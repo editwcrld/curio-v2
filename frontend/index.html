@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="css/quote-section.css">
     <link rel="stylesheet" href="css/info-section.css">
     <link rel="stylesheet" href="css/fav-section.css">
+    <link rel="stylesheet" href="css/auth-modal.css">
 </head>
 <body>
     <div id="app">
@@ -192,6 +193,142 @@
                 <span>Saved</span>
             </button>
         </nav>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-modal">
+            <!-- Close Button -->
+            <button id="auth-close" class="auth-close" aria-label="Close">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+            
+            <!-- Login View -->
+            <div id="auth-login-view" class="auth-view">
+                <div class="auth-header">
+                    <h2 class="auth-title">Willkommen zurück</h2>
+                    <p class="auth-subtitle">Melde dich an um fortzufahren</p>
+                </div>
+                
+                <!-- Error/Info Message -->
+                <div id="login-message" class="auth-message">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span class="auth-message-text"></span>
+                </div>
+                
+                <form id="auth-login-form" class="auth-form">
+                    <div class="auth-input-group">
+                        <label class="auth-label" for="login-email">Email</label>
+                        <input 
+                            type="email" 
+                            id="login-email" 
+                            class="auth-input" 
+                            placeholder="deine@email.com"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="auth-input-group">
+                        <label class="auth-label" for="login-password">Passwort</label>
+                        <input 
+                            type="password" 
+                            id="login-password" 
+                            class="auth-input" 
+                            placeholder="••••••••"
+                            autocomplete="current-password"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="auth-forgot">
+                        <a href="#" class="auth-forgot-link">Passwort vergessen?</a>
+                    </div>
+                    
+                    <button type="submit" class="auth-submit">Anmelden</button>
+                </form>
+                
+                <div class="auth-toggle">
+                    <p class="auth-toggle-text">
+                        Noch kein Account?
+                        <a href="#" class="auth-toggle-link" data-view="signup">Registrieren</a>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Signup View -->
+            <div id="auth-signup-view" class="auth-view hidden">
+                <div class="auth-header">
+                    <h2 class="auth-title">Account erstellen</h2>
+                    <p class="auth-subtitle">Registriere dich kostenlos</p>
+                </div>
+                
+                <!-- Error/Info Message -->
+                <div id="signup-message" class="auth-message">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                    <span class="auth-message-text"></span>
+                </div>
+                
+                <form id="auth-signup-form" class="auth-form">
+                    <div class="auth-input-group">
+                        <label class="auth-label" for="signup-name">Name</label>
+                        <input 
+                            type="text" 
+                            id="signup-name" 
+                            class="auth-input" 
+                            placeholder="Dein Name"
+                            autocomplete="name"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="auth-input-group">
+                        <label class="auth-label" for="signup-email">Email</label>
+                        <input 
+                            type="email" 
+                            id="signup-email" 
+                            class="auth-input" 
+                            placeholder="deine@email.com"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+                    
+                    <div class="auth-input-group">
+                        <label class="auth-label" for="signup-password">Passwort</label>
+                        <input 
+                            type="password" 
+                            id="signup-password" 
+                            class="auth-input" 
+                            placeholder="Mindestens 6 Zeichen"
+                            autocomplete="new-password"
+                            minlength="6"
+                            required
+                        >
+                    </div>
+                    
+                    <button type="submit" class="auth-submit">Registrieren</button>
+                </form>
+                
+                <div class="auth-toggle">
+                    <p class="auth-toggle-text">
+                        Schon registriert?
+                        <a href="#" class="auth-toggle-link" data-view="login">Anmelden</a>
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module" src="js/main.js"></script>

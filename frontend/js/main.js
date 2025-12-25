@@ -11,6 +11,7 @@ import { initNavigation, showLoading, showError } from './ui-controller.js';
 import { initFavoritesView, updateAllFavoriteButtons } from './fav-engine.js';
 import { initContentNavigation, handleNext, handlePrevious } from './content-navigation.js';
 import { initSwipeHandler } from './swipe-handler.js';
+import { initAuthModal, checkAuthState } from './auth-modal.js';
 
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
@@ -24,6 +25,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         initArtView();
         initQuoteView();
         initFavoritesView();
+        
+        // Initialize auth modal
+        initAuthModal();
+        checkAuthState();
         
         // Initialize content navigation (back/next buttons)
         initContentNavigation();
