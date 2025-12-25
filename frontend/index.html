@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title id="page-title">Loading..</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/navigation.css">
+<link rel="stylesheet" href="css/favorites.css">
+<link rel="stylesheet" href="css/utilities.css">
+<link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMklEQVR42mP8/5+hnoGYYGgY4IAp/P+f/Z9D8f8/BnYGiAFj6v8fAxY0Gf8fQ0OAAQCz5z8v80Y/fAAAAABJRU5ErkJggg==">
+</head>
+<body>
+<input type="text" name="website" id="honeypot-field" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;" tabindex="-1" autocomplete="off" oninput="window.honeypot = this.value">
+<div id="toast-container"></div>
+<div id="text-overlay-dimmer" class="text-overlay-dimmer" onclick="closeTextOverlay()"></div>
+<div id="text-overlay-panel" class="text-overlay-panel"></div>
+<button id="text-overlay-close" class="text-overlay-close" onclick="closeTextOverlay()" style="display:none;">&times;</button>
+
+<header id="main-header">
+<div class="brand" onclick="show('art-view', document.getElementById('nav-art'))" style="cursor:pointer">
+<svg class="logo-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+<path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+<path d="M9 4c0 5.5 -.33 16 4 16s7.546 -11.27 8 -13"></path>
+<path d="M3 4c.253 5.44 1.449 16 5.894 16c4.444 0 8.42 -10.036 9.106 -14"></path>
+</svg>
+<h1 class="brand-name" id="brand-name-text">Loading..</h1>
+</div>
+<div id="auth-endpoint">
+<button class="login-btn" id="auth-nav-btn" onclick="openLogin()">Login</button>
+</div>
+</header>
+
+<main>
+<section id="art-view" class="scroll-expand-container">
+<div class="card">
+<div class="image-container">
+<div class="img-placeholder"></div>
+<div class="card-loader" id="art-loader"></div>
+<button class="fav-btn-top" id="favBtnArt" onclick="toggleFavorite('art')">
+<svg class="heart-icon" viewBox="0 0 24 24" width="18" height="18"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+</button>
+<div class="nav-btn-group">
+<button id="prev-art-btn" class="img-overlay-btn" onclick="loadPrevArt()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+<button id="next-art-btn" class="img-overlay-btn" onclick="loadNextArt()"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+</div>
+<img src="" id="mainImg" onclick="openLightbox()">
+</div>
+<div class="card-info scroll-expand-target">
+<div class="card-info-header">
+<h2 id="title">Loading..</h2>
+<p id="meta"></p>
+</div>
+<div class="description-container">
+<p id="description-text" class="expandable-text collapsed"></p>
+</div>
+</div>
+</div>
+</section>
+
+<section id="quote-view" class="hidden scroll-expand-container">
+<div class="card">
+<div class="quote-container" id="quoteBg">
+<div class="card-loader" id="quote-loader"></div>
+<button class="fav-btn-top" id="favBtnQuote" onclick="toggleFavoriteQuote()">
+<svg class="heart-icon" viewBox="0 0 24 24" width="18" height="18"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"></path></svg>
+</button>
+<div class="nav-btn-group">
+<button id="prev-quote-btn" class="img-overlay-btn" onclick="loadPrevQuote()"><svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+<button id="next-quote-btn" class="img-overlay-btn" onclick="loadNextQuote()"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+</div>
+<div class="quote-content">
+<p id="quoteText"></p>
+</div>
+</div>
+<div class="card-info scroll-expand-target">
+<div class="card-info-header">
+<p id="quoteAuthorTitle"></p>
+</div>
+<div class="description-container">
+<p id="quote-description-text" class="expandable-text collapsed">Tippe hier für eine Interpretation des Zitats...</p>
+</div>
+</div>
+</div>
+</section>
+
+<section id="fav-view" class="hidden">
+<div class="sticky-fav-header">
+<div class="fav-title-row">
+<h2 class="section-title">Sammlung</h2>
+<div class="search-wrapper">
+<input type="text" id="favSearch" placeholder="Suchen..." oninput="handleSearchInput(this.value)">
+<span id="search-clear" class="hidden" onclick="clearSearch()">&times;</span>
+</div>
+</div>
+<div class="filter-chips">
+<span class="chip active" onclick="filterFavs('all', this)">Alles</span>
+<span class="chip" onclick="filterFavs('art', this)">Kunst</span>
+<span class="chip" onclick="filterFavs('quote', this)">Zitate</span>
+</div>
+</div>
+<div id="fav-grid" class="fav-grid"></div>
+</section>
+</main>
+
+<div id="login-modal" class="modal-overlay hidden">
+<div class="modal-content">
+<span class="close-modal" onclick="closeLogin()">&times;</span>
+<h2 id="modal-title">Login</h2>
+<p id="modal-subtitle">Melde dich an, um deine Favoriten zu speichern.</p>
+<div id="auth-error-message" class="auth-error hidden"></div>
+<div class="input-group">
+<input type="email" id="email-input" placeholder="E-Mail">
+<input type="password" id="password-input" placeholder="Passwort">
+</div>
+<button class="primary-btn" id="auth-submit-btn" onclick="handleAuth()">Bestätigen</button>
+<p class="toggle-text">Neu hier? <span onclick="toggleAuthMode()" id="auth-toggle-link">Registrieren</span></p>
+</div>
+</div>
+
+<div id="premium-limit-modal" class="modal-overlay hidden">
+<div class="modal-content">
+<span class="close-modal" onclick="closePremiumModal()">&times;</span>
+<h2>Tageslimit erreicht</h2>
+<div style="background:rgba(255,200,0,0.12);border-left:3px solid #ffc107;padding:1rem;margin:1rem 0;border-radius:8px;text-align:left">
+<strong style="color:#ffc107;font-size:1.1em">⚠️ Free-Limit erreicht</strong>
+<p style="margin:0.75rem 0 0 0;font-size:0.85rem;line-height:1.5;color:#666">Dein Limit setzt sich in 24 Stunden zurück. Für sofortigen unbegrenzten Zugang sieh dir unsere Premium-Pläne an.</p>
+</div>
+<button class="primary-btn" style="margin-bottom:10px" onclick="alert('Subscription coming soon!')">Premium ansehen</button>
+<button class="primary-btn" style="background:#f5f5f5;color:#666" onclick="closePremiumModal()">Schließen</button>
+</div>
+</div>
+
+<div id="lightbox" class="hidden">
+<span class="close-box" onclick="closeLightbox()">&times;</span>
+<div class="lightbox-toolbar">
+<button class="zoom-btn" onclick="zoomImage(0.5)">+</button>
+<button class="zoom-btn" onclick="zoomImage(-0.5)">-</button>
+<button class="zoom-btn" onclick="resetZoom()">Fit</button>
+</div>
+<div class="lightbox-content"><img id="detailImg" src="" draggable="false"></div>
+</div>
+
+<nav id="bottom-nav">
+<div class="nav-item active" onclick="show('art-view', this)" id="nav-art">
+<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 14l5-5 5 5 5-5 3 3"></path></svg>
+<span id="nav-art-text">Art</span>
+</div>
+<div class="nav-item" onclick="show('quote-view', this)">
+<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+<span id="nav-quote-text">Quotes</span>
+</div>
+<div class="nav-item" onclick="show('fav-view', this)">
+<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19.57,5.44a4.91,4.91,0,0,1,0,6.93L12,20,4.43,12.37A4.91,4.91,0,0,1,7.87,4a4.9,4.9,0,0,1,3.44,1.44,4.46,4.46,0,0,1,.69.88,4.46,4.46,0,0,1,.69-.88,4.83,4.83,0,0,1,6.88,0Z"></path></svg>
+<span id="nav-fav-text">Favs</span>
+</div>
+</nav>
+
+<script>
+const overlayPanel = document.getElementById('text-overlay-panel');
+const closeBtn = document.getElementById('text-overlay-close');
+const observer = new MutationObserver(() => {
+    if (overlayPanel.classList.contains('active')) closeBtn.style.display = 'block';
+    else closeBtn.style.display = 'none';
+});
+observer.observe(overlayPanel, { attributes: true, attributeFilter: ['class'] });
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/scroll-expand.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/limits.js"></script>
+<script src="js/art.js"></script>
+<script src="js/quotes.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

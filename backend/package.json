@@ -1,0 +1,16 @@
+{
+  "name": "musedaily-backend",
+  "version": "1.0.0",
+  "description": "Backend für MuseDaily",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@mistralai/mistralai": "^1.11.0",
+    "@supabase/supabase-js": "^2.89.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
+    "express": "^4.22.1"
+  }
+}
