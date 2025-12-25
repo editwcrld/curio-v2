@@ -1,0 +1,22 @@
+:root {
+    --bg-color: #000;
+    --surface-glass: rgba(255, 255, 255, 0.72);
+    --text-main: #1a1a1a;
+    --text-muted: #555555;
+    --accent-color: #000000;
+    --radius-l: 32px;
+    --transition-speed: 0.5s;
+    --ease: cubic-bezier(0.2, 1, 0.3, 1);
+    --ui-width: 90%;
+    --ui-max-width: 480px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { background: var(--bg-color); height: 100vh; overflow: hidden; color: white; -webkit-font-smoothing: antialiased; }
+#app { height: 100vh; width: 100%; display: flex; flex-direction: column; position: relative; }
+.view { width: 100%; height: 100%; position: absolute; top: 0; left: 0; overflow: hidden; }
+.hidden { display: none !important; }
+#user-profile-btn {
+    position: fixed; top: 20px; right: 20px; width: 44px; height: 44px;
+    border-radius: 50%; background: var(--surface-glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3); z-index: 3000; display: flex; align-items: center; justify-content: center; color: black;
+}

@@ -1,0 +1,33 @@
+/* --- UI COMPONENTS --- */
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: var(--spacing-m) var(--spacing-l);
+    border-radius: var(--radius-m);
+    font-weight: 600;
+    width: 100%;
+    transition: opacity 0.2s;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+input {
+    width: 100%;
+    padding: var(--spacing-m);
+    margin-bottom: var(--spacing-m);
+    border: 1px solid #ddd;
+    border-radius: var(--radius-s);
+    font-size: 1rem;
+}

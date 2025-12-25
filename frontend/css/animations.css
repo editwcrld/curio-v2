@@ -1,0 +1,31 @@
+/* --- ANIMATIONS & STATES --- */
+
+/* Sanftes Einblenden für Content-Wechsel */
+.fade-in {
+    animation: fadeIn 0.5s var(--ease) forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Loading Spinner */
+.spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(0,0,0,0.1);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Button-Klick Effekt */
+.btn-active-effect:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+}
