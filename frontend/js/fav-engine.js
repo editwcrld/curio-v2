@@ -1,141 +1,166 @@
+/**
+ * Favorites Engine - Komplett neu geschrieben
+ * Optimiert für Performance und Best Practices
+ */
+
 import { appState } from './state.js';
 
-/**
- * Favorites Engine Module
- * Handles saving, loading, filtering and displaying favorites
- */
-
-// LocalStorage key (später Supabase)
-const STORAGE_KEY = 'dailyart_favorites';
-
-// Current filter and search state
-let currentFilter = 'all';
-let searchQuery = '';
+// ===== STORAGE =====
+const STORAGE_KEY = 'dailyart_favorites_v2';
+let favoritesCache = null;
 
 /**
- * Load favorites from storage
+ * Load favorites (cached)
  */
-export function loadFavorites() {
+function getFavorites() {
+    if (favoritesCache !== null) {
+        return favoritesCache;
+    }
+    
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        return stored ? JSON.parse(stored) : [];
+        favoritesCache = stored ? JSON.parse(stored) : [];
+        return favoritesCache;
     } catch (error) {
         console.error('Error loading favorites:', error);
+        favoritesCache = [];
         return [];
     }
 }
 
 /**
- * Save favorites to storage
+ * Save favorites (with cache update)
  */
 function saveFavorites(favorites) {
     try {
+        favoritesCache = favorites;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+        return true;
     } catch (error) {
         console.error('Error saving favorites:', error);
+        return false;
     }
 }
 
 /**
- * Add item to favorites
+ * Clear cache (call when data might be stale)
  */
-export function addFavorite(item, type) {
-    const favorites = loadFavorites();
-    
-    // Check if already exists
-    const exists = favorites.some(f => f.id === item.id);
-    if (exists) {
-        console.log('Item already in favorites');
-        return favorites;
-    }
-    
-    // Add type and timestamp
-    const favoriteItem = {
-        ...item,
-        type,
-        savedAt: new Date().toISOString(),
-        savedGradient: appState.currentGradient || null
-    };
-    
-    favorites.push(favoriteItem);
-    saveFavorites(favorites);
-    
-    console.log('Added to favorites:', item.id);
-    return favorites;
+function clearCache() {
+    favoritesCache = null;
 }
 
-/**
- * Remove item from favorites
- */
-export function removeFavorite(itemId) {
-    const favorites = loadFavorites();
-    const filtered = favorites.filter(f => f.id !== itemId);
-    saveFavorites(filtered);
-    
-    console.log('Removed from favorites:', itemId);
-    return filtered;
-}
+// ===== CORE OPERATIONS =====
 
 /**
- * Check if item is favorited
+ * Check if item is favorited (fast)
  */
 export function isFavorite(itemId) {
-    const favorites = loadFavorites();
+    const favorites = getFavorites();
     return favorites.some(f => f.id === itemId);
 }
 
 /**
- * Toggle favorite status
+ * Add to favorites
+ */
+export function addFavorite(item, type) {
+    const favorites = getFavorites();
+    
+    // Prevent duplicates
+    if (favorites.some(f => f.id === item.id)) {
+        return false;
+    }
+    
+    const favoriteItem = {
+        ...item,
+        type,
+        savedAt: Date.now(),
+        savedGradient: appState.currentGradient || null
+    };
+    
+    favorites.unshift(favoriteItem); // Add to beginning
+    saveFavorites(favorites);
+    
+    return true;
+}
+
+/**
+ * Remove from favorites
+ */
+export function removeFavorite(itemId) {
+    const favorites = getFavorites();
+    const filtered = favorites.filter(f => f.id !== itemId);
+    
+    if (filtered.length === favorites.length) {
+        return false; // Nothing removed
+    }
+    
+    saveFavorites(filtered);
+    return true;
+}
+
+/**
+ * Toggle favorite (optimized)
  */
 export function toggleFavorite(item, type) {
-    if (isFavorite(item.id)) {
-        return removeFavorite(item.id);
-    } else {
-        return addFavorite(item, type);
+    if (!item || !item.id) {
+        console.warn('Invalid item for favorite');
+        return false;
     }
+    
+    const isCurrentlyFavorited = isFavorite(item.id);
+    
+    if (isCurrentlyFavorited) {
+        removeFavorite(item.id);
+    } else {
+        addFavorite(item, type);
+    }
+    
+    // Immediate UI update
+    updateFavoriteButtonState(type, item.id);
+    
+    return !isCurrentlyFavorited;
 }
 
-/**
- * Filter favorites by type
- */
-export function filterFavorites(favorites, filter) {
-    if (filter === 'all') return favorites;
-    return favorites.filter(f => f.type === filter);
-}
+// ===== UI UPDATES =====
 
 /**
- * Search in favorites
+ * Update favorite button state for specific view
  */
-export function searchFavorites(favorites, query) {
-    if (!query) return favorites;
+export function updateFavoriteButtonState(viewType, itemId) {
+    const view = document.getElementById(`view-${viewType}`);
+    if (!view) return;
     
-    const lowerQuery = query.toLowerCase();
+    const btn = view.querySelector('.fav-btn');
+    if (!btn) return;
     
-    return favorites.filter(f => {
-        const searchableText = [
-            f.title,
-            f.artist,
-            f.text,
-            f.author,
-            f.source
-        ].filter(Boolean).join(' ').toLowerCase();
-        
-        return searchableText.includes(lowerQuery);
+    const isFav = isFavorite(itemId);
+    
+    // Use requestAnimationFrame for smooth UI update
+    requestAnimationFrame(() => {
+        btn.classList.toggle('active', isFav);
     });
 }
 
 /**
- * Get filtered and searched favorites
+ * Update all favorite buttons
  */
-export function getFilteredFavorites(filter = currentFilter, query = searchQuery) {
-    let favorites = loadFavorites();
-    favorites = filterFavorites(favorites, filter);
-    favorites = searchFavorites(favorites, query);
-    return favorites;
+export function updateAllFavoriteButtons() {
+    if (appState.currentArtData) {
+        updateFavoriteButtonState('art', appState.currentArtData.id);
+    }
+    
+    if (appState.currentQuoteData) {
+        updateFavoriteButtonState('quotes', appState.currentQuoteData.id);
+    }
 }
 
+// ===== FILTERING & SEARCH =====
+
+let currentFilter = 'all';
+let currentSearch = '';
+
 /**
- * Set current filter
+ * Set filter
  */
 export function setFilter(filter) {
     currentFilter = filter;
@@ -144,61 +169,112 @@ export function setFilter(filter) {
 /**
  * Set search query
  */
-export function setSearchQuery(query) {
-    searchQuery = query;
+export function setSearch(query) {
+    currentSearch = query.toLowerCase().trim();
 }
 
 /**
- * Render favorites grid
+ * Get current filter
+ */
+export function getFilter() {
+    return currentFilter;
+}
+
+/**
+ * Get current search
+ */
+export function getSearch() {
+    return currentSearch;
+}
+
+/**
+ * Apply filters and search (optimized)
+ */
+export function getFilteredFavorites() {
+    let favorites = getFavorites();
+    
+    // Filter by type
+    if (currentFilter !== 'all') {
+        favorites = favorites.filter(f => f.type === currentFilter);
+    }
+    
+    // Search
+    if (currentSearch) {
+        favorites = favorites.filter(item => {
+            const searchFields = [
+                item.title,
+                item.artist,
+                item.text,
+                item.author,
+                item.source
+            ].filter(Boolean).join(' ').toLowerCase();
+            
+            return searchFields.includes(currentSearch);
+        });
+    }
+    
+    return favorites;
+}
+
+// ===== RENDER =====
+
+/**
+ * Render favorites grid (optimized)
  */
 export function renderFavorites() {
     const container = document.getElementById('fav-list');
+    const countEl = document.querySelector('.fav-count');
+    
     if (!container) return;
     
     const favorites = getFilteredFavorites();
+    const allFavorites = getFavorites();
+    
+    // Update count
+    if (countEl) {
+        const count = allFavorites.length;
+        countEl.textContent = `${count} ${count === 1 ? 'Favorit' : 'Favoriten'}`;
+    }
+    
+    // Clear container
+    container.innerHTML = '';
     
     // Empty state
     if (favorites.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                </svg>
-                <h3>${searchQuery ? 'Keine Treffer' : 'Noch keine Favoriten'}</h3>
-                <p>${searchQuery ? 'Versuche einen anderen Suchbegriff' : 'Speichere Kunst und Zitate, indem du auf das Herz-Icon klickst'}</p>
-            </div>
-        `;
+        container.innerHTML = createEmptyState();
         return;
     }
     
-    // Render items
-    container.innerHTML = '';
+    // Create document fragment for better performance
+    const fragment = document.createDocumentFragment();
     
-    favorites.forEach(item => {
-        const card = createFavoriteCard(item);
-        container.appendChild(card);
+    favorites.forEach((item, index) => {
+        const card = createCard(item, index);
+        fragment.appendChild(card);
     });
+    
+    container.appendChild(fragment);
 }
 
 /**
- * Create favorite card element
+ * Create card element (optimized)
  */
-function createFavoriteCard(item) {
+function createCard(item, index) {
     const card = document.createElement('div');
-    card.className = `fav-item type-${item.type}`;
+    card.className = `fav-card type-${item.type}`;
     card.dataset.id = item.id;
     
     if (item.type === 'art') {
         card.innerHTML = `
-            <img src="${item.imageUrl}" alt="${item.title}">
-            <div class="fav-item-info">
-                <h3>${item.title}</h3>
-                <p>${item.artist}</p>
+            <img class="fav-card-image" src="${item.imageUrl}" alt="${item.title}" loading="lazy">
+            <div class="fav-card-content">
+                <h3 class="fav-card-title">${item.title}</h3>
+                <p class="fav-card-meta">${item.artist}</p>
             </div>
-            <button class="fav-item-delete" aria-label="Remove from favorites">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
+            <button class="fav-card-delete" aria-label="Remove">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
             </button>
         `;
@@ -206,67 +282,98 @@ function createFavoriteCard(item) {
         const gradient = item.savedGradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
         card.style.background = gradient;
         card.innerHTML = `
-            <div class="quote-preview">"${item.text}"</div>
-            <div class="fav-item-info">
-                <h3>${item.author}</h3>
-            </div>
-            <button class="fav-item-delete" aria-label="Remove from favorites">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
+            <p class="fav-card-quote">"${item.text}"</p>
+            <p class="fav-card-author">${item.author}</p>
+            <button class="fav-card-delete" aria-label="Remove">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
             </button>
         `;
     }
     
-    // Click to open in detail view
+    // Event listeners with event delegation would be better, but for simplicity:
+    const deleteBtn = card.querySelector('.fav-card-delete');
+    
+    // Card click - open detail
     card.addEventListener('click', (e) => {
-        if (!e.target.closest('.fav-item-delete')) {
-            openFavoriteDetail(item);
+        if (!e.target.closest('.fav-card-delete')) {
+            openDetail(item);
         }
     });
     
-    // Delete button
-    const deleteBtn = card.querySelector('.fav-item-delete');
+    // Delete click
     deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        removeFavorite(item.id);
-        renderFavorites();
-        updateAllFavoriteButtons();
+        deleteCard(item.id, card);
     });
     
     return card;
 }
 
 /**
- * Open favorite in detail view (art or quotes)
+ * Create empty state
  */
-function openFavoriteDetail(item) {
+function createEmptyState() {
+    const hasSearch = currentSearch.length > 0;
+    
+    return `
+        <div class="fav-empty">
+            <svg class="fav-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            <h3 class="fav-empty-title">${hasSearch ? 'Keine Treffer' : 'Noch keine Favoriten'}</h3>
+            <p class="fav-empty-text">
+                ${hasSearch 
+                    ? 'Versuche einen anderen Suchbegriff' 
+                    : 'Speichere Kunst und Zitate, indem du auf das Herz klickst'
+                }
+            </p>
+        </div>
+    `;
+}
+
+/**
+ * Delete card with animation
+ */
+function deleteCard(itemId, cardElement) {
+    // Animate out
+    cardElement.style.opacity = '0';
+    cardElement.style.transform = 'scale(0.8)';
+    
+    setTimeout(() => {
+        removeFavorite(itemId);
+        renderFavorites();
+        updateAllFavoriteButtons();
+    }, 300);
+}
+
+/**
+ * Open detail view
+ */
+function openDetail(item) {
     if (item.type === 'art') {
-        // Load into art view
         appState.setArtData(item);
-        switchToView('art');
+        switchView('art');
     } else {
-        // Load into quotes view
         appState.setQuoteData(item);
         if (item.savedGradient) {
             appState.setGradient(item.savedGradient);
         }
-        switchToView('quotes');
+        switchView('quotes');
     }
 }
 
 /**
- * Switch to specific view
+ * Switch view helper
  */
-function switchToView(viewName) {
-    // Update nav
+function switchView(viewName) {
     const navButtons = document.querySelectorAll('#bottom-nav button');
     navButtons.forEach(btn => {
         btn.classList.toggle('active', btn.id === `nav-${viewName}`);
     });
     
-    // Update views
     const views = document.querySelectorAll('.view');
     views.forEach(view => {
         view.classList.toggle('hidden', view.id !== `view-${viewName}`);
@@ -275,74 +382,53 @@ function switchToView(viewName) {
     appState.setView(viewName);
 }
 
-/**
- * Update all favorite button states
- */
-export function updateAllFavoriteButtons() {
-    // Update art view
-    if (appState.currentArtData) {
-        const artView = document.getElementById('view-art');
-        const artBtn = artView?.querySelector('.fav-btn');
-        if (artBtn) {
-            artBtn.classList.toggle('active', isFavorite(appState.currentArtData.id));
-        }
-    }
-    
-    // Update quotes view
-    if (appState.currentQuoteData) {
-        const quotesView = document.getElementById('view-quotes');
-        const quotesBtn = quotesView?.querySelector('.fav-btn');
-        if (quotesBtn) {
-            quotesBtn.classList.toggle('active', isFavorite(appState.currentQuoteData.id));
-        }
-    }
-}
+// ===== INITIALIZATION =====
 
 /**
  * Initialize favorites view
  */
 export function initFavoritesView() {
-    const searchToggle = document.getElementById('search-toggle');
-    const searchContainer = document.getElementById('search-container');
     const searchInput = document.getElementById('fav-search');
-    const searchClear = document.getElementById('search-clear');
-    const filterButtons = document.querySelectorAll('.filter-btn');
+    const searchClear = document.getElementById('fav-search-clear');
+    const filterBtns = document.querySelectorAll('.fav-filter-pill');
     
-    // Search toggle
-    if (searchToggle) {
-        searchToggle.addEventListener('click', () => {
-            searchContainer.classList.toggle('active');
-            if (searchContainer.classList.contains('active')) {
-                searchInput.focus();
-            }
-        });
-    }
-    
-    // Search input
+    // Search input with debouncing
+    let searchTimeout;
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            const query = e.target.value;
-            setSearchQuery(query);
-            searchClear?.classList.toggle('visible', query.length > 0);
-            renderFavorites();
+            const value = e.target.value;
+            
+            // Show/hide clear button
+            if (searchClear) {
+                searchClear.classList.toggle('visible', value.length > 0);
+            }
+            
+            // Debounce search
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                setSearch(value);
+                renderFavorites();
+            }, 300);
         });
     }
     
     // Search clear
     if (searchClear) {
         searchClear.addEventListener('click', () => {
-            searchInput.value = '';
-            setSearchQuery('');
-            searchClear.classList.remove('visible');
-            renderFavorites();
-            searchInput.focus();
+            if (searchInput) {
+                searchInput.value = '';
+                searchClear.classList.remove('visible');
+                setSearch('');
+                renderFavorites();
+                searchInput.focus();
+            }
         });
     }
     
     // Filter buttons
-    filterButtons.forEach(btn => {
+    filterBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            filterButtons.forEach(b => b.classList.remove('active'));
+            filterBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             setFilter(btn.dataset.filter);
             renderFavorites();
@@ -350,5 +436,13 @@ export function initFavoritesView() {
     });
     
     // Initial render
+    renderFavorites();
+}
+
+/**
+ * Refresh favorites view (call when switching to favorites)
+ */
+export function refreshFavoritesView() {
+    clearCache();
     renderFavorites();
 }

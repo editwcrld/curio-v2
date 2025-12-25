@@ -17,7 +17,6 @@
 </head>
 <body>
     <div id="app">
-        <!-- Main Content Area -->
         <main id="content-display">
             
             <!-- ART VIEW -->
@@ -25,7 +24,6 @@
                 <div class="art-container">
                     <img src="" class="main-image" alt="Daily Art">
                     
-                    <!-- Info Panel for Art -->
                     <div class="info-wrapper">
                         <section class="info-section">
                             <div class="info-header">
@@ -54,7 +52,6 @@
                         <p class="quote-author"></p>
                     </div>
                     
-                    <!-- Info Panel for Quotes -->
                     <div class="info-wrapper">
                         <section class="info-section">
                             <div class="info-header">
@@ -75,38 +72,47 @@
                 </div>
             </div>
 
-            <!-- FAVORITES VIEW -->
+            <!-- FAVORITES VIEW - KOMPLETT NEU -->
             <div id="view-favorites" class="view hidden">
-                <div class="fav-header-area">
-                    <div class="fav-top-row">
-                        <h1 class="fav-headline">Gespeichert</h1>
-                        <div class="header-actions">
-                            <button id="search-toggle" class="icon-btn" aria-label="Toggle search">
-                                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                                </svg>
-                            </button>
-                        </div>
+                <div class="fav-header">
+                    <!-- Title Section -->
+                    <div class="fav-title-section">
+                        <h1 class="fav-title">Libary</h1>
+                        <p class="fav-count">0 Favoriten</p>
                     </div>
-                    <div id="search-container" class="search-wrapper">
-                        <input type="text" id="fav-search" class="search-bar" placeholder="Suche...">
-                        <button id="search-clear" class="search-clear-btn" aria-label="Clear search">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3">
-                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                    
+                    <!-- Search -->
+                    <div class="fav-search-container">
+                        <svg class="fav-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input 
+                            type="text" 
+                            id="fav-search" 
+                            class="fav-search-input" 
+                            placeholder="Suche in Favoriten..."
+                            autocomplete="off"
+                        >
+                        <button id="fav-search-clear" class="fav-search-clear" aria-label="Clear search">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <line x1="18" y1="6" x2="6" y2="18"/>
+                                <line x1="6" y1="6" x2="18" y2="18"/>
                             </svg>
                         </button>
                     </div>
-                    <div class="filter-row">
-                        <button class="filter-btn active" data-filter="all">Alles</button>
-                        <button class="filter-btn" data-filter="art">Kunst</button>
-                        <button class="filter-btn" data-filter="quotes">Zitate</button>
+                    
+                    <!-- Filters -->
+                    <div class="fav-filters">
+                        <button class="fav-filter-pill active" data-filter="all">All</button>
+                        <button class="fav-filter-pill" data-filter="art">Art</button>
+                        <button class="fav-filter-pill" data-filter="quotes">Quotes</button>
                     </div>
                 </div>
-                <div class="favorites-scroll-container">
+                
+                <!-- Content -->
+                <div class="fav-content">
                     <div id="fav-list" class="fav-grid"></div>
-                    <div class="nav-spacer"></div>
                 </div>
             </div>
 
@@ -138,7 +144,6 @@
         </nav>
     </div>
 
-    <!-- JavaScript Module -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

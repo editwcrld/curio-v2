@@ -1,8 +1,8 @@
 import { appState } from './state.js';
+import { refreshFavoritesView } from './fav-engine.js';
 
 /**
- * UI Controller Module
- * Handles navigation, view switching, and UI updates
+ * UI Controller Module - Optimiert
  */
 
 export function initNavigation() {
@@ -31,14 +31,20 @@ export function switchView(viewName) {
     views.forEach(view => {
         view.classList.toggle('hidden', view.id !== `view-${viewName}`);
     });
+    
+    // Refresh favorites when switching to it
+    if (viewName === 'favorites') {
+        // Use requestAnimationFrame for smooth transition
+        requestAnimationFrame(() => {
+            refreshFavoritesView();
+        });
+    }
 }
 
 export function showLoading(show = true) {
-    // Future implementation for loading states
     console.log(show ? 'Loading...' : 'Loading complete');
 }
 
 export function showError(message) {
-    // Future implementation for error messages
     console.error('Error:', message);
 }
