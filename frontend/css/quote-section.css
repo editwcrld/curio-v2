@@ -1,16 +1,56 @@
-.quote-container { height: 100%; width: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+.quote-container { 
+    height: 100%; 
+    width: 100%; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    align-items: center; 
+    padding: 20px; 
+}
 
 .quote-text-wrapper {
-    width: 100%; max-width: 600px; text-align: center; margin-bottom: 240px; position: relative; padding: 0 25px;
+    width: 100%; 
+    max-width: 600px; 
+    text-align: center; 
+    margin-bottom: 240px; 
+    position: relative; 
+    padding: 0 25px;
 }
-.quote-text-wrapper::before {
-    content: "“"; position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
-    font-size: clamp(4rem, 15vw, 8rem); font-family: serif; color: rgba(255, 255, 255, 0.3); line-height: 1;
-}
-.quote-text {
-    font-family: serif; font-style: italic; font-weight: 700; color: white; line-height: 1.25; 
-    font-size: clamp(1.6rem, 8vw, 3.2rem); text-shadow: 0 2px 15px rgba(0,0,0,0.2);
-}
-.quote-author { color: white; margin-top: 20px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; font-size: 0.9rem; opacity: 0.9; }
 
-@media (min-width: 768px) { .quote-text-wrapper { margin-bottom: 100px; } }
+.quote-text-wrapper::before {
+    content: ""; 
+    position: absolute; 
+    top: -60px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    font-size: clamp(4rem, 15vw, 8rem); 
+    font-family: serif; 
+    color: rgba(255, 255, 255, 0.3); 
+    line-height: 1;
+}
+
+.quote-text {
+    font-family: serif; 
+    font-style: italic; 
+    font-weight: 700; 
+    color: white; 
+    line-height: 1.25; 
+    font-size: clamp(1.6rem, 8vw, 3.2rem); 
+    text-shadow: 0 2px 15px rgba(0,0,0,0.2);
+}
+
+.quote-author { 
+    color: white; 
+    margin-top: 20px; 
+    font-weight: 800; 
+    text-transform: uppercase; 
+    letter-spacing: 2px; 
+    font-size: 0.9rem; 
+    opacity: 0.9; 
+}
+
+@media (min-width: 768px) { 
+    .quote-text-wrapper { 
+        margin-bottom: 100px; 
+    } 
+}

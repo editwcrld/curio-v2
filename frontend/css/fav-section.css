@@ -1,0 +1,337 @@
+/* ===== FAVORITES VIEW ===== */
+
+#view-favorites {
+    background: #000;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header Area */
+.fav-header-area {
+    padding: 70px 24px 20px 24px;
+    background: #000;
+    z-index: 2100;
+    flex-shrink: 0;
+}
+
+.fav-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.fav-headline {
+    font-size: 2rem;
+    font-weight: 900;
+    color: white;
+    letter-spacing: -1px;
+    margin: 0;
+}
+
+/* Header Actions (Search Toggle) */
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.icon-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.icon-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.icon-btn:active {
+    transform: scale(0.95);
+}
+
+/* Search Wrapper */
+.search-wrapper {
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity: 0;
+    position: relative;
+}
+
+.search-wrapper.active {
+    max-height: 60px;
+    margin-bottom: 20px;
+    opacity: 1;
+}
+
+.search-bar {
+    width: 100%;
+    padding: 14px 45px 14px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: white;
+    outline: none;
+    font-size: 16px;
+}
+
+.search-bar::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.search-clear-btn {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: white;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-clear-btn.visible {
+    display: flex;
+}
+
+.search-clear-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Filter Row */
+.filter-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.filter-btn.active {
+    background: white;
+    color: black;
+    font-weight: 700;
+}
+
+.filter-btn:active {
+    transform: scale(0.95);
+}
+
+/* Scroll Container */
+.favorites-scroll-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 0 20px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.favorites-scroll-container::-webkit-scrollbar {
+    display: none;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.empty-state svg {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
+    opacity: 0.3;
+}
+
+.empty-state h3 {
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.empty-state p {
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Favorites Grid */
+.fav-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    padding-bottom: 120px;
+}
+
+/* Tablet */
+@media (min-width: 600px) {
+    .fav-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+    .fav-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+    }
+    
+    .fav-header-area {
+        padding: 70px 40px 20px 40px;
+    }
+    
+    .favorites-scroll-container {
+        padding: 0 40px;
+    }
+}
+
+@media (min-width: 1400px) {
+    .fav-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* Favorite Item Card */
+.fav-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+}
+
+.fav-item:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.fav-item:active {
+    transform: translateY(-2px);
+}
+
+/* Art Type Card */
+.fav-item.type-art img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    object-fit: cover;
+}
+
+/* Quote Type Card */
+.fav-item.type-quotes {
+    min-height: 220px;
+    justify-content: center;
+    padding: 30px 20px;
+    text-align: center;
+}
+
+.fav-item.type-quotes .quote-preview {
+    font-family: serif;
+    font-style: italic;
+    color: white;
+    font-size: 1.05rem;
+    line-height: 1.4;
+    margin-bottom: 15px;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Card Info */
+.fav-item-info {
+    padding: 16px;
+    color: white;
+}
+
+.fav-item-info h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    margin-top: 0;
+    line-height: 1.3;
+}
+
+.fav-item-info p {
+    font-size: 0.9rem;
+    opacity: 0.7;
+    margin: 0;
+}
+
+/* Delete Button on Card */
+.fav-item-delete {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    z-index: 10;
+}
+
+.fav-item:hover .fav-item-delete {
+    opacity: 1;
+}
+
+.fav-item-delete:hover {
+    background: rgba(255, 71, 87, 0.9);
+    transform: scale(1.1);
+}
+
+.fav-item-delete:active {
+    transform: scale(0.95);
+}
+
+/* Bottom Nav Spacer */
+.nav-spacer {
+    height: 100px;
+}

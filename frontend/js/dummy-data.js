@@ -1,21 +1,9 @@
-// ================================================
-// BACKEND - Dummy Data Server
-// ================================================
+/**
+ * Dummy Data für Development & Testing
+ * Verwende diese Daten wenn die API nicht verfügbar ist
+ */
 
-const express = require('express');
-const cors = require('cors');
-require('dotenv').config();
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// ===== DUMMY DATA =====
-
-const DUMMY_ART = [
+export const DUMMY_ART = [
     {
         id: "art_1",
         title: "Sternennacht",
@@ -42,7 +30,7 @@ const DUMMY_ART = [
     }
 ];
 
-const DUMMY_QUOTES = [
+export const DUMMY_QUOTES = [
     {
         id: "quote_1",
         text: "In der Mitte von Schwierigkeiten liegen die Möglichkeiten.",
@@ -66,48 +54,16 @@ const DUMMY_QUOTES = [
     }
 ];
 
-// Helper: Random item
-function getRandomItem(array) {
-    return array[Math.floor(Math.random() * array.length)];
+/**
+ * Gibt ein zufälliges Art-Objekt zurück
+ */
+export function getRandomArt() {
+    return DUMMY_ART[Math.floor(Math.random() * DUMMY_ART.length)];
 }
 
-// ===== ROUTES =====
-
-// Health Check
-app.get('/', (req, res) => {
-    res.json({ 
-        status: 'ok', 
-        message: 'Daily Art & Quotes Backend',
-        endpoints: ['/api/daily/art', '/api/daily/quote']
-    });
-});
-
-// Get Daily Art
-app.get('/api/daily/art', (req, res) => {
-    try {
-        const art = getRandomItem(DUMMY_ART);
-        res.json(art);
-    } catch (error) {
-        console.error('Error in /api/daily/art:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Get Daily Quote
-app.get('/api/daily/quote', (req, res) => {
-    try {
-        const quote = getRandomItem(DUMMY_QUOTES);
-        res.json(quote);
-    } catch (error) {
-        console.error('Error in /api/daily/quote:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
-
-// Start Server
-app.listen(PORT, () => {
-    console.log(`✅ Backend running on http://localhost:${PORT}`);
-    console.log(`📡 CORS enabled`);
-    console.log(`🎨 Art endpoint: http://localhost:${PORT}/api/daily/art`);
-    console.log(`💬 Quote endpoint: http://localhost:${PORT}/api/daily/quote`);
-});
+/**
+ * Gibt ein zufälliges Quote-Objekt zurück
+ */
+export function getRandomQuote() {
+    return DUMMY_QUOTES[Math.floor(Math.random() * DUMMY_QUOTES.length)];
+}
