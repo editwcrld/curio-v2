@@ -1,0 +1,118 @@
+/* ===== APP HEADER ===== */
+
+.app-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    z-index: 9999;
+    pointer-events: none;
+}
+
+/* Logo */
+.app-logo {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-logo:hover {
+    transform: scale(1.05);
+}
+
+.app-logo:active {
+    transform: scale(0.95);
+}
+
+.logo-icon {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.logo-text {
+    font-size: 1.3rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -0.5px;
+}
+
+/* Hide logo text on small screens */
+@media (max-width: 480px) {
+    .logo-text {
+        display: none;
+    }
+}
+
+/* User Icon */
+.user-icon {
+    pointer-events: auto;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.user-icon:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.user-icon:active {
+    transform: scale(0.95);
+}
+
+/* Guest state */
+.user-icon.guest {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* Logged in state */
+.user-icon.logged-in {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.user-icon.logged-in::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 10px;
+    height: 10px;
+    background: #10b981;
+    border: 2px solid #000;
+    border-radius: 50%;
+}
+
+/* User icon SVG sizing */
+.user-icon svg {
+    width: 22px;
+    height: 22px;
+}

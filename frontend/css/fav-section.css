@@ -92,7 +92,7 @@
 .fav-search-clear {
     position: absolute;
     right: 16px;
-    top: 35%;
+    top: 50%;
     transform: translateY(-50%);
     width: 32px;
     height: 32px;
@@ -244,6 +244,14 @@
     position: relative;
     animation: fadeInUp 0.4s ease-out forwards;
     opacity: 0;
+}
+
+/* Mobile: Smaller height */
+@media (max-width: 768px) {
+    .fav-card.type-quotes {
+        min-height: 200px; /* reduced from 240px (≈17% reduction) */
+        padding: 24px 20px; /* slightly reduced padding */
+    }
 }
 
 @keyframes fadeInUp {

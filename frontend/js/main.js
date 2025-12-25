@@ -9,6 +9,8 @@ import { loadDailyQuote, initQuoteView } from './quote-engine.js';
 import { initInfoPanels, initFavoriteButtons } from './info-panel.js';
 import { initNavigation, showLoading, showError } from './ui-controller.js';
 import { initFavoritesView, updateAllFavoriteButtons } from './fav-engine.js';
+import { initContentNavigation, handleNext, handlePrevious } from './content-navigation.js';
+import { initSwipeHandler } from './swipe-handler.js';
 
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
@@ -22,6 +24,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         initArtView();
         initQuoteView();
         initFavoritesView();
+        
+        // Initialize content navigation (back/next buttons)
+        initContentNavigation();
+        
+        // Initialize swipe gestures
+        initSwipeHandler(handleNext, handlePrevious);
         
         // Load daily content
         showLoading(true);

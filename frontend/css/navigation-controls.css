@@ -1,0 +1,145 @@
+/* ===== NAVIGATION CONTROLS (Back/Next) ===== */
+
+.nav-controls {
+    position: absolute;
+    bottom: 115px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: var(--ui-width);
+    max-width: var(--ui-max-width);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    z-index: 600;
+}
+
+/* Hide on mobile - swipe only */
+@media (max-width: 768px) {
+    .nav-controls {
+        display: none;
+    }
+}
+
+/* Only show in art and quotes views */
+#view-art .nav-controls,
+#view-quotes .nav-controls {
+    display: flex;
+}
+
+#view-favorites .nav-controls {
+    display: none;
+}
+
+@media (max-width: 768px) {
+    #view-art .nav-controls,
+    #view-quotes .nav-controls {
+        display: none;
+    }
+}
+
+.nav-btn {
+    pointer-events: auto;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: #000;
+}
+
+.nav-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.nav-btn:active {
+    transform: scale(0.95);
+}
+
+.nav-btn svg {
+    width: 24px;
+    height: 24px;
+}
+
+/* Position buttons outside info section */
+.nav-btn-prev {
+    transform: translateX(-70px);
+}
+
+.nav-btn-next {
+    transform: translateX(70px);
+}
+
+.nav-btn-prev:hover {
+    transform: translateX(-70px) scale(1.1);
+}
+
+.nav-btn-next:hover {
+    transform: translateX(70px) scale(1.1);
+}
+
+.nav-btn-prev:active {
+    transform: translateX(-70px) scale(0.95);
+}
+
+.nav-btn-next:active {
+    transform: translateX(70px) scale(0.95);
+}
+
+/* Tablet: adjust spacing */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .nav-btn-prev {
+        transform: translateX(-60px);
+    }
+    
+    .nav-btn-next {
+        transform: translateX(60px);
+    }
+    
+    .nav-btn-prev:hover {
+        transform: translateX(-60px) scale(1.1);
+    }
+    
+    .nav-btn-next:hover {
+        transform: translateX(60px) scale(1.1);
+    }
+    
+    .nav-btn-prev:active {
+        transform: translateX(-60px) scale(0.95);
+    }
+    
+    .nav-btn-next:active {
+        transform: translateX(60px) scale(0.95);
+    }
+}
+
+/* Loading state */
+.nav-btn.loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.nav-btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

@@ -8,6 +8,8 @@
     <!-- CSS Imports -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/header.css">
+    <link rel="stylesheet" href="css/navigation-controls.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/art-section.css">
@@ -17,12 +19,46 @@
 </head>
 <body>
     <div id="app">
+        <!-- App Header (Logo & User Icon) -->
+        <header class="app-header">
+            <a href="#" class="app-logo">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                        <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                    </svg>
+                </div>
+                <span class="logo-text">Curio</span>
+            </a>
+            
+            <button class="user-icon guest" id="user-icon" aria-label="User menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+            </button>
+        </header>
+
         <main id="content-display">
             
             <!-- ART VIEW -->
             <div id="view-art" class="view">
                 <div class="art-container">
                     <img src="" class="main-image" alt="Daily Art">
+                    
+                    <!-- Navigation Controls -->
+                    <div class="nav-controls">
+                        <button class="nav-btn nav-btn-prev" aria-label="Previous">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="15 18 9 12 15 6"/>
+                            </svg>
+                        </button>
+                        <button class="nav-btn nav-btn-next" aria-label="Next">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </button>
+                    </div>
                     
                     <div class="info-wrapper">
                         <section class="info-section">
@@ -47,6 +83,20 @@
             <!-- QUOTES VIEW -->
             <div id="view-quotes" class="view hidden">
                 <div class="quote-container">
+                    <!-- Navigation Controls -->
+                    <div class="nav-controls">
+                        <button class="nav-btn nav-btn-prev" aria-label="Previous">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="15 18 9 12 15 6"/>
+                            </svg>
+                        </button>
+                        <button class="nav-btn nav-btn-next" aria-label="Next">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
                     <div class="quote-text-wrapper">
                         <h2 class="quote-text"></h2>
                         <p class="quote-author"></p>
@@ -77,7 +127,7 @@
                 <div class="fav-header">
                     <!-- Title Section -->
                     <div class="fav-title-section">
-                        <h1 class="fav-title">Libary</h1>
+                        <h1 class="fav-title">Gespeichert</h1>
                         <p class="fav-count">0 Favoriten</p>
                     </div>
                     
@@ -104,9 +154,9 @@
                     
                     <!-- Filters -->
                     <div class="fav-filters">
-                        <button class="fav-filter-pill active" data-filter="all">All</button>
-                        <button class="fav-filter-pill" data-filter="art">Art</button>
-                        <button class="fav-filter-pill" data-filter="quotes">Quotes</button>
+                        <button class="fav-filter-pill active" data-filter="all">Alles</button>
+                        <button class="fav-filter-pill" data-filter="art">Kunst</button>
+                        <button class="fav-filter-pill" data-filter="quotes">Zitate</button>
                     </div>
                 </div>
                 
