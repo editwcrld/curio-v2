@@ -1,6 +1,6 @@
 /**
  * CURIO BACKEND - Server Entry Point
- * FINAL Version mit Auth Integration
+ * COMPLETE VERSION - Ready for Production!
  */
 
 require('dotenv').config();
@@ -29,11 +29,14 @@ app.use(honeypotMiddleware);
 // ROUTES
 // =====================================================
 
+// Auth Routes (NEW!)
+app.use('/api/auth', require('./routes/auth'));
+
+// User Routes
+app.use('/api/user', require('./routes/user'));
+
 // Content Routes
 app.use('/api', require('./routes/content'));
-
-// User Routes (NEW!)
-app.use('/api/user', require('./routes/user'));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -49,17 +52,28 @@ app.get('/', (req, res) => {
     res.json({
         name: 'Curio Backend API',
         version: '1.0.0',
+        status: 'running',
         endpoints: {
-            health: '/health',
-            // Content
-            daily_art: '/api/daily/art',
-            daily_quote: '/api/daily/quote',
-            art_next: '/api/art/next',
-            quote_next: '/api/quote/next',
-            // User (requires auth)
-            user_profile: '/api/user/profile',
-            user_limits: '/api/user/limits',
-            user_status: '/api/user/status'
+            // Public
+            health: 'GET /health',
+            
+            // Auth
+            signup: 'POST /api/auth/signup',
+            login: 'POST /api/auth/login',
+            logout: 'POST /api/auth/logout',
+            session: 'GET /api/auth/session',
+            refresh: 'POST /api/auth/refresh',
+            
+            // Content (Public/Optional Auth)
+            daily_art: 'GET /api/daily/art',
+            daily_quote: 'GET /api/daily/quote',
+            art_next: 'GET /api/art/next',
+            quote_next: 'GET /api/quote/next',
+            
+            // User (Requires Auth)
+            user_profile: 'GET /api/user/profile',
+            user_limits: 'GET /api/user/limits',
+            user_status: 'GET /api/user/status'
         }
     });
 });
@@ -83,7 +97,7 @@ app.use(errorHandler);
 app.listen(PORT, () => {
     console.log('');
     console.log('🚀 ================================');
-    console.log('   CURIO BACKEND STARTED');
+    console.log('   CURIO BACKEND - READY!');
     console.log('🚀 ================================');
     console.log('');
     console.log(`✅ Server running on: http://localhost:${PORT}`);
@@ -94,22 +108,25 @@ app.listen(PORT, () => {
     console.log('   ✅ CORS Policy');
     console.log('   ✅ Honeypot Bot Protection');
     console.log('   ✅ Error Handler');
-    console.log('   ✅ Auth Middleware (optionalAuth, requireAuth)');
+    console.log('   ✅ Auth Middleware');
     console.log('');
-    console.log('📍 Available Endpoints:');
-    console.log('   GET  /                      - API Info');
-    console.log('   GET  /health                - Health Check');
+    console.log('🔐 Authentication:');
+    console.log('   POST /api/auth/signup         - Create Account');
+    console.log('   POST /api/auth/login          - Sign In');
+    console.log('   POST /api/auth/logout         - Sign Out');
+    console.log('   GET  /api/auth/session        - Validate Token');
+    console.log('   POST /api/auth/refresh        - Refresh Token');
     console.log('');
-    console.log('   📦 Content (Public/Optional Auth):');
-    console.log('   GET  /api/daily/art         - Daily Art');
-    console.log('   GET  /api/daily/quote       - Daily Quote');
-    console.log('   GET  /api/art/next          - Next Art');
-    console.log('   GET  /api/quote/next        - Next Quote');
+    console.log('📦 Content (Public/Optional Auth):');
+    console.log('   GET  /api/daily/art           - Daily Art');
+    console.log('   GET  /api/daily/quote         - Daily Quote');
+    console.log('   GET  /api/art/next            - Next Art');
+    console.log('   GET  /api/quote/next          - Next Quote');
     console.log('');
-    console.log('   👤 User (Requires Auth):');
-    console.log('   GET  /api/user/profile      - User Profile');
-    console.log('   GET  /api/user/limits       - Daily Limits');
-    console.log('   GET  /api/user/status       - User Status');
+    console.log('👤 User (Requires Auth):');
+    console.log('   GET  /api/user/profile        - User Profile');
+    console.log('   GET  /api/user/limits         - Daily Limits');
+    console.log('   GET  /api/user/status         - User Status');
     console.log('');
     console.log('🎯 Press Ctrl+C to stop');
     console.log('');
