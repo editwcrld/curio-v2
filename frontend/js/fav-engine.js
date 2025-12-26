@@ -11,8 +11,16 @@ let favoritesCache = null;
 
 /**
  * Load favorites (cached)
+ * Only returns favorites if user is logged in
  */
 function getFavorites() {
+    // Check if user is logged in
+    const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
+    
+    if (!isLoggedIn) {
+        return []; // Return empty array if not logged in
+    }
+    
     if (favoritesCache !== null) {
         return favoritesCache;
     }
@@ -188,6 +196,19 @@ export function getSearch() {
 }
 
 /**
+ * Refresh favorites view (called after login)
+ */
+export function refreshFavoritesView() {
+    // Clear cache to force reload
+    favoritesCache = null;
+    
+    // Re-render favorites
+    renderFavorites();
+    
+    console.log('✅ Favorites refreshed after login');
+}
+
+/**
  * Apply filters and search (optimized)
  */
 export function getFilteredFavorites() {
@@ -317,6 +338,34 @@ function createCard(item, index) {
  */
 function createEmptyState() {
     const hasSearch = currentSearch.length > 0;
+    const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
+    
+    if (!isLoggedIn && !hasSearch) {
+        // Show login prompt for non-logged-in users
+        setTimeout(() => {
+            const loginBtn = document.querySelector('.fav-login-btn');
+            if (loginBtn) {
+                loginBtn.addEventListener('click', () => {
+                    import('./auth-modal.js').then(module => {
+                        module.openAuthModal('login');
+                    });
+                });
+            }
+        }, 100);
+        
+        return `
+            <div class="fav-empty">
+                <svg class="fav-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                <h3 class="fav-empty-title">Melde dich an um Favoriten zu speichern</h3>
+                <p class="fav-empty-text">Speichere deine Lieblingskunstwerke und Zitate</p>
+                <button class="fav-login-btn">
+                    Jetzt anmelden
+                </button>
+            </div>
+        `;
+    }
     
     return `
         <div class="fav-empty">
@@ -436,13 +485,5 @@ export function initFavoritesView() {
     });
     
     // Initial render
-    renderFavorites();
-}
-
-/**
- * Refresh favorites view (call when switching to favorites)
- */
-export function refreshFavoritesView() {
-    clearCache();
     renderFavorites();
 }

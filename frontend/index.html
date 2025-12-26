@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="css/info-section.css">
     <link rel="stylesheet" href="css/fav-section.css">
     <link rel="stylesheet" href="css/auth-modal.css">
+    <link rel="stylesheet" href="css/lightbox.css">
 </head>
 <body>
     <div id="app">
@@ -128,7 +129,7 @@
                 <div class="fav-header">
                     <!-- Title Section -->
                     <div class="fav-title-section">
-                        <h1 class="fav-title">Gespeichert</h1>
+                        <h1 class="fav-title">Library</h1>
                         <p class="fav-count">0 Favoriten</p>
                     </div>
                     
@@ -155,9 +156,9 @@
                     
                     <!-- Filters -->
                     <div class="fav-filters">
-                        <button class="fav-filter-pill active" data-filter="all">Alles</button>
-                        <button class="fav-filter-pill" data-filter="art">Kunst</button>
-                        <button class="fav-filter-pill" data-filter="quotes">Zitate</button>
+                        <button class="fav-filter-pill active" data-filter="all">All</button>
+                        <button class="fav-filter-pill" data-filter="art">Art</button>
+                        <button class="fav-filter-pill" data-filter="quotes">Quotes</button>
                     </div>
                 </div>
                 
@@ -209,7 +210,7 @@
             <!-- Login View -->
             <div id="auth-login-view" class="auth-view">
                 <div class="auth-header">
-                    <h2 class="auth-title">Willkommen zurück</h2>
+                    <h2 class="auth-title">Hey! 👋</h2>
                     <p class="auth-subtitle">Melde dich an um fortzufahren</p>
                 </div>
                 
@@ -266,7 +267,7 @@
             <!-- Signup View -->
             <div id="auth-signup-view" class="auth-view hidden">
                 <div class="auth-header">
-                    <h2 class="auth-title">Account erstellen</h2>
+                    <h2 class="auth-title">Sign-up! 👌</h2>
                     <p class="auth-subtitle">Registriere dich kostenlos</p>
                 </div>
                 
@@ -280,19 +281,7 @@
                     <span class="auth-message-text"></span>
                 </div>
                 
-                <form id="auth-signup-form" class="auth-form">
-                    <div class="auth-input-group">
-                        <label class="auth-label" for="signup-name">Name</label>
-                        <input 
-                            type="text" 
-                            id="signup-name" 
-                            class="auth-input" 
-                            placeholder="Dein Name"
-                            autocomplete="name"
-                            required
-                        >
-                    </div>
-                    
+                <form id="auth-signup-form" class="auth-form">                  
                     <div class="auth-input-group">
                         <label class="auth-label" for="signup-email">Email</label>
                         <input 

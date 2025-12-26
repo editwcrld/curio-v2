@@ -12,6 +12,7 @@ import { initFavoritesView, updateAllFavoriteButtons } from './fav-engine.js';
 import { initContentNavigation, handleNext, handlePrevious } from './content-navigation.js';
 import { initSwipeHandler } from './swipe-handler.js';
 import { initAuthModal, checkAuthState } from './auth-modal.js';
+import { initLightbox } from './lightbox.js';
 
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
@@ -29,6 +30,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize auth modal
         initAuthModal();
         checkAuthState();
+        
+        // Initialize lightbox
+        initLightbox();
         
         // Initialize content navigation (back/next buttons)
         initContentNavigation();

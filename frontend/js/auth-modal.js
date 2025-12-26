@@ -169,6 +169,11 @@ async function handleLogin(e) {
             // Update user icon state
             updateUserIconState(true, email);
             
+            // Refresh favorites view to show user's saved items
+            import('./fav-engine.js').then(module => {
+                module.refreshFavoritesView();
+            });
+            
             // Close modal after delay
             setTimeout(() => {
                 closeAuthModal();

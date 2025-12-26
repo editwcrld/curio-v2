@@ -38,6 +38,15 @@ function handleFavoriteClick(e) {
     e.preventDefault();
     e.stopPropagation();
     
+    // Check if user is logged in
+    const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
+    
+    if (!isLoggedIn) {
+        // Show login required message
+        showLoginRequiredMessage();
+        return;
+    }
+    
     // Get view type
     const viewElement = e.currentTarget.closest('.view');
     const viewType = viewElement ? viewElement.id.replace('view-', '') : null;
@@ -67,4 +76,40 @@ function handleFavoriteClick(e) {
     requestAnimationFrame(() => {
         toggleFavorite(data, viewType);
     });
+}
+
+/**
+ * Show login required message
+ */
+function showLoginRequiredMessage() {
+    // Create toast message
+    const toast = document.createElement('div');
+    toast.className = 'auth-toast login-required-toast';
+    toast.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 8px;">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+        <span>Bitte melde dich an um Favoriten zu speichern</span>
+    `;
+    toast.style.cursor = 'pointer';
+    toast.style.pointerEvents = 'all';
+    toast.style.display = 'flex';
+    toast.style.alignItems = 'center';
+    
+    // Add click to open login
+    toast.addEventListener('click', () => {
+        import('./auth-modal.js').then(module => {
+            module.openAuthModal('login');
+            toast.remove();
+        });
+    });
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => toast.classList.add('visible'), 10);
+    
+    setTimeout(() => {
+        toast.classList.remove('visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 }
