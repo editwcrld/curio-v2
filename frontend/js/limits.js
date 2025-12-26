@@ -1,18 +1,11 @@
 /**
- * Limits Module
- * Handles daily navigation limits for guests, registered, and premium users
+ * Limits Module - QUICK FIX VERSION
  */
 
 const LIMITS = {
-    guest: { art: 5, quotes: 5 },
-    registered: { art: 20, quotes: 20 },
+    guest: { art: 2, quotes: 2 },
+    registered: { art: 3, quotes: 3 },
     premium: { art: Infinity, quotes: Infinity }
-};
-
-const STORAGE_KEYS = {
-    LIMITS: 'user_limits_v1',
-    LAST_RESET: 'limits_last_reset_v1',
-    USER_TYPE: 'user_type_v1'
 };
 
 export function getUserType() {
@@ -26,112 +19,85 @@ export function getUserType() {
 }
 
 export function getCurrentLimits() {
-    const userType = getUserType();
-    return LIMITS[userType];
+    return LIMITS[getUserType()];
 }
 
 function shouldResetLimits() {
-    const lastReset = localStorage.getItem(STORAGE_KEYS.LAST_RESET);
+    const lastReset = localStorage.getItem('limits_last_reset_v1');
     if (!lastReset) return true;
     
-    const lastResetTime = new Date(lastReset);
-    const now = new Date();
-    const hoursPassed = (now - lastResetTime) / (1000 * 60 * 60);
-    
+    const hoursPassed = (new Date() - new Date(lastReset)) / (1000 * 60 * 60);
     return hoursPassed >= 24;
 }
 
 function resetLimits() {
-    const emptyLimits = {
-        art: { used: 0, remaining: 0 },
-        quotes: { used: 0, remaining: 0 }
-    };
-    
-    localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(emptyLimits));
-    localStorage.setItem(STORAGE_KEYS.LAST_RESET, new Date().toISOString());
-    console.log('🔄 Limits reset for new day');
+    localStorage.setItem('user_limits_v1', JSON.stringify({
+        art: { used: 0 },
+        quotes: { used: 0 }
+    }));
+    localStorage.setItem('limits_last_reset_v1', new Date().toISOString());
+    console.log('🔄 Limits reset');
 }
 
 export function initLimits() {
-    if (shouldResetLimits()) {
-        resetLimits();
-    }
+    if (shouldResetLimits()) resetLimits();
     console.log('✅ Limits initialized');
 }
 
 export function getLimitUsage() {
-    const stored = localStorage.getItem(STORAGE_KEYS.LIMITS);
-    const userLimits = getCurrentLimits();
+    const stored = localStorage.getItem('user_limits_v1');
+    const limits = getCurrentLimits();
     
-    let usage = stored ? JSON.parse(stored) : {
-        art: { used: 0, remaining: userLimits.art },
-        quotes: { used: 0, remaining: userLimits.quotes }
+    const usage = stored ? JSON.parse(stored) : { art: { used: 0 }, quotes: { used: 0 } };
+    
+    // FIX: Berechne remaining korrekt
+    return {
+        art: { 
+            used: usage.art?.used || 0, 
+            remaining: Math.max(0, limits.art - (usage.art?.used || 0))
+        },
+        quotes: { 
+            used: usage.quotes?.used || 0, 
+            remaining: Math.max(0, limits.quotes - (usage.quotes?.used || 0))
+        }
     };
-    
-    usage.art.remaining = userLimits.art - usage.art.used;
-    usage.quotes.remaining = userLimits.quotes - usage.quotes.used;
-    
-    return usage;
 }
 
 export function canNavigate(type) {
-    const userType = getUserType();
-    if (userType === 'premium') return true;
-    
+    if (getUserType() === 'premium') return true;
     const usage = getLimitUsage();
-    const limit = getCurrentLimits()[type];
-    
-    return usage[type].used < limit;
+    return usage[type].remaining > 0;
 }
 
 export function incrementUsage(type) {
-    const usage = getLimitUsage();
-    usage[type].used += 1;
+    const stored = localStorage.getItem('user_limits_v1');
+    const usage = stored ? JSON.parse(stored) : { art: { used: 0 }, quotes: { used: 0 } };
     
-    localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(usage));
-    console.log(`📊 ${type} usage: ${usage[type].used}/${getCurrentLimits()[type]}`);
+    usage[type].used = (usage[type].used || 0) + 1;
+    
+    localStorage.setItem('user_limits_v1', JSON.stringify(usage));
+    
+    const current = getLimitUsage();
+    console.log(`📊 ${type}: ${current[type].used}/${getCurrentLimits()[type]} (${current[type].remaining} remaining)`);
 }
 
 export function getRemainingCount(type) {
-    const userType = getUserType();
-    if (userType === 'premium') return Infinity;
-    
-    const usage = getLimitUsage();
-    return usage[type].remaining;
+    return getLimitUsage()[type].remaining;
 }
 
 export function handleLimitReached(type) {
     const userType = getUserType();
-    
     console.log('🚫 Limit reached!', { type, userType });
     
     if (userType === 'guest') {
-        showGuestLimitModal(type);
+        import('./auth-modal.js').then(m => m.openAuthModal('login'));
+        setTimeout(() => updateAuthModalWithLimitInfo(type), 150);
     } else if (userType === 'registered') {
-        showUpgradeModal(type);
+        import('./limit-modal.js').then(m => m.openUpgradeModal(type));
     }
 }
 
-function showGuestLimitModal(type) {
-    import('./auth-modal.js').then(module => {
-        module.openAuthModal('login');
-    });
-    
-    setTimeout(() => {
-        updateAuthModalWithLimitInfo(type);
-    }, 150);
-}
-
-function showUpgradeModal(type) {
-    import('./limit-modal.js').then(module => {
-        module.openUpgradeModal(type);
-    });
-}
-
 function updateAuthModalWithLimitInfo(type) {
-    const usage = getLimitUsage();
-    const limits = getCurrentLimits();
-    
     const authHeader = document.querySelector('.auth-header');
     if (!authHeader) return;
     
@@ -142,29 +108,30 @@ function updateAuthModalWithLimitInfo(type) {
         authHeader.after(limitInfo);
     }
     
+    const usage = getLimitUsage();
+    const limits = getCurrentLimits();
     const typeName = type === 'art' ? 'Kunstwerke' : 'Zitate';
-    const registeredLimit = LIMITS.registered[type];
     
     limitInfo.innerHTML = `
         <div class="limit-warning">
             <p class="limit-title">Tageslimit erreicht</p>
             <p class="limit-description">
                 Du hast <strong>${usage[type].used}/${limits[type]} ${typeName}</strong> für heute angesehen. 
-                Melde dich an für <strong>${registeredLimit} ${typeName}</strong> pro Tag!
+                Melde dich an für <strong>20 ${typeName}</strong> pro Tag!
             </p>
         </div>
     `;
 }
 
-export async function syncLimitsWithBackend() {
+export function syncLimitsWithBackend() {
     return {
         userType: getUserType(),
         limits: getCurrentLimits(),
         usage: getLimitUsage(),
-        resetAt: localStorage.getItem(STORAGE_KEYS.LAST_RESET)
+        resetAt: localStorage.getItem('limits_last_reset_v1')
     };
 }
 
-export async function trackNavigationOnBackend(type) {
+export function trackNavigationOnBackend(type) {
     incrementUsage(type);
 }
