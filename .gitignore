@@ -35,3 +35,4 @@ build/
 .cache/
 temp/
 tmp/
+tree.ps1

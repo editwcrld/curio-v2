@@ -1,9 +1,10 @@
 /**
- * Auth Modal Module
- * Handles login and sign-up modal with Toast notifications
+ * Auth Modal Module - FIXED VERSION
+ * Handles login and sign-up with REAL Backend
  */
 
 import { showSuccess, showError, showWarning, showInfo } from './toast.js';
+import { API_BASE_URL } from './config.js';
 
 let currentView = 'login';
 
@@ -63,7 +64,6 @@ export function openAuthModal(view = 'login') {
     
     switchView(view);
     overlay.classList.add('active');
-    // REMOVED: document.body.style.overflow = 'hidden';
 }
 
 export function closeAuthModal() {
@@ -71,7 +71,6 @@ export function closeAuthModal() {
     if (!overlay) return;
     
     overlay.classList.remove('active');
-    // REMOVED: document.body.style.overflow = '';
     
     setTimeout(() => {
         clearForms();
@@ -109,12 +108,15 @@ function initForms() {
     }
 }
 
+/**
+ * FIXED: Real Backend Login
+ */
 async function handleLogin(e) {
     e.preventDefault();
     
     const emailInput = document.getElementById('login-email');
     const passwordInput = document.getElementById('login-password');
-    const email = emailInput.value;
+    const email = emailInput.value.trim();
     const password = passwordInput.value;
     const submitBtn = e.target.querySelector('.auth-submit');
     
@@ -131,42 +133,66 @@ async function handleLogin(e) {
     submitBtn.disabled = true;
     
     try {
-        await simulateAPICall();
+        // REAL Backend Call!
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
         
-        const success = Math.random() > 0.5;
+        const data = await response.json();
         
-        if (success) {
+        if (response.ok && data.success) {
+            // Save auth data
+            localStorage.setItem('auth_token', data.data.session.access_token);
+            localStorage.setItem('user_logged_in', 'true');
+            localStorage.setItem('user_email', email);
+            localStorage.setItem('user_premium', data.data.isPremium);  // ← CRITICAL!
+            
+            // Update UI
             updateUserIconState(true, email);
             
+            // Refresh favorites
             import('./fav-engine.js').then(module => {
                 module.refreshFavoritesView();
             });
             
-            showSuccess('Erfolgreich angemeldet!');
+            // Show success message
+            if (data.data.isPremium) {
+                showSuccess('🎉 Premium Login erfolgreich!');
+            } else {
+                showSuccess('Erfolgreich angemeldet!');
+            }
             
             setTimeout(() => {
                 closeAuthModal();
             }, 1000);
         } else {
+            // Login failed
             emailInput.classList.add('error');
             passwordInput.classList.add('error');
-            showError('Falsches Passwort oder Email');
+            showError(data.message || 'Falsches Passwort oder Email');
         }
     } catch (error) {
-        showError('Ein Fehler ist aufgetreten');
+        console.error('Login error:', error);
+        showError('Verbindungsfehler. Bitte versuche es später erneut.');
     } finally {
         submitBtn.classList.remove('loading');
         submitBtn.disabled = false;
     }
 }
 
+/**
+ * FIXED: Real Backend Signup
+ */
 async function handleSignup(e) {
     e.preventDefault();
     
-    // FIXED: Kein Name-Feld mehr!
     const emailInput = document.getElementById('signup-email');
     const passwordInput = document.getElementById('signup-password');
-    const email = emailInput.value;
+    const email = emailInput.value.trim();
     const password = passwordInput.value;
     const submitBtn = e.target.querySelector('.auth-submit');
     
@@ -189,17 +215,33 @@ async function handleSignup(e) {
     submitBtn.disabled = true;
     
     try {
-        await simulateAPICall();
+        // REAL Backend Call!
+        const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
         
-        showSuccess('Account erfolgreich erstellt!');
+        const data = await response.json();
         
-        setTimeout(() => {
-            switchView('login');
-            document.getElementById('login-email').value = email;
-            showInfo('Du kannst dich jetzt einloggen');
-        }, 1500);
+        if (response.ok && data.success) {
+            showSuccess('Account erfolgreich erstellt! 🎉');
+            
+            setTimeout(() => {
+                switchView('login');
+                document.getElementById('login-email').value = email;
+                document.getElementById('login-password').value = password;
+                showInfo('Du kannst dich jetzt einloggen');
+            }, 1500);
+        } else {
+            emailInput.classList.add('error');
+            showError(data.message || 'Registrierung fehlgeschlagen');
+        }
     } catch (error) {
-        showError('Ein Fehler ist aufgetreten');
+        console.error('Signup error:', error);
+        showError('Verbindungsfehler. Bitte versuche es später erneut.');
     } finally {
         submitBtn.classList.remove('loading');
         submitBtn.disabled = false;
@@ -223,13 +265,13 @@ function updateUserIconState(loggedIn, email = '') {
     if (loggedIn) {
         userIcon.classList.remove('guest');
         userIcon.classList.add('logged-in');
-        localStorage.setItem('user_logged_in', 'true');
-        localStorage.setItem('user_email', email);
     } else {
         userIcon.classList.add('guest');
         userIcon.classList.remove('logged-in');
         localStorage.removeItem('user_logged_in');
         localStorage.removeItem('user_email');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user_premium');
     }
 }
 
@@ -245,15 +287,13 @@ export function checkAuthState() {
 export function logout() {
     updateUserIconState(false);
     showSuccess('Erfolgreich ausgeloggt');
+    
+    // Reload page to reset limits
+    setTimeout(() => {
+        window.location.reload();
+    }, 1000);
 }
 
 function showLogoutConfirmation() {
-    // FIXED: Einfach ausloggen ohne Confirm-Box, mit Toast
     logout();
-}
-
-function simulateAPICall() {
-    return new Promise(resolve => {
-        setTimeout(resolve, 1500);
-    });
 }
