@@ -17,17 +17,13 @@ const SWIPE_VERTICAL_TOLERANCE = 150; // Max vertical movement allowed
 export function initSwipeHandler(onNext, onPrevious) {
     const artView = document.getElementById('view-art');
     const quotesView = document.getElementById('view-quotes');
-    
-    console.log('🔄 Swipe handler initialized');
-    
+      
     if (artView) {
         addSwipeListeners(artView, onNext, onPrevious);
-        console.log('✅ Art view swipe enabled');
     }
     
     if (quotesView) {
         addSwipeListeners(quotesView, onNext, onPrevious);
-        console.log('✅ Quotes view swipe enabled');
     }
 }
 
@@ -64,17 +60,14 @@ function handleSwipe(onNext, onPrevious) {
     const diffX = touchEndX - touchStartX;
     const diffY = Math.abs(touchEndY - touchStartY);
     
-    console.log(`👆 Swipe detected - X: ${diffX}, Y: ${diffY}`);
-    
+   
     // Check if vertical movement is too much (probably scrolling)
     if (diffY > SWIPE_VERTICAL_TOLERANCE) {
-        console.log('⚠️ Too much vertical movement, ignoring');
         return;
     }
     
     // Swipe left (next) - moving finger to the left
     if (diffX < -SWIPE_THRESHOLD) {
-        console.log('👈 Swipe LEFT detected → Next');
         if (typeof onNext === 'function') {
             onNext();
         }
@@ -82,7 +75,6 @@ function handleSwipe(onNext, onPrevious) {
     
     // Swipe right (previous) - moving finger to the right
     if (diffX > SWIPE_THRESHOLD) {
-        console.log('👉 Swipe RIGHT detected → Previous');
         if (typeof onPrevious === 'function') {
             onPrevious();
         }

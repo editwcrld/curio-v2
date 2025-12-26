@@ -36,12 +36,10 @@ function resetLimits() {
         quotes: { used: 0 }
     }));
     localStorage.setItem('limits_last_reset_v1', new Date().toISOString());
-    console.log('🔄 Limits reset');
 }
 
 export function initLimits() {
     if (shouldResetLimits()) resetLimits();
-    console.log('✅ Limits initialized');
 }
 
 export function getLimitUsage() {
@@ -78,7 +76,6 @@ export function incrementUsage(type) {
     localStorage.setItem('user_limits_v1', JSON.stringify(usage));
     
     const current = getLimitUsage();
-    console.log(`📊 ${type}: ${current[type].used}/${getCurrentLimits()[type]} (${current[type].remaining} remaining)`);
 }
 
 export function getRemainingCount(type) {
@@ -87,7 +84,6 @@ export function getRemainingCount(type) {
 
 export function handleLimitReached(type) {
     const userType = getUserType();
-    console.log('🚫 Limit reached!', { type, userType });
     
     if (userType === 'guest') {
         import('./auth-modal.js').then(m => m.openAuthModal('login'));

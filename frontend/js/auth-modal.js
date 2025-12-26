@@ -225,13 +225,11 @@ function updateUserIconState(loggedIn, email = '') {
         userIcon.classList.add('logged-in');
         localStorage.setItem('user_logged_in', 'true');
         localStorage.setItem('user_email', email);
-        console.log('✅ User logged in:', email);
     } else {
         userIcon.classList.add('guest');
         userIcon.classList.remove('logged-in');
         localStorage.removeItem('user_logged_in');
         localStorage.removeItem('user_email');
-        console.log('👋 User logged out');
     }
 }
 

@@ -59,7 +59,6 @@ async function loadNextArt() {
     
     // ✅ CHECK LIMIT BEFORE NAVIGATING
     if (!canNavigate('art')) {
-        console.log('🚫 Art limit reached!');
         handleLimitReached('art');
         return;
     }
@@ -88,7 +87,6 @@ async function loadPreviousArt() {
     
     // ✅ CHECK LIMIT BEFORE NAVIGATING
     if (!canNavigate('art')) {
-        console.log('🚫 Art limit reached!');
         handleLimitReached('art');
         return;
     }
@@ -117,7 +115,6 @@ async function loadNextQuote() {
     
     // ✅ CHECK LIMIT BEFORE NAVIGATING
     if (!canNavigate('quotes')) {
-        console.log('🚫 Quotes limit reached!');
         handleLimitReached('quotes');
         return;
     }
@@ -148,7 +145,6 @@ async function loadPreviousQuote() {
     
     // ✅ CHECK LIMIT BEFORE NAVIGATING
     if (!canNavigate('quotes')) {
-        console.log('🚫 Quotes limit reached!');
         handleLimitReached('quotes');
         return;
     }

@@ -204,8 +204,6 @@ export function refreshFavoritesView() {
     
     // Re-render favorites
     renderFavorites();
-    
-    console.log('✅ Favorites refreshed after login');
 }
 
 /**
