@@ -1,32 +1,29 @@
 /**
  * CURIO BACKEND - Server Entry Point
- * Minimal server.js - alle Logik in separaten Modulen!
+ * Minimal server.js mit Middleware Integration
  */
 
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // =====================================================
-// MIDDLEWARE
+// MIDDLEWARE (Reihenfolge wichtig!)
 // =====================================================
 
-// CORS - Allow Frontend
-app.use(cors({
-    origin: [
-        'http://localhost:5500',
-        'http://127.0.0.1:5500',
-        process.env.FRONTEND_URL
-    ].filter(Boolean),
-    credentials: true
-}));
+// 1. CORS - Zuerst!
+const corsMiddleware = require('./middleware/cors');
+app.use(corsMiddleware);
 
-// Body Parser
+// 2. Body Parser
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// 3. Honeypot Bot Protection
+const honeypotMiddleware = require('./middleware/honeypot');
+app.use(honeypotMiddleware);
 
 // =====================================================
 // ROUTES
@@ -52,37 +49,24 @@ app.get('/', (req, res) => {
         endpoints: {
             health: '/health',
             daily_art: '/api/daily/art',
-            daily_quote: '/api/daily/quote'
+            daily_quote: '/api/daily/quote',
+            art_next: '/api/art/next',
+            quote_next: '/api/quote/next'
         }
     });
 });
 
 // =====================================================
-// ERROR HANDLING
+// ERROR HANDLING (Am Ende!)
 // =====================================================
 
-// 404 Handler
-app.use((req, res) => {
-    res.status(404).json({
-        error: 'Not Found',
-        message: `Route ${req.method} ${req.path} not found`,
-        availableRoutes: [
-            'GET /',
-            'GET /health',
-            'GET /api/daily/art',
-            'GET /api/daily/quote'
-        ]
-    });
-});
+const { notFoundHandler, errorHandler } = require('./middleware/error');
 
-// Global Error Handler
-app.use((err, req, res, next) => {
-    console.error('❌ Error:', err);
-    res.status(err.status || 500).json({
-        error: err.message || 'Internal Server Error',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-    });
-});
+// 404 Handler
+app.use(notFoundHandler);
+
+// Global Error Handler (muss am Ende sein!)
+app.use(errorHandler);
 
 // =====================================================
 // START SERVER
@@ -98,11 +82,18 @@ app.listen(PORT, () => {
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL || 'Not set'}`);
     console.log('');
+    console.log('🛡️  Middleware Active:');
+    console.log('   ✅ CORS Policy');
+    console.log('   ✅ Honeypot Bot Protection');
+    console.log('   ✅ Error Handler');
+    console.log('');
     console.log('📍 Available Endpoints:');
     console.log(`   GET  /                    - API Info`);
     console.log(`   GET  /health              - Health Check`);
     console.log(`   GET  /api/daily/art       - Daily Art`);
     console.log(`   GET  /api/daily/quote     - Daily Quote`);
+    console.log(`   GET  /api/art/next        - Next Art`);
+    console.log(`   GET  /api/quote/next      - Next Quote`);
     console.log('');
     console.log('🎯 Press Ctrl+C to stop');
     console.log('');
