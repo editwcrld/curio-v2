@@ -1,32 +1,23 @@
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import { appState } from './state.js';
-import { getRandomQuote } from './dummy-data.js';
 
 /**
- * Quote Engine Module
+ * Quote Engine Module - PRODUCTION VERSION
  * Handles fetching and displaying daily quotes
+ * ✅ NO DUMMY DATA - Always from Backend!
  */
 
 export async function loadDailyQuote() {
     try {
         const response = await fetch(`${API_BASE_URL}/daily/quote`);
         
-        // Wenn API nicht verfügbar, verwende Dummy-Daten
         if (!response.ok) {
-            console.warn('API not available, using dummy data');
-            const dummyData = getRandomQuote();
-            appState.setQuoteData(dummyData);
-            
-            // Set random gradient for this quote
-            const gradient = getRandomGradient();
-            appState.setGradient(gradient);
-            
-            return dummyData;
+            throw new Error(`HTTP ${response.status}: Failed to load quote`);
         }
         
         const result = await response.json();
         
-        // FIXED: Backend wrapped data in { success: true, data: {...} }
+        // Backend wrapped data in { success: true, data: {...} }
         const data = result.data || result;
         
         appState.setQuoteData(data);
@@ -37,16 +28,17 @@ export async function loadDailyQuote() {
         
         return data;
     } catch (error) {
-        console.warn('Error loading daily quote, using dummy data:', error);
-        // Fallback auf Dummy-Daten
-        const dummyData = getRandomQuote();
-        appState.setQuoteData(dummyData);
+        console.error('Error loading daily quote:', error);
         
-        // Set random gradient for this quote
-        const gradient = getRandomGradient();
-        appState.setGradient(gradient);
+        // Show error to user
+        appState.setQuoteData({
+            id: 'error',
+            text: 'Quotes konnten nicht geladen werden',
+            author: 'Fehler',
+            backgroundInfo: 'Bitte lade die Seite neu oder versuche es später erneut.'
+        });
         
-        return dummyData;
+        throw error;
     }
 }
 
@@ -68,7 +60,7 @@ export function displayQuote(data, gradient) {
     if (textEl) textEl.textContent = data.text;
     if (authorEl) authorEl.textContent = data.author;
     if (titleEl) titleEl.textContent = data.author;
-    if (contentEl) contentEl.textContent = data.backgroundInfo;
+    if (contentEl) contentEl.textContent = data.backgroundInfo || '';
 }
 
 export function initQuoteView() {
