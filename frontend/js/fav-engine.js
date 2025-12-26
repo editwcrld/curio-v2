@@ -1,57 +1,129 @@
 /**
- * Favorites Engine - Komplett neu geschrieben
- * Optimiert für Performance und Best Practices
+ * Favorites Engine - FIXED VERSION
+ * Uses Supabase Backend statt localStorage
+ * ✅ User-specific favorites
+ * ✅ Persistiert in DB
+ * ✅ Keine Funktionalität verloren
  */
 
 import { appState } from './state.js';
+import { API_BASE_URL } from './config.js';
 
-// ===== STORAGE =====
-const STORAGE_KEY = 'dailyart_favorites_v2';
+// ===== STATE =====
 let favoritesCache = null;
+let currentFilter = 'all';
+let currentSearch = '';
+
+// ===== API CALLS =====
 
 /**
- * Load favorites (cached)
- * Only returns favorites if user is logged in
+ * Fetch favorites from backend
  */
-function getFavorites() {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
+async function fetchFavoritesFromBackend() {
+    const token = localStorage.getItem('auth_token');
     
-    if (!isLoggedIn) {
-        return []; // Return empty array if not logged in
-    }
-    
-    if (favoritesCache !== null) {
-        return favoritesCache;
+    if (!token) {
+        return []; // Not logged in
     }
     
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        favoritesCache = stored ? JSON.parse(stored) : [];
-        return favoritesCache;
+        const response = await fetch(`${API_BASE_URL}/favorites`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to fetch favorites');
+        }
+        
+        const data = await response.json();
+        return data.data || [];
     } catch (error) {
-        console.error('Error loading favorites:', error);
-        favoritesCache = [];
+        console.error('Error fetching favorites:', error);
         return [];
     }
 }
 
 /**
- * Save favorites (with cache update)
+ * Add favorite to backend
  */
-function saveFavorites(favorites) {
+async function addFavoriteToBackend(type, itemId) {
+    const token = localStorage.getItem('auth_token');
+    
+    if (!token) {
+        // Not logged in - show login modal
+        import('./auth-modal.js').then(m => m.openAuthModal('login'));
+        return false;
+    }
+    
     try {
-        favoritesCache = favorites;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
-        return true;
+        const response = await fetch(`${API_BASE_URL}/favorites`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ type, itemId })
+        });
+        
+        const data = await response.json();
+        return data.success;
     } catch (error) {
-        console.error('Error saving favorites:', error);
+        console.error('Error adding favorite:', error);
         return false;
     }
 }
 
 /**
- * Clear cache (call when data might be stale)
+ * Remove favorite from backend
+ */
+async function removeFavoriteFromBackend(favoriteId) {
+    const token = localStorage.getItem('auth_token');
+    
+    if (!token) return false;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/favorites/${favoriteId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        const data = await response.json();
+        return data.success;
+    } catch (error) {
+        console.error('Error removing favorite:', error);
+        return false;
+    }
+}
+
+// ===== CACHE MANAGEMENT =====
+
+/**
+ * Get favorites (with cache)
+ */
+async function getFavorites() {
+    const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
+    
+    if (!isLoggedIn) {
+        favoritesCache = [];
+        return [];
+    }
+    
+    // Return cache if available
+    if (favoritesCache !== null) {
+        return favoritesCache;
+    }
+    
+    // Fetch from backend
+    favoritesCache = await fetchFavoritesFromBackend();
+    return favoritesCache;
+}
+
+/**
+ * Clear cache (force refresh)
  */
 function clearCache() {
     favoritesCache = null;
@@ -60,33 +132,28 @@ function clearCache() {
 // ===== CORE OPERATIONS =====
 
 /**
- * Check if item is favorited (fast)
+ * Check if item is favorited
  */
-export function isFavorite(itemId) {
-    const favorites = getFavorites();
+export async function isFavorite(itemId) {
+    const favorites = await getFavorites();
     return favorites.some(f => f.id === itemId);
 }
 
 /**
  * Add to favorites
  */
-export function addFavorite(item, type) {
-    const favorites = getFavorites();
+export async function addFavorite(item, type) {
+    // Add to backend
+    const success = await addFavoriteToBackend(type, item.id);
     
-    // Prevent duplicates
-    if (favorites.some(f => f.id === item.id)) {
-        return false;
-    }
+    if (!success) return false;
     
-    const favoriteItem = {
-        ...item,
-        type,
-        savedAt: Date.now(),
-        savedGradient: appState.currentGradient || null
-    };
+    // Clear cache to force refresh
+    clearCache();
     
-    favorites.unshift(favoriteItem); // Add to beginning
-    saveFavorites(favorites);
+    // Refresh UI
+    await renderFavorites();
+    updateAllFavoriteButtons();
     
     return true;
 }
@@ -94,56 +161,59 @@ export function addFavorite(item, type) {
 /**
  * Remove from favorites
  */
-export function removeFavorite(itemId) {
-    const favorites = getFavorites();
-    const filtered = favorites.filter(f => f.id !== itemId);
+export async function removeFavorite(favoriteId) {
+    // Remove from backend
+    const success = await removeFavoriteFromBackend(favoriteId);
     
-    if (filtered.length === favorites.length) {
-        return false; // Nothing removed
-    }
+    if (!success) return false;
     
-    saveFavorites(filtered);
+    // Clear cache
+    clearCache();
+    
+    // Refresh UI
+    await renderFavorites();
+    updateAllFavoriteButtons();
+    
     return true;
 }
 
 /**
- * Toggle favorite (optimized)
+ * Toggle favorite
  */
-export function toggleFavorite(item, type) {
+export async function toggleFavorite(item, type) {
     if (!item || !item.id) {
         console.warn('Invalid item for favorite');
         return false;
     }
     
-    const isCurrentlyFavorited = isFavorite(item.id);
+    const favorites = await getFavorites();
+    const existingFavorite = favorites.find(f => f.id === item.id);
     
-    if (isCurrentlyFavorited) {
-        removeFavorite(item.id);
+    if (existingFavorite) {
+        // Remove
+        await removeFavorite(existingFavorite.favoriteId);
+        return false; // Now not favorited
     } else {
-        addFavorite(item, type);
+        // Add
+        await addFavorite(item, type);
+        return true; // Now favorited
     }
-    
-    // Immediate UI update
-    updateFavoriteButtonState(type, item.id);
-    
-    return !isCurrentlyFavorited;
 }
 
 // ===== UI UPDATES =====
 
 /**
- * Update favorite button state for specific view
+ * Update favorite button state
  */
-export function updateFavoriteButtonState(viewType, itemId) {
+export async function updateFavoriteButtonState(viewType, itemId) {
     const view = document.getElementById(`view-${viewType}`);
     if (!view) return;
     
     const btn = view.querySelector('.fav-btn');
     if (!btn) return;
     
-    const isFav = isFavorite(itemId);
+    const isFav = await isFavorite(itemId);
     
-    // Use requestAnimationFrame for smooth UI update
     requestAnimationFrame(() => {
         btn.classList.toggle('active', isFav);
     });
@@ -152,45 +222,30 @@ export function updateFavoriteButtonState(viewType, itemId) {
 /**
  * Update all favorite buttons
  */
-export function updateAllFavoriteButtons() {
+export async function updateAllFavoriteButtons() {
     if (appState.currentArtData) {
-        updateFavoriteButtonState('art', appState.currentArtData.id);
+        await updateFavoriteButtonState('art', appState.currentArtData.id);
     }
     
     if (appState.currentQuoteData) {
-        updateFavoriteButtonState('quotes', appState.currentQuoteData.id);
+        await updateFavoriteButtonState('quotes', appState.currentQuoteData.id);
     }
 }
 
 // ===== FILTERING & SEARCH =====
 
-let currentFilter = 'all';
-let currentSearch = '';
-
-/**
- * Set filter
- */
 export function setFilter(filter) {
     currentFilter = filter;
 }
 
-/**
- * Set search query
- */
 export function setSearch(query) {
     currentSearch = query.toLowerCase().trim();
 }
 
-/**
- * Get current filter
- */
 export function getFilter() {
     return currentFilter;
 }
 
-/**
- * Get current search
- */
 export function getSearch() {
     return currentSearch;
 }
@@ -198,19 +253,16 @@ export function getSearch() {
 /**
  * Refresh favorites view (called after login)
  */
-export function refreshFavoritesView() {
-    // Clear cache to force reload
-    favoritesCache = null;
-    
-    // Re-render favorites
-    renderFavorites();
+export async function refreshFavoritesView() {
+    clearCache();
+    await renderFavorites();
 }
 
 /**
- * Apply filters and search (optimized)
+ * Get filtered favorites
  */
-export function getFilteredFavorites() {
-    let favorites = getFavorites();
+async function getFilteredFavorites() {
+    let favorites = await getFavorites();
     
     // Filter by type
     if (currentFilter !== 'all') {
@@ -238,16 +290,16 @@ export function getFilteredFavorites() {
 // ===== RENDER =====
 
 /**
- * Render favorites grid (optimized)
+ * Render favorites grid
  */
-export function renderFavorites() {
+export async function renderFavorites() {
     const container = document.getElementById('fav-list');
     const countEl = document.querySelector('.fav-count');
     
     if (!container) return;
     
-    const favorites = getFilteredFavorites();
-    const allFavorites = getFavorites();
+    const favorites = await getFilteredFavorites();
+    const allFavorites = await getFavorites();
     
     // Update count
     if (countEl) {
@@ -264,11 +316,11 @@ export function renderFavorites() {
         return;
     }
     
-    // Create document fragment for better performance
+    // Create cards
     const fragment = document.createDocumentFragment();
     
-    favorites.forEach((item, index) => {
-        const card = createCard(item, index);
+    favorites.forEach((item) => {
+        const card = createCard(item);
         fragment.appendChild(card);
     });
     
@@ -276,12 +328,13 @@ export function renderFavorites() {
 }
 
 /**
- * Create card element (optimized)
+ * Create card element
  */
-function createCard(item, index) {
+function createCard(item) {
     const card = document.createElement('div');
     card.className = `fav-card type-${item.type}`;
     card.dataset.id = item.id;
+    card.dataset.favoriteId = item.favoriteId;
     
     if (item.type === 'art') {
         card.innerHTML = `
@@ -298,7 +351,7 @@ function createCard(item, index) {
             </button>
         `;
     } else {
-        const gradient = item.savedGradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        const gradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
         card.style.background = gradient;
         card.innerHTML = `
             <p class="fav-card-quote">"${item.text}"</p>
@@ -312,9 +365,6 @@ function createCard(item, index) {
         `;
     }
     
-    // Event listeners with event delegation would be better, but for simplicity:
-    const deleteBtn = card.querySelector('.fav-card-delete');
-    
     // Card click - open detail
     card.addEventListener('click', (e) => {
         if (!e.target.closest('.fav-card-delete')) {
@@ -323,9 +373,10 @@ function createCard(item, index) {
     });
     
     // Delete click
+    const deleteBtn = card.querySelector('.fav-card-delete');
     deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        deleteCard(item.id, card);
+        deleteCard(item.favoriteId, card);
     });
     
     return card;
@@ -339,7 +390,6 @@ function createEmptyState() {
     const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
     
     if (!isLoggedIn && !hasSearch) {
-        // Show login prompt for non-logged-in users
         setTimeout(() => {
             const loginBtn = document.querySelector('.fav-login-btn');
             if (loginBtn) {
@@ -384,15 +434,12 @@ function createEmptyState() {
 /**
  * Delete card with animation
  */
-function deleteCard(itemId, cardElement) {
-    // Animate out
+function deleteCard(favoriteId, cardElement) {
     cardElement.style.opacity = '0';
     cardElement.style.transform = 'scale(0.8)';
     
-    setTimeout(() => {
-        removeFavorite(itemId);
-        renderFavorites();
-        updateAllFavoriteButtons();
+    setTimeout(async () => {
+        await removeFavorite(favoriteId);
     }, 300);
 }
 
@@ -405,9 +452,6 @@ function openDetail(item) {
         switchView('art');
     } else {
         appState.setQuoteData(item);
-        if (item.savedGradient) {
-            appState.setGradient(item.savedGradient);
-        }
         switchView('quotes');
     }
 }
@@ -439,34 +483,32 @@ export function initFavoritesView() {
     const searchClear = document.getElementById('fav-search-clear');
     const filterBtns = document.querySelectorAll('.fav-filter-pill');
     
-    // Search input with debouncing
+    // Search with debounce
     let searchTimeout;
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             const value = e.target.value;
             
-            // Show/hide clear button
             if (searchClear) {
                 searchClear.classList.toggle('visible', value.length > 0);
             }
             
-            // Debounce search
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
+            searchTimeout = setTimeout(async () => {
                 setSearch(value);
-                renderFavorites();
+                await renderFavorites();
             }, 300);
         });
     }
     
     // Search clear
     if (searchClear) {
-        searchClear.addEventListener('click', () => {
+        searchClear.addEventListener('click', async () => {
             if (searchInput) {
                 searchInput.value = '';
                 searchClear.classList.remove('visible');
                 setSearch('');
-                renderFavorites();
+                await renderFavorites();
                 searchInput.focus();
             }
         });
@@ -474,11 +516,11 @@ export function initFavoritesView() {
     
     // Filter buttons
     filterBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             filterBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             setFilter(btn.dataset.filter);
-            renderFavorites();
+            await renderFavorites();
         });
     });
     

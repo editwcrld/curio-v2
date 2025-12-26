@@ -35,6 +35,9 @@ app.use('/api/auth', require('./routes/auth'));
 // User Routes
 app.use('/api/user', require('./routes/user'));
 
+// Favorites Routes (NEW!)
+app.use('/api/favorites', require('./routes/favorites'));
+
 // Content Routes
 app.use('/api', require('./routes/content'));
 
@@ -73,7 +76,13 @@ app.get('/', (req, res) => {
             // User (Requires Auth)
             user_profile: 'GET /api/user/profile',
             user_limits: 'GET /api/user/limits',
-            user_status: 'GET /api/user/status'
+            user_status: 'GET /api/user/status',
+            
+            // Favorites (Requires Auth)
+            favorites_list: 'GET /api/favorites',
+            favorites_add: 'POST /api/favorites',
+            favorites_remove: 'DELETE /api/favorites/:id',
+            favorites_check: 'GET /api/favorites/check/:type/:id'
         }
     });
 });
@@ -127,6 +136,12 @@ app.listen(PORT, () => {
     console.log('   GET  /api/user/profile        - User Profile');
     console.log('   GET  /api/user/limits         - Daily Limits');
     console.log('   GET  /api/user/status         - User Status');
+    console.log('');
+    console.log('⭐ Favorites (Requires Auth):');
+    console.log('   GET    /api/favorites         - List All');
+    console.log('   POST   /api/favorites         - Add Favorite');
+    console.log('   DELETE /api/favorites/:id     - Remove Favorite');
+    console.log('   GET    /api/favorites/check   - Check Status');
     console.log('');
     console.log('🎯 Press Ctrl+C to stop');
     console.log('');
