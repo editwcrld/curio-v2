@@ -7,16 +7,20 @@ import { appState } from './state.js';
 import { loadDailyArt, initArtView } from './art-engine.js';
 import { loadDailyQuote, initQuoteView } from './quote-engine.js';
 import { initInfoPanels, initFavoriteButtons } from './info-panel.js';
-import { initNavigation, showLoading, showError } from './ui-controller.js';
+import { initNavigation } from './ui-controller.js';
 import { initFavoritesView, updateAllFavoriteButtons } from './fav-engine.js';
-import { initContentNavigation, handleNext, handlePrevious } from './content-navigation.js';
+import { initContentNavigation } from './content-navigation.js';
 import { initSwipeHandler } from './swipe-handler.js';
 import { initAuthModal, checkAuthState } from './auth-modal.js';
 import { initLightbox } from './lightbox.js';
+import { showAppLoading, hideAppLoading } from './loading.js';
 
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        // Show app loading screen
+        showAppLoading();
+        
         // Initialize UI components
         initNavigation();
         initInfoPanels();
@@ -38,22 +42,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         initContentNavigation();
         
         // Initialize swipe gestures
-        initSwipeHandler(handleNext, handlePrevious);
+        initSwipeHandler(
+            () => import('./content-navigation.js').then(m => m.handleNext()),
+            () => import('./content-navigation.js').then(m => m.handlePrevious())
+        );
         
         // Load daily content
-        showLoading(true);
         await Promise.all([
             loadDailyArt(),
             loadDailyQuote()
         ]);
-        showLoading(false);
         
         // Update favorite button states after loading
         updateAllFavoriteButtons();
         
+        // Hide loading screen
+        hideAppLoading();
+        
         console.log('✅ App initialized successfully');
     } catch (error) {
         console.error('❌ Error initializing app:', error);
-        showError('Failed to load content. Please refresh the page.');
+        hideAppLoading();
+        alert('Failed to load content. Please refresh the page.');
     }
 });

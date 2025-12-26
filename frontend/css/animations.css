@@ -10,22 +10,304 @@
     to { opacity: 1; }
 }
 
-/* Loading Spinner */
-.spinner {
-    width: 30px;
-    height: 30px;
-    border: 3px solid rgba(0,0,0,0.1);
-    border-top-color: var(--accent-color);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
 /* Button-Klick Effekt */
 .btn-active-effect:active {
     transform: scale(0.95);
     transition: transform 0.1s;
+}
+
+/* ===== LOADING SYSTEM ===== */
+
+/* Loading Overlay - transparent, only centers spinner */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.loading-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* RULE: Blur + Dim ONLY the actual image/quote element, not the container */
+.view.loading .main-image {
+    filter: blur(8px);
+    opacity: 0.5;
+    transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+.view.loading .quote-text-wrapper {
+    filter: blur(8px);
+    opacity: 0.5;
+    transition: filter 0.3s ease, opacity 0.3s ease;
+}
+
+/* RULE: Info section only dimmed (no blur) */
+.view.loading .info-section {
+    opacity: 0.6;
+    pointer-events: none;
+    filter: none !important; /* Force no blur */
+    transition: opacity 0.3s ease;
+}
+
+/* Hide favorite button during loading */
+.view.loading .fav-btn {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+/* RULE: Info section must show skeleton loading bars */
+.info-section.loading .info-title,
+.info-section.loading .info-meta,
+.info-section.loading .info-content p {
+    position: relative;
+    color: transparent !important;
+    user-select: none;
+    overflow: hidden;
+}
+
+.info-section.loading .info-title::before,
+.info-section.loading .info-meta::before,
+.info-section.loading .info-content p::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 100%;
+    background: linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.1) 0%,
+        rgba(0, 0, 0, 0.2) 50%,
+        rgba(0, 0, 0, 0.1) 100%
+    );
+    background-size: 200% 100%;
+    animation: loadingSkeleton 1.5s ease-in-out infinite;
+    border-radius: 4px;
+}
+
+@keyframes loadingSkeleton {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Different heights for different text elements */
+.info-section.loading .info-title::before {
+    height: 22px;
+}
+
+.info-section.loading .info-meta::before {
+    height: 14px;
+}
+
+.info-section.loading .info-content p::before {
+    height: 16px;
+}
+
+/* RULE: Nav controls (back/next buttons) only dimmed (no blur) */
+.view.loading .nav-controls {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: none !important; /* Force no blur */
+    transition: opacity 0.3s ease;
+}
+
+/* Additional: Ensure nav buttons themselves are not blurred */
+.view.loading .nav-btn {
+    filter: none !important;
+}
+
+/* Thick Circle Spinner with stronger colors */
+.logo-spinner {
+    width: 60px;
+    height: 60px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    border-top-color: rgba(102, 126, 234, 1); /* Stronger purple */
+    border-right-color: rgba(118, 75, 162, 0.9); /* Stronger violet */
+    border-radius: 50%;
+    animation: spinnerRotate 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes spinnerRotate {
+    0% {
+        transform: rotate(0deg);
+        border-top-color: rgba(102, 126, 234, 1);
+        border-right-color: rgba(118, 75, 162, 0.9);
+    }
+    50% {
+        border-top-color: rgba(118, 75, 162, 1);
+        border-right-color: rgba(102, 126, 234, 0.9);
+    }
+    100% {
+        transform: rotate(360deg);
+        border-top-color: rgba(102, 126, 234, 1);
+        border-right-color: rgba(118, 75, 162, 0.9);
+    }
+}
+
+/* Success state - fade out */
+.logo-spinner.loaded {
+    animation: spinnerSuccess 0.5s ease-out forwards;
+}
+
+@keyframes spinnerSuccess {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.3);
+    }
+}
+
+/* ===== DIMMED STATES FOR HEADER & NAVIGATION ===== */
+
+/* RULE: Dim user icon during loading (no blur) */
+body.app-loading .user-icon {
+    opacity: 0.4;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+/* RULE: Keep app logo visible and clickable */
+body.app-loading .app-logo {
+    opacity: 1;
+    pointer-events: all;
+    cursor: pointer;
+}
+
+/* RULE: Dim bottom navigation during loading (no blur) */
+body.app-loading #bottom-nav {
+    opacity: 0.4;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+/* Disable interactions during loading */
+.loading-active {
+    pointer-events: none !important;
+    user-select: none !important;
+}
+
+/* ===== APP STARTUP LOADING ===== */
+
+/* Full screen loading for app initialization */
+.app-loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.app-loading-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* Larger spinner for startup with stronger colors */
+.app-loading-screen .logo-spinner {
+    width: 80px;
+    height: 80px;
+    border-width: 6px;
+    border-color: rgba(255, 255, 255, 0.3);
+    border-top-color: rgba(255, 255, 255, 1); /* Full opacity */
+    border-right-color: rgba(255, 255, 255, 0.8);
+}
+
+@keyframes appSpinnerRotate {
+    0% {
+        transform: rotate(0deg);
+        border-top-color: rgba(255, 255, 255, 1);
+        border-right-color: rgba(255, 255, 255, 0.8);
+    }
+    50% {
+        border-top-color: rgba(255, 255, 255, 1);
+        border-right-color: rgba(255, 255, 255, 1);
+    }
+    100% {
+        transform: rotate(360deg);
+        border-top-color: rgba(255, 255, 255, 1);
+        border-right-color: rgba(255, 255, 255, 0.8);
+    }
+}
+
+.app-loading-screen .logo-spinner {
+    animation: appSpinnerRotate 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Loading text */
+.loading-text {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    opacity: 0.9;
+    animation: loadingPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes loadingPulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
+/* ===== MOBILE OPTIMIZATIONS ===== */
+
+@media (max-width: 768px) {
+    .logo-spinner {
+        width: 50px;
+        height: 50px;
+        border-width: 4px;
+    }
+    
+    .app-loading-screen .logo-spinner {
+        width: 70px;
+        height: 70px;
+        border-width: 5px;
+    }
+    
+    .loading-text {
+        bottom: 80px;
+        font-size: 13px;
+    }
+    
+    /* Skeleton loading bars on mobile */
+    .info-section.loading .info-title::before {
+        height: 20px;
+    }
+    
+    .info-section.loading .info-meta::before {
+        height: 14px;
+    }
+    
+    .info-section.loading .info-content p::before {
+        height: 16px;
+    }
 }

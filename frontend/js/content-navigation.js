@@ -1,6 +1,7 @@
 /**
  * Content Navigation Module
  * Handles back/next navigation for art and quotes
+ * WITH LOADING SYSTEM INTEGRATION
  */
 
 import { DUMMY_ART, DUMMY_QUOTES } from './dummy-data.js';
@@ -9,6 +10,7 @@ import { getRandomGradient } from './config.js';
 import { displayArt } from './art-engine.js';
 import { displayQuote } from './quote-engine.js';
 import { updateAllFavoriteButtons } from './fav-engine.js';
+import { showContentLoading, hideContentLoading } from './loading.js';
 
 let isLoading = false;
 let currentArtIndex = 0;
@@ -63,93 +65,111 @@ export function handleNext() {
 /**
  * Load next art
  */
-function loadNextArt() {
+async function loadNextArt() {
+    if (isLoading) return;
+    
     isLoading = true;
-    setLoadingState(true);
+    
+    // Show loading overlay
+    showContentLoading('view-art');
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     currentArtIndex = (currentArtIndex + 1) % DUMMY_ART.length;
     const newArt = DUMMY_ART[currentArtIndex];
     
-    setTimeout(() => {
-        appState.setArtData(newArt);
-        displayArt(newArt);
-        updateAllFavoriteButtons();
-        
-        isLoading = false;
-        setLoadingState(false);
-    }, 300);
+    appState.setArtData(newArt);
+    displayArt(newArt);
+    updateAllFavoriteButtons();
+    
+    // Hide loading overlay
+    hideContentLoading('view-art');
+    
+    isLoading = false;
 }
 
 /**
  * Load previous art
  */
-function loadPreviousArt() {
+async function loadPreviousArt() {
+    if (isLoading) return;
+    
     isLoading = true;
-    setLoadingState(true);
+    
+    // Show loading overlay
+    showContentLoading('view-art');
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     currentArtIndex = (currentArtIndex - 1 + DUMMY_ART.length) % DUMMY_ART.length;
     const newArt = DUMMY_ART[currentArtIndex];
     
-    setTimeout(() => {
-        appState.setArtData(newArt);
-        displayArt(newArt);
-        updateAllFavoriteButtons();
-        
-        isLoading = false;
-        setLoadingState(false);
-    }, 300);
+    appState.setArtData(newArt);
+    displayArt(newArt);
+    updateAllFavoriteButtons();
+    
+    // Hide loading overlay
+    hideContentLoading('view-art');
+    
+    isLoading = false;
 }
 
 /**
  * Load next quote
  */
-function loadNextQuote() {
+async function loadNextQuote() {
+    if (isLoading) return;
+    
     isLoading = true;
-    setLoadingState(true);
+    
+    // Show loading overlay
+    showContentLoading('view-quotes');
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     currentQuoteIndex = (currentQuoteIndex + 1) % DUMMY_QUOTES.length;
     const newQuote = DUMMY_QUOTES[currentQuoteIndex];
     const newGradient = getRandomGradient();
     
-    setTimeout(() => {
-        appState.setQuoteData(newQuote);
-        appState.setGradient(newGradient);
-        displayQuote(newQuote, newGradient);
-        updateAllFavoriteButtons();
-        
-        isLoading = false;
-        setLoadingState(false);
-    }, 300);
+    appState.setQuoteData(newQuote);
+    appState.setGradient(newGradient);
+    displayQuote(newQuote, newGradient);
+    updateAllFavoriteButtons();
+    
+    // Hide loading overlay
+    hideContentLoading('view-quotes');
+    
+    isLoading = false;
 }
 
 /**
  * Load previous quote
  */
-function loadPreviousQuote() {
+async function loadPreviousQuote() {
+    if (isLoading) return;
+    
     isLoading = true;
-    setLoadingState(true);
+    
+    // Show loading overlay
+    showContentLoading('view-quotes');
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 800));
     
     currentQuoteIndex = (currentQuoteIndex - 1 + DUMMY_QUOTES.length) % DUMMY_QUOTES.length;
     const newQuote = DUMMY_QUOTES[currentQuoteIndex];
     const newGradient = getRandomGradient();
     
-    setTimeout(() => {
-        appState.setQuoteData(newQuote);
-        appState.setGradient(newGradient);
-        displayQuote(newQuote, newGradient);
-        updateAllFavoriteButtons();
-        
-        isLoading = false;
-        setLoadingState(false);
-    }, 300);
-}
-
-/**
- * Set loading state on buttons
- */
-function setLoadingState(loading) {
-    const navBtns = document.querySelectorAll('.nav-btn');
-    navBtns.forEach(btn => {
-        btn.classList.toggle('loading', loading);
-    });
+    appState.setQuoteData(newQuote);
+    appState.setGradient(newGradient);
+    displayQuote(newQuote, newGradient);
+    updateAllFavoriteButtons();
+    
+    // Hide loading overlay
+    hideContentLoading('view-quotes');
+    
+    isLoading = false;
 }

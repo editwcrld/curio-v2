@@ -54,6 +54,7 @@
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     color: #000;
+    position: relative; /* Important for centered spinner */
 }
 
 .nav-btn:hover {
@@ -69,6 +70,7 @@
 .nav-btn svg {
     width: 24px;
     height: 24px;
+    transition: opacity 0.2s ease;
 }
 
 /* Position buttons outside info section */
@@ -123,23 +125,54 @@
     }
 }
 
-/* Loading state */
+/* Loading state - FIXED: Centered spinner */
 .nav-btn.loading {
     opacity: 0.5;
     pointer-events: none;
 }
 
+/* Hide the arrow icon during loading */
+.nav-btn.loading svg {
+    opacity: 0;
+}
+
+/* Centered spinner with proper positioning */
 .nav-btn.loading::after {
     content: '';
     position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 20px;
     height: 20px;
     border: 2px solid rgba(0, 0, 0, 0.1);
     border-top-color: #000;
     border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+    animation: navSpin 0.6s linear infinite;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+@keyframes navSpin {
+    to { 
+        transform: translate(-50%, -50%) rotate(360deg); 
+    }
+}
+
+/* Ensure loading transform doesn't affect button position */
+.nav-btn-prev.loading {
+    transform: translateX(-70px);
+}
+
+.nav-btn-next.loading {
+    transform: translateX(70px);
+}
+
+/* Tablet loading states */
+@media (min-width: 769px) and (max-width: 1023px) {
+    .nav-btn-prev.loading {
+        transform: translateX(-60px);
+    }
+    
+    .nav-btn-next.loading {
+        transform: translateX(60px);
+    }
 }
