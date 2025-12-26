@@ -1,7 +1,7 @@
 /**
  * Content Navigation Module
  * Handles back/next navigation for art and quotes
- * WITH LOADING SYSTEM AND LIMITS INTEGRATION
+ * WITH LOADING SYSTEM INTEGRATION
  */
 
 import { DUMMY_ART, DUMMY_QUOTES } from './dummy-data.js';
@@ -11,7 +11,6 @@ import { displayArt } from './art-engine.js';
 import { displayQuote } from './quote-engine.js';
 import { updateAllFavoriteButtons } from './fav-engine.js';
 import { showContentLoading, hideContentLoading } from './loading.js';
-import { canNavigate, incrementUsage, handleLimitReached } from './limits.js';
 
 let isLoading = false;
 let currentArtIndex = 0;
@@ -41,7 +40,6 @@ export function handlePrevious() {
     
     const currentView = appState.currentView;
     
-    // Previous doesn't count towards limit
     if (currentView === 'art') {
         loadPreviousArt();
     } else if (currentView === 'quotes') {
@@ -56,13 +54,6 @@ export function handleNext() {
     if (isLoading) return;
     
     const currentView = appState.currentView;
-    const type = currentView === 'art' ? 'art' : 'quotes';
-    
-    // Check if user can navigate (has remaining limit)
-    if (!canNavigate(type)) {
-        handleLimitReached(type);
-        return;
-    }
     
     if (currentView === 'art') {
         loadNextArt();
@@ -92,9 +83,6 @@ async function loadNextArt() {
     displayArt(newArt);
     updateAllFavoriteButtons();
     
-    // Increment usage counter
-    incrementUsage('art');
-    
     // Hide loading overlay
     hideContentLoading('view-art');
     
@@ -121,8 +109,6 @@ async function loadPreviousArt() {
     appState.setArtData(newArt);
     displayArt(newArt);
     updateAllFavoriteButtons();
-    
-    // Previous doesn't count towards limit
     
     // Hide loading overlay
     hideContentLoading('view-art');
@@ -153,9 +139,6 @@ async function loadNextQuote() {
     displayQuote(newQuote, newGradient);
     updateAllFavoriteButtons();
     
-    // Increment usage counter
-    incrementUsage('quotes');
-    
     // Hide loading overlay
     hideContentLoading('view-quotes');
     
@@ -184,8 +167,6 @@ async function loadPreviousQuote() {
     appState.setGradient(newGradient);
     displayQuote(newQuote, newGradient);
     updateAllFavoriteButtons();
-    
-    // Previous doesn't count towards limit
     
     // Hide loading overlay
     hideContentLoading('view-quotes');

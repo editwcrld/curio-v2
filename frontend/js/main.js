@@ -14,17 +14,12 @@ import { initSwipeHandler } from './swipe-handler.js';
 import { initAuthModal, checkAuthState } from './auth-modal.js';
 import { initLightbox } from './lightbox.js';
 import { showAppLoading, hideAppLoading } from './loading.js';
-import { initLimits } from './limits.js';
-import './toast.js';
 
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Show app loading screen
         showAppLoading();
-        
-        // Initialize limits system (check 24h reset)
-        initLimits();
         
         // Initialize UI components
         initNavigation();

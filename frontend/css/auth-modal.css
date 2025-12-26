@@ -1,5 +1,6 @@
 /* ===== AUTH MODAL ===== */
 
+/* Overlay */
 .auth-overlay {
     position: fixed;
     top: 0;
@@ -23,6 +24,7 @@
     pointer-events: all;
 }
 
+/* Modal Container */
 .auth-modal {
     background: rgba(20, 20, 20, 0.95);
     backdrop-filter: blur(40px) saturate(180%);
@@ -42,6 +44,7 @@
     transform: scale(1) translateY(0);
 }
 
+/* Close Button */
 .auth-close {
     position: absolute;
     top: 16px;
@@ -70,9 +73,10 @@
     height: 20px;
 }
 
+/* Header */
 .auth-header {
     text-align: center;
-    margin-bottom: 28px;
+    margin-bottom: 32px;
 }
 
 .auth-title {
@@ -92,12 +96,14 @@
     margin: 0;
 }
 
+/* Form */
 .auth-form {
     display: flex;
     flex-direction: column;
     gap: 16px;
 }
 
+/* Input Group */
 .auth-input-group {
     display: flex;
     flex-direction: column;
@@ -134,17 +140,58 @@
     transform: translateY(-1px);
 }
 
-/* Error State for Inputs */
-.auth-input.error {
-    border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.08);
+/* Error/Info Messages */
+.auth-message {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    animation: slideDown 0.3s ease-out;
 }
 
-.auth-input.error:focus {
-    border-color: #ef4444;
-    background: rgba(239, 68, 68, 0.12);
+.auth-message.visible {
+    display: flex;
 }
 
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.auth-message.error {
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.auth-message.info {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #93c5fd;
+}
+
+.auth-message.warning {
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: #fcd34d;
+}
+
+.auth-message svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* Submit Button */
 .auth-submit {
     width: 100%;
     padding: 14px;
@@ -176,6 +223,7 @@
     transform: none;
 }
 
+/* Loading State */
 .auth-submit.loading {
     position: relative;
     color: transparent;
@@ -200,6 +248,7 @@
     to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
+/* Toggle Link */
 .auth-toggle {
     text-align: center;
     margin-top: 24px;
@@ -228,6 +277,7 @@
     text-decoration: underline;
 }
 
+/* Forgot Password */
 .auth-forgot {
     text-align: right;
     margin-top: -8px;
@@ -245,6 +295,7 @@
     color: #667eea;
 }
 
+/* View Switching Animation */
 .auth-form-container {
     position: relative;
     overflow: hidden;
@@ -276,4 +327,31 @@
         padding: 12px 14px;
         font-size: 16px; /* Prevent zoom on iOS */
     }
+}
+
+/* Toast Notification */
+.auth-toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 14px 24px;
+    color: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    z-index: 10001;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.auth-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
