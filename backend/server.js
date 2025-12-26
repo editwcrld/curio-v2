@@ -1,6 +1,6 @@
 /**
  * CURIO BACKEND - Server Entry Point
- * Minimal server.js mit Middleware Integration
+ * FINAL Version mit Auth Integration
  */
 
 require('dotenv').config();
@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3000;
 // MIDDLEWARE (Reihenfolge wichtig!)
 // =====================================================
 
-// 1. CORS - Zuerst!
+// 1. CORS
 const corsMiddleware = require('./middleware/cors');
 app.use(corsMiddleware);
 
@@ -29,8 +29,11 @@ app.use(honeypotMiddleware);
 // ROUTES
 // =====================================================
 
-// Content Routes (Daily Art & Quote)
+// Content Routes
 app.use('/api', require('./routes/content'));
+
+// User Routes (NEW!)
+app.use('/api/user', require('./routes/user'));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -48,16 +51,21 @@ app.get('/', (req, res) => {
         version: '1.0.0',
         endpoints: {
             health: '/health',
+            // Content
             daily_art: '/api/daily/art',
             daily_quote: '/api/daily/quote',
             art_next: '/api/art/next',
-            quote_next: '/api/quote/next'
+            quote_next: '/api/quote/next',
+            // User (requires auth)
+            user_profile: '/api/user/profile',
+            user_limits: '/api/user/limits',
+            user_status: '/api/user/status'
         }
     });
 });
 
 // =====================================================
-// ERROR HANDLING (Am Ende!)
+// ERROR HANDLING
 // =====================================================
 
 const { notFoundHandler, errorHandler } = require('./middleware/error');
@@ -65,7 +73,7 @@ const { notFoundHandler, errorHandler } = require('./middleware/error');
 // 404 Handler
 app.use(notFoundHandler);
 
-// Global Error Handler (muss am Ende sein!)
+// Global Error Handler
 app.use(errorHandler);
 
 // =====================================================
@@ -86,14 +94,22 @@ app.listen(PORT, () => {
     console.log('   ✅ CORS Policy');
     console.log('   ✅ Honeypot Bot Protection');
     console.log('   ✅ Error Handler');
+    console.log('   ✅ Auth Middleware (optionalAuth, requireAuth)');
     console.log('');
     console.log('📍 Available Endpoints:');
-    console.log(`   GET  /                    - API Info`);
-    console.log(`   GET  /health              - Health Check`);
-    console.log(`   GET  /api/daily/art       - Daily Art`);
-    console.log(`   GET  /api/daily/quote     - Daily Quote`);
-    console.log(`   GET  /api/art/next        - Next Art`);
-    console.log(`   GET  /api/quote/next      - Next Quote`);
+    console.log('   GET  /                      - API Info');
+    console.log('   GET  /health                - Health Check');
+    console.log('');
+    console.log('   📦 Content (Public/Optional Auth):');
+    console.log('   GET  /api/daily/art         - Daily Art');
+    console.log('   GET  /api/daily/quote       - Daily Quote');
+    console.log('   GET  /api/art/next          - Next Art');
+    console.log('   GET  /api/quote/next        - Next Quote');
+    console.log('');
+    console.log('   👤 User (Requires Auth):');
+    console.log('   GET  /api/user/profile      - User Profile');
+    console.log('   GET  /api/user/limits       - Daily Limits');
+    console.log('   GET  /api/user/status       - User Status');
     console.log('');
     console.log('🎯 Press Ctrl+C to stop');
     console.log('');
