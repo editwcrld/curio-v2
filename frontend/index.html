@@ -18,6 +18,8 @@
     <link rel="stylesheet" href="css/fav-section.css">
     <link rel="stylesheet" href="css/auth-modal.css">
     <link rel="stylesheet" href="css/lightbox.css">
+    <link rel="stylesheet" href="css/limits.css">
+    <link rel="stylesheet" href="css/toast.css">
 </head>
 <body>
     <div id="app">
@@ -100,8 +102,17 @@
                     </div>
                     
                     <div class="quote-text-wrapper">
-                        <h2 class="quote-text"></h2>
-                        <p class="quote-author"></p>
+                        <div class="quote-symbol quote-symbol-left">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/>
+                            </svg>
+                        </div>
+                        <p class="quote-text">Loading...</p>
+                        <div class="quote-symbol quote-symbol-right">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/>
+                            </svg>
+                        </div>
                     </div>
                     
                     <div class="info-wrapper">
@@ -113,7 +124,7 @@
                                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                                     </svg>
                                 </button>
-                                <h2 class="info-title">...</h2>
+                                <h2 class="info-title">Loading...</h2>
                                 <p class="info-meta">...</p>
                             </div>
                             <div class="info-content">
@@ -124,74 +135,52 @@
                 </div>
             </div>
 
-            <!-- FAVORITES VIEW - KOMPLETT NEU -->
+            <!-- FAVORITES VIEW -->
             <div id="view-favorites" class="view hidden">
-                <div class="fav-header">
-                    <!-- Title Section -->
-                    <div class="fav-title-section">
-                        <h1 class="fav-title">Library</h1>
-                        <p class="fav-count">0 Favoriten</p>
+                <div class="favorites-container">
+                    <div class="favorites-header">
+                        <h2 class="favorites-title">Meine Favoriten</h2>
+                        <p class="favorites-subtitle">Deine gespeicherten Kunstwerke & Zitate</p>
                     </div>
                     
-                    <!-- Search -->
-                    <div class="fav-search-container">
-                        <svg class="fav-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                        </svg>
-                        <input 
-                            type="text" 
-                            id="fav-search" 
-                            class="fav-search-input" 
-                            placeholder="Suche in Favoriten..."
-                            autocomplete="off"
-                        >
-                        <button id="fav-search-clear" class="fav-search-clear" aria-label="Clear search">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
+                    <div class="favorites-content">
+                        <div class="favorites-empty hidden">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                             </svg>
-                        </button>
+                            <h3>Noch keine Favoriten</h3>
+                            <p>Speichere Kunstwerke oder Zitate, indem du auf das Herz-Symbol tippst</p>
+                        </div>
+                        
+                        <div class="favorites-list"></div>
                     </div>
-                    
-                    <!-- Filters -->
-                    <div class="fav-filters">
-                        <button class="fav-filter-pill active" data-filter="all">All</button>
-                        <button class="fav-filter-pill" data-filter="art">Art</button>
-                        <button class="fav-filter-pill" data-filter="quotes">Quotes</button>
-                    </div>
-                </div>
-                
-                <!-- Content -->
-                <div class="fav-content">
-                    <div id="fav-list" class="fav-grid"></div>
                 </div>
             </div>
-
         </main>
 
         <!-- Bottom Navigation -->
-        <nav id="bottom-nav">
-            <button id="nav-art" class="active">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                    <polyline points="21 15 16 10 5 21"></polyline>
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-view="art">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
                 </svg>
-                <span>Art</span>
+                <span>Kunst</span>
             </button>
-            <button id="nav-quotes">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"></path>
-                    <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"></path>
+            
+            <button class="nav-item" data-view="quotes">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M6 17h3l2-4V7H5v6h3zm8 0h3l2-4V7h-6v6h3z"/>
                 </svg>
-                <span>Quotes</span>
+                <span>Zitate</span>
             </button>
-            <button id="nav-favorites">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            
+            <button class="nav-item" data-view="favorites">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
-                <span>Saved</span>
+                <span>Favoriten</span>
             </button>
         </nav>
     </div>
@@ -214,15 +203,7 @@
                     <p class="auth-subtitle">Melde dich an um fortzufahren</p>
                 </div>
                 
-                <!-- Error/Info Message -->
-                <div id="login-message" class="auth-message">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="12"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    <span class="auth-message-text"></span>
-                </div>
+                <!-- NO MESSAGE ELEMENTS - USING TOASTS INSTEAD -->
                 
                 <form id="auth-login-form" class="auth-form">
                     <div class="auth-input-group">
@@ -271,17 +252,21 @@
                     <p class="auth-subtitle">Registriere dich kostenlos</p>
                 </div>
                 
-                <!-- Error/Info Message -->
-                <div id="signup-message" class="auth-message">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="12" y1="8" x2="12" y2="12"/>
-                        <line x1="12" y1="16" x2="12.01" y2="16"/>
-                    </svg>
-                    <span class="auth-message-text"></span>
-                </div>
+                <!-- NO MESSAGE ELEMENTS - USING TOASTS INSTEAD -->
                 
-                <form id="auth-signup-form" class="auth-form">                  
+                <form id="auth-signup-form" class="auth-form">
+                    <div class="auth-input-group">
+                        <label class="auth-label" for="signup-name">Name</label>
+                        <input 
+                            type="text" 
+                            id="signup-name" 
+                            class="auth-input" 
+                            placeholder="Dein Name"
+                            autocomplete="name"
+                            required
+                        >
+                    </div>
+                    
                     <div class="auth-input-group">
                         <label class="auth-label" for="signup-email">Email</label>
                         <input 
@@ -302,7 +287,6 @@
                             class="auth-input" 
                             placeholder="Mindestens 6 Zeichen"
                             autocomplete="new-password"
-                            minlength="6"
                             required
                         >
                     </div>
@@ -320,6 +304,25 @@
         </div>
     </div>
 
+    <!-- Lightbox for Art Zoom/Pan -->
+    <div id="lightbox-overlay" class="lightbox-overlay">
+        <button id="lightbox-close" class="lightbox-close" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+        <div class="lightbox-container">
+            <img id="lightbox-image" src="" alt="">
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="app-loading" class="app-loading">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- JavaScript Modules -->
     <script type="module" src="js/main.js"></script>
 </body>
 </html>

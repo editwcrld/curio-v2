@@ -1,0 +1,377 @@
+/* ===== LIMIT SYSTEM STYLES ===== */
+
+/* Limit info box - clean text-only box with proper spacing */
+.auth-limit-info {
+    margin: 0 0 24px 0;
+    animation: limitSlideIn 0.3s ease-out;
+}
+
+@keyframes limitSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.limit-warning {
+    padding: 16px 18px;
+    background: linear-gradient(
+        135deg,
+        rgba(251, 146, 36, 0.1) 0%,
+        rgba(251, 191, 36, 0.08) 100%
+    );
+    border: 1px solid rgba(251, 146, 36, 0.3);
+    border-left: 3px solid #fb923c;
+    border-radius: 10px;
+}
+
+.limit-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #fb923c;
+    margin: 0 0 6px 0;
+    letter-spacing: -0.3px;
+}
+
+.limit-description {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.limit-description strong {
+    color: rgba(255, 255, 255, 0.95);
+    font-weight: 700;
+}
+
+/* ===== UPGRADE MODAL ===== */
+
+.upgrade-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.upgrade-overlay.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.upgrade-modal {
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    width: 90%;
+    max-width: 480px;
+    padding: 40px 32px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.upgrade-overlay.active .upgrade-modal {
+    transform: scale(1) translateY(0);
+}
+
+.upgrade-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.upgrade-close:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: rotate(90deg);
+}
+
+.upgrade-close svg {
+    width: 20px;
+    height: 20px;
+}
+
+.upgrade-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.upgrade-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: rgba(251, 191, 36, 0.15);
+    border: 2px solid rgba(251, 191, 36, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.upgrade-icon svg {
+    width: 30px;
+    height: 30px;
+    color: #fbbf24;
+}
+
+.upgrade-title {
+    font-size: 1.75rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #fff 0%, #a0a0a0 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 8px 0;
+    letter-spacing: -1px;
+}
+
+.upgrade-subtitle {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+.upgrade-content {
+    margin-bottom: 32px;
+}
+
+.upgrade-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.upgrade-stat {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+}
+
+.upgrade-stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.upgrade-stat-value {
+    font-size: 1.5rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.upgrade-divider {
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+    margin: 24px 0;
+}
+
+.upgrade-premium-benefits {
+    margin-top: 24px;
+}
+
+.upgrade-benefits-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    margin: 0 0 16px 0;
+    text-align: center;
+}
+
+.upgrade-benefits-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.upgrade-benefit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.upgrade-benefit:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.upgrade-benefit svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: #10b981;
+}
+
+.upgrade-benefit span {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.upgrade-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.upgrade-btn-primary {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: not-allowed;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    opacity: 0.6;
+}
+
+.upgrade-btn-primary:not(:disabled) {
+    cursor: pointer;
+    opacity: 1;
+}
+
+.upgrade-btn-primary:not(:disabled):hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(102, 126, 234, 0.4);
+}
+
+.upgrade-btn-primary svg {
+    width: 18px;
+    height: 18px;
+}
+
+.upgrade-btn-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #fbbf24;
+    color: #000;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.upgrade-btn-secondary {
+    width: 100%;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.upgrade-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: white;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 480px) {
+    .upgrade-modal {
+        padding: 32px 24px;
+        width: 95%;
+    }
+    
+    .upgrade-title {
+        font-size: 1.5rem;
+    }
+    
+    .upgrade-stats {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .upgrade-stat-value {
+        font-size: 1.25rem;
+    }
+    
+    .limit-description {
+        font-size: 0.85rem;
+    }
+}
+
+.upgrade-modal::-webkit-scrollbar {
+    width: 8px;
+}
+
+.upgrade-modal::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+
+.upgrade-modal::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.upgrade-modal::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
