@@ -1,7 +1,7 @@
 /**
  * Content Navigation Module
  * Handles back/next navigation for art and quotes
- * WITH LOADING SYSTEM INTEGRATION
+ * WITH LIMITS INTEGRATION
  */
 
 import { DUMMY_ART, DUMMY_QUOTES } from './dummy-data.js';
@@ -11,14 +11,12 @@ import { displayArt } from './art-engine.js';
 import { displayQuote } from './quote-engine.js';
 import { updateAllFavoriteButtons } from './fav-engine.js';
 import { showContentLoading, hideContentLoading } from './loading.js';
+import { canNavigate, incrementUsage, handleLimitReached } from './limits.js';
 
 let isLoading = false;
 let currentArtIndex = 0;
 let currentQuoteIndex = 0;
 
-/**
- * Initialize navigation controls
- */
 export function initContentNavigation() {
     const prevBtns = document.querySelectorAll('.nav-btn-prev');
     const nextBtns = document.querySelectorAll('.nav-btn-next');
@@ -32,9 +30,6 @@ export function initContentNavigation() {
     });
 }
 
-/**
- * Handle previous button click
- */
 export function handlePrevious() {
     if (isLoading) return;
     
@@ -47,9 +42,6 @@ export function handlePrevious() {
     }
 }
 
-/**
- * Handle next button click
- */
 export function handleNext() {
     if (isLoading) return;
     
@@ -62,18 +54,19 @@ export function handleNext() {
     }
 }
 
-/**
- * Load next art
- */
 async function loadNextArt() {
     if (isLoading) return;
     
-    isLoading = true;
+    // ✅ CHECK LIMIT BEFORE NAVIGATING
+    if (!canNavigate('art')) {
+        console.log('🚫 Art limit reached!');
+        handleLimitReached('art');
+        return;
+    }
     
-    // Show loading overlay
+    isLoading = true;
     showContentLoading('view-art');
     
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
     currentArtIndex = (currentArtIndex + 1) % DUMMY_ART.length;
@@ -83,24 +76,26 @@ async function loadNextArt() {
     displayArt(newArt);
     updateAllFavoriteButtons();
     
-    // Hide loading overlay
-    hideContentLoading('view-art');
+    // ✅ INCREMENT USAGE AFTER SUCCESSFUL NAVIGATION
+    incrementUsage('art');
     
+    hideContentLoading('view-art');
     isLoading = false;
 }
 
-/**
- * Load previous art
- */
 async function loadPreviousArt() {
     if (isLoading) return;
     
-    isLoading = true;
+    // ✅ CHECK LIMIT BEFORE NAVIGATING
+    if (!canNavigate('art')) {
+        console.log('🚫 Art limit reached!');
+        handleLimitReached('art');
+        return;
+    }
     
-    // Show loading overlay
+    isLoading = true;
     showContentLoading('view-art');
     
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
     currentArtIndex = (currentArtIndex - 1 + DUMMY_ART.length) % DUMMY_ART.length;
@@ -110,24 +105,26 @@ async function loadPreviousArt() {
     displayArt(newArt);
     updateAllFavoriteButtons();
     
-    // Hide loading overlay
-    hideContentLoading('view-art');
+    // ✅ INCREMENT USAGE AFTER SUCCESSFUL NAVIGATION
+    incrementUsage('art');
     
+    hideContentLoading('view-art');
     isLoading = false;
 }
 
-/**
- * Load next quote
- */
 async function loadNextQuote() {
     if (isLoading) return;
     
-    isLoading = true;
+    // ✅ CHECK LIMIT BEFORE NAVIGATING
+    if (!canNavigate('quotes')) {
+        console.log('🚫 Quotes limit reached!');
+        handleLimitReached('quotes');
+        return;
+    }
     
-    // Show loading overlay
+    isLoading = true;
     showContentLoading('view-quotes');
     
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
     currentQuoteIndex = (currentQuoteIndex + 1) % DUMMY_QUOTES.length;
@@ -139,24 +136,26 @@ async function loadNextQuote() {
     displayQuote(newQuote, newGradient);
     updateAllFavoriteButtons();
     
-    // Hide loading overlay
-    hideContentLoading('view-quotes');
+    // ✅ INCREMENT USAGE AFTER SUCCESSFUL NAVIGATION
+    incrementUsage('quotes');
     
+    hideContentLoading('view-quotes');
     isLoading = false;
 }
 
-/**
- * Load previous quote
- */
 async function loadPreviousQuote() {
     if (isLoading) return;
     
-    isLoading = true;
+    // ✅ CHECK LIMIT BEFORE NAVIGATING
+    if (!canNavigate('quotes')) {
+        console.log('🚫 Quotes limit reached!');
+        handleLimitReached('quotes');
+        return;
+    }
     
-    // Show loading overlay
+    isLoading = true;
     showContentLoading('view-quotes');
     
-    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 800));
     
     currentQuoteIndex = (currentQuoteIndex - 1 + DUMMY_QUOTES.length) % DUMMY_QUOTES.length;
@@ -168,8 +167,9 @@ async function loadPreviousQuote() {
     displayQuote(newQuote, newGradient);
     updateAllFavoriteButtons();
     
-    // Hide loading overlay
-    hideContentLoading('view-quotes');
+    // ✅ INCREMENT USAGE AFTER SUCCESSFUL NAVIGATION
+    incrementUsage('quotes');
     
+    hideContentLoading('view-quotes');
     isLoading = false;
 }
