@@ -12,7 +12,7 @@
  * Diese Liste ist nur als Fallback, falls DB nicht erreichbar.
  */
 const PREMIUM_FALLBACK_EMAILS = [
-    'editw_rld@proton.me'
+    'editw_orld@proton.me'
 ];
 
 // =====================================================

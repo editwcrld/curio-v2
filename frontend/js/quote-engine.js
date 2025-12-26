@@ -24,7 +24,11 @@ export async function loadDailyQuote() {
             return dummyData;
         }
         
-        const data = await response.json();
+        const result = await response.json();
+        
+        // FIXED: Backend wrapped data in { success: true, data: {...} }
+        const data = result.data || result;
+        
         appState.setQuoteData(data);
         
         // Set random gradient for this quote

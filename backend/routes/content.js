@@ -1,8 +1,8 @@
 /**
- * CURIO BACKEND - Content Routes (UPDATED)
+ * CURIO BACKEND - Content Routes (UPDATED with Cache)
  * Endpoints: /api/daily/art, /api/daily/quote
  * 
- * UPDATED: Mit optionalAuth für Limit Tracking
+ * UPDATED: Nutzt jetzt Quote Cache statt Dummy Data!
  */
 
 const express = require('express');
@@ -10,10 +10,11 @@ const router = express.Router();
 
 const { optionalAuth, getUserType } = require('../middleware/auth');
 const { incrementLimit, getUserLimits } = require('../config/supabase');
+const { getQuote } = require('../services/quote-cache');
 const { LIMITS } = require('../config/constants');
 
 // =====================================================
-// DUMMY DATA
+// DUMMY DATA (nur für Art - bis Step 9!)
 // =====================================================
 
 const DUMMY_ART = [
@@ -40,30 +41,6 @@ const DUMMY_ART = [
         year: "1503",
         imageUrl: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=800&q=80",
         description: "Die Mona Lisa ist eines der berühmtesten Gemälde der Welt."
-    }
-];
-
-const DUMMY_QUOTES = [
-    {
-        id: "quote_1",
-        text: "In der Mitte von Schwierigkeiten liegen die Möglichkeiten.",
-        author: "Albert Einstein",
-        source: "Brief an einen Freund, 1940er",
-        backgroundInfo: "Albert Einstein (1879-1955) war ein theoretischer Physiker."
-    },
-    {
-        id: "quote_2",
-        text: "Die einzige Art, großartige Arbeit zu leisten, ist zu lieben, was man tut.",
-        author: "Steve Jobs",
-        source: "Stanford Commencement Speech, 2005",
-        backgroundInfo: "Steve Jobs (1955-2011) war Mitbegründer von Apple Inc."
-    },
-    {
-        id: "quote_3",
-        text: "Sei du selbst die Veränderung, die du dir wünschst für diese Welt.",
-        author: "Mahatma Gandhi",
-        source: "Zugeschrieben",
-        backgroundInfo: "Mahatma Gandhi (1869-1948) war ein indischer Politiker."
     }
 ];
 
@@ -131,6 +108,8 @@ async function checkAndIncrementLimit(req, type) {
 /**
  * GET /api/daily/art
  * Daily artwork (with optional limit tracking)
+ * 
+ * TODO (Step 9): Replace dummy data with real Art API
  */
 router.get('/daily/art', optionalAuth, async (req, res, next) => {
     try {
@@ -152,13 +131,14 @@ router.get('/daily/art', optionalAuth, async (req, res, next) => {
             }
         }
         
-        // Get art (currently dummy data)
+        // Get art (currently dummy data - TODO: Art API in Step 9)
         const art = getRandomItem(DUMMY_ART);
         
         res.json({
             success: true,
             data: art,
             cached: false,
+            source: 'dummy',  // TODO: Change to 'cache' in Step 9
             timestamp: new Date().toISOString()
         });
     } catch (error) {
@@ -168,7 +148,9 @@ router.get('/daily/art', optionalAuth, async (req, res, next) => {
 
 /**
  * GET /api/daily/quote
- * Daily quote (with optional limit tracking)
+ * Daily quote (with limit tracking)
+ * 
+ * UPDATED: Now uses real Quote Cache! ✅
  */
 router.get('/daily/quote', optionalAuth, async (req, res, next) => {
     try {
@@ -190,13 +172,21 @@ router.get('/daily/quote', optionalAuth, async (req, res, next) => {
             }
         }
         
-        // Get quote (currently dummy data)
-        const quote = getRandomItem(DUMMY_QUOTES);
+        // Get quote from cache (REAL DATA!)
+        const quote = await getQuote();
         
         res.json({
             success: true,
-            data: quote,
-            cached: false,
+            data: {
+                id: quote.id,
+                text: quote.text,
+                author: quote.author,
+                source: quote.source || 'Unknown',
+                category: quote.category,
+                backgroundInfo: quote.ai_description || null  // Will be filled in Step 14
+            },
+            cached: true,
+            source: 'cache',
             timestamp: new Date().toISOString()
         });
     } catch (error) {
@@ -207,6 +197,8 @@ router.get('/daily/quote', optionalAuth, async (req, res, next) => {
 /**
  * GET /api/art/next
  * Next random art
+ * 
+ * TODO (Step 9): Replace with real Art API
  */
 router.get('/art/next', optionalAuth, async (req, res, next) => {
     try {
@@ -227,6 +219,7 @@ router.get('/art/next', optionalAuth, async (req, res, next) => {
         res.json({
             success: true,
             data: art,
+            source: 'dummy',
             timestamp: new Date().toISOString()
         });
     } catch (error) {
@@ -236,7 +229,7 @@ router.get('/art/next', optionalAuth, async (req, res, next) => {
 
 /**
  * GET /api/quote/next
- * Next random quote
+ * Next random quote (REAL DATA!)
  */
 router.get('/quote/next', optionalAuth, async (req, res, next) => {
     try {
@@ -253,10 +246,19 @@ router.get('/quote/next', optionalAuth, async (req, res, next) => {
             }
         }
         
-        const quote = getRandomItem(DUMMY_QUOTES);
+        const quote = await getQuote();
         res.json({
             success: true,
-            data: quote,
+            data: {
+                id: quote.id,
+                text: quote.text,
+                author: quote.author,
+                source: quote.source || 'Unknown',
+                category: quote.category,
+                backgroundInfo: quote.ai_description || null
+            },
+            cached: true,
+            source: 'cache',
             timestamp: new Date().toISOString()
         });
     } catch (error) {

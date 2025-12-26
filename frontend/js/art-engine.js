@@ -19,7 +19,11 @@ export async function loadDailyArt() {
             return dummyData;
         }
         
-        const data = await response.json();
+        const result = await response.json();
+        
+        // FIXED: Backend wrapped data in { success: true, data: {...} }
+        const data = result.data || result;
+        
         appState.setArtData(data);
         return data;
     } catch (error) {
