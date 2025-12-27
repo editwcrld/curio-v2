@@ -1,5 +1,15 @@
 // API Configuration
-export const API_BASE_URL = 'http://localhost:3000/api';
+// PRODUCTION: Change to your Render.com backend URL
+const IS_PRODUCTION = window.location.hostname !== 'localhost' && 
+                       !window.location.hostname.includes('127.0.0.1');
+
+export const API_BASE_URL = IS_PRODUCTION 
+    ? 'https://curio-v2.onrender.com/api'  // Production Backend
+    : 'http://localhost:3000/api';          // Local Development
+
+// Debug log (remove in final production)
+console.log(`🌐 API Mode: ${IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT'}`);
+console.log(`🔗 API URL: ${API_BASE_URL}`);
 
 // Gradient presets for quotes - ERWEITERT (20 verschiedene!)
 export const GRADIENTS = [

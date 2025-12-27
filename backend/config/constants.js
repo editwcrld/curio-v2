@@ -109,8 +109,17 @@ const SCHEDULER_CONFIG = {
  * Automatische Erkennung von Local + Production
  */
 const ALLOWED_ORIGINS = [
+    // Local Development
     'http://localhost:5500',
     'http://127.0.0.1:5500',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    // Production (Render.com)
+    'https://curio-v2-1.onrender.com',
+    // Future custom domain
+    'https://curio.day',
+    'https://www.curio.day',
+    // From ENV (backup)
     process.env.FRONTEND_URL
 ].filter(Boolean).map(url => url.replace(/\/$/, ''));
 
