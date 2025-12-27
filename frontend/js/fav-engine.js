@@ -1,69 +1,72 @@
 /**
- * Favorites Engine - PRODUCTION VERSION
- * ✅ Nur Storage geändert: localStorage → Supabase Backend
- * ✅ Alle andere Logik bleibt IDENTISCH!
+ * Favorites Engine
+ * ✅ Supabase Backend
+ * ✅ Gradient in DB
+ * ✅ Fallback Gradient für alte Favorites (basierend auf ID)
  */
 
 import { appState } from './state.js';
-import { API_BASE_URL } from './config.js';
+import { API_BASE_URL, GRADIENTS } from './config.js';
 
-// ===== STORAGE (GEÄNDERT: Supabase statt localStorage) =====
-let favoritesCache = null;
+// ===== STATE =====
+let favorites = [];
+let isLoaded = false;
+let currentFilter = 'all';
+let currentSearch = '';
+
+// ===== GRADIENT HELPER =====
 
 /**
- * Load favorites from Backend (ersetzt localStorage.getItem)
+ * Generiert einen konsistenten Gradient basierend auf der ID
+ * Alte Favorites ohne gespeicherten Gradient bekommen so immer den gleichen!
  */
-async function getFavorites() {
-    // Check if user is logged in
-    const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
+function getGradientForId(id) {
+    if (!id) return GRADIENTS[0];
     
-    if (!isLoggedIn) {
-        favoritesCache = [];
-        return []; // Return empty array if not logged in
+    // Hash die ID zu einer Zahl
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = ((hash << 5) - hash) + id.charCodeAt(i);
+        hash = hash & hash; // Convert to 32bit integer
     }
     
-    // Return cache if available
-    if (favoritesCache !== null) {
-        return favoritesCache;
-    }
+    // Positiver Index
+    const index = Math.abs(hash) % GRADIENTS.length;
+    return GRADIENTS[index];
+}
+
+// ===== BACKEND API =====
+
+async function fetchFavoritesFromBackend() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return [];
     
-    // Fetch from backend
     try {
-        const token = localStorage.getItem('auth_token');
-        if (!token) {
-            favoritesCache = [];
-            return [];
-        }
-        
         const response = await fetch(`${API_BASE_URL}/favorites`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
-        if (!response.ok) {
-            favoritesCache = [];
-            return [];
-        }
+        if (!response.ok) return [];
         
         const data = await response.json();
-        favoritesCache = data.data || [];
-        return favoritesCache;
+        const backendFavs = data.data || [];
+        
+        // ✅ Fallback Gradient für alte Favorites!
+        return backendFavs.map(fav => ({
+            ...fav,
+            savedGradient: fav.savedGradient || getGradientForId(fav.id)
+        }));
     } catch (error) {
-        console.error('Error loading favorites:', error);
-        favoritesCache = [];
+        console.error('Fetch favorites error:', error);
         return [];
     }
 }
 
-/**
- * Save favorite to Backend (ersetzt localStorage.setItem)
- */
-async function saveFavorite(item, type) {
+async function addFavoriteToBackend(type, itemId, gradient) {
     const token = localStorage.getItem('auth_token');
-    if (!token) {
-        // Show login modal
-        import('./auth-modal.js').then(m => m.openAuthModal('login'));
-        return false;
-    }
+    if (!token) return null;
+    
+    console.log('📤 Sending to backend:', { type, itemId, gradient }); // DEBUG
     
     try {
         const response = await fetch(`${API_BASE_URL}/favorites`, {
@@ -72,20 +75,28 @@ async function saveFavorite(item, type) {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ type, itemId: item.id })
+            body: JSON.stringify({ 
+                type, 
+                itemId,
+                gradient  // ✅ Gradient an Backend senden!
+            })
         });
         
-        return response.ok;
+        if (!response.ok) {
+            console.error('Add favorite failed:', response.status);
+            return null;
+        }
+        
+        const data = await response.json();
+        console.log('📥 Backend response:', data); // DEBUG
+        return data.data?.favoriteId || null;
     } catch (error) {
-        console.error('Error saving favorite:', error);
-        return false;
+        console.error('Add favorite error:', error);
+        return null;
     }
 }
 
-/**
- * Delete favorite from Backend (ersetzt localStorage filter)
- */
-async function deleteFavorite(favoriteId) {
+async function removeFavoriteFromBackend(favoriteId) {
     const token = localStorage.getItem('auth_token');
     if (!token) return false;
     
@@ -94,99 +105,61 @@ async function deleteFavorite(favoriteId) {
             method: 'DELETE',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
         return response.ok;
     } catch (error) {
-        console.error('Error deleting favorite:', error);
+        console.error('Remove favorite error:', error);
         return false;
     }
 }
 
-/**
- * Clear cache (call when data might be stale)
- */
-function clearCache() {
-    favoritesCache = null;
-}
+// ===== CORE FUNCTIONS =====
 
-// ===== CORE OPERATIONS (UNVERÄNDERT!) =====
-
-/**
- * Check if item is favorited (fast)
- */
-export async function isFavorite(itemId) {
-    const favorites = await getFavorites();
+export function isFavorite(itemId) {
     return favorites.some(f => f.id === itemId);
 }
 
-/**
- * Add to favorites
- */
-export async function addFavorite(item, type) {
-    const favorites = await getFavorites();
+export function toggleFavorite(item, type) {
+    if (!item?.id) return false;
     
-    // Prevent duplicates
-    if (favorites.some(f => f.id === item.id)) {
+    const existing = favorites.find(f => f.id === item.id);
+    
+    if (existing) {
+        // REMOVE
+        favorites = favorites.filter(f => f.id !== item.id);
+        
+        if (existing.favoriteId) {
+            removeFavoriteFromBackend(existing.favoriteId);
+        }
+        
         return false;
-    }
-    
-    // Save to backend
-    const success = await saveFavorite(item, type);
-    if (!success) return false;
-    
-    // Clear cache for refresh
-    clearCache();
-    
-    return true;
-}
-
-/**
- * Remove from favorites
- */
-export async function removeFavorite(itemId) {
-    const favorites = await getFavorites();
-    const favorite = favorites.find(f => f.id === itemId);
-    
-    if (!favorite) return false;
-    
-    // Delete from backend
-    const success = await deleteFavorite(favorite.favoriteId);
-    if (!success) return false;
-    
-    // Clear cache for refresh
-    clearCache();
-    
-    return true;
-}
-
-/**
- * Toggle favorite (optimized)
- */
-export async function toggleFavorite(item, type) {
-    if (!item || !item.id) {
-        console.warn('Invalid item for favorite');
-        return false;
-    }
-    
-    const isCurrentlyFavorited = await isFavorite(item.id);
-    
-    if (isCurrentlyFavorited) {
-        await removeFavorite(item.id);
     } else {
-        await addFavorite(item, type);
+        // ADD
+        const gradient = type === 'quotes' ? appState.currentGradient : null;
+        
+        console.log('💾 Saving favorite with gradient:', gradient); // DEBUG
+        
+        const newFav = {
+            ...item,
+            type,
+            favoriteId: null,
+            savedAt: Date.now(),
+            savedGradient: gradient
+        };
+        
+        favorites.unshift(newFav);
+        
+        // ✅ Gradient mit an Backend senden!
+        addFavoriteToBackend(type, item.id, gradient).then(favId => {
+            if (favId) {
+                const fav = favorites.find(f => f.id === item.id);
+                if (fav) fav.favoriteId = favId;
+            }
+        });
+        
+        return true;
     }
-    
-    // Immediate UI update
-    updateFavoriteButtonState(type, item.id);
-    
-    return !isCurrentlyFavorited;
 }
 
-// ===== UI UPDATES (UNVERÄNDERT!) =====
-
-/**
- * Update favorite button state for specific view
- */
 export function updateFavoriteButtonState(viewType, itemId) {
     const view = document.getElementById(`view-${viewType}`);
     if (!view) return;
@@ -194,148 +167,76 @@ export function updateFavoriteButtonState(viewType, itemId) {
     const btn = view.querySelector('.fav-btn');
     if (!btn) return;
     
-    // Async check
-    isFavorite(itemId).then(isFav => {
-        requestAnimationFrame(() => {
-            btn.classList.toggle('active', isFav);
-        });
-    });
+    btn.classList.toggle('active', isFavorite(itemId));
 }
 
-/**
- * Update all favorite buttons
- */
 export function updateAllFavoriteButtons() {
     if (appState.currentArtData) {
         updateFavoriteButtonState('art', appState.currentArtData.id);
     }
-    
     if (appState.currentQuoteData) {
         updateFavoriteButtonState('quotes', appState.currentQuoteData.id);
     }
 }
 
-// ===== FILTERING & SEARCH (UNVERÄNDERT!) =====
+// ===== FILTER & SEARCH =====
 
-let currentFilter = 'all';
-let currentSearch = '';
-
-/**
- * Set filter
- */
 export function setFilter(filter) {
     currentFilter = filter;
 }
 
-/**
- * Set search query
- */
 export function setSearch(query) {
     currentSearch = query.toLowerCase().trim();
 }
 
-/**
- * Get current filter
- */
-export function getFilter() {
-    return currentFilter;
-}
-
-/**
- * Get current search
- */
-export function getSearch() {
-    return currentSearch;
-}
-
-/**
- * Refresh favorites view (called after login)
- */
-export function refreshFavoritesView() {
-    // Clear cache to force reload
-    clearCache();
+export function getFilteredFavorites() {
+    let result = [...favorites];
     
-    // Re-render favorites
-    renderFavorites();
-}
-
-/**
- * Apply filters and search (optimized)
- */
-export async function getFilteredFavorites() {
-    let favorites = await getFavorites();
-    
-    // Filter by type
     if (currentFilter !== 'all') {
-        favorites = favorites.filter(f => f.type === currentFilter);
+        result = result.filter(f => f.type === currentFilter);
     }
     
-    // Search
     if (currentSearch) {
-        favorites = favorites.filter(item => {
-            const searchFields = [
-                item.title,
-                item.artist,
-                item.text,
-                item.author,
-                item.source
-            ].filter(Boolean).join(' ').toLowerCase();
-            
-            return searchFields.includes(currentSearch);
+        result = result.filter(item => {
+            const fields = [item.title, item.artist, item.text, item.author, item.source]
+                .filter(Boolean).join(' ').toLowerCase();
+            return fields.includes(currentSearch);
         });
     }
     
-    return favorites;
+    return result;
 }
 
-// ===== RENDER (UNVERÄNDERT!) =====
+// ===== RENDER =====
 
-/**
- * Render favorites grid (optimized)
- */
-export async function renderFavorites() {
+export function renderFavorites() {
     const container = document.getElementById('fav-list');
     const countEl = document.querySelector('.fav-count');
     
     if (!container) return;
     
-    const favorites = await getFilteredFavorites();
-    const allFavorites = await getFavorites();
+    const filtered = getFilteredFavorites();
     
-    // Update count
     if (countEl) {
-        const count = allFavorites.length;
-        countEl.textContent = `${count} ${count === 1 ? 'Favorit' : 'Favoriten'}`;
+        countEl.textContent = `${favorites.length} ${favorites.length === 1 ? 'Favorit' : 'Favoriten'}`;
     }
     
-    // Clear container
     container.innerHTML = '';
     
-    // Empty state
-    if (favorites.length === 0) {
+    if (filtered.length === 0) {
         container.innerHTML = createEmptyState();
         return;
     }
     
-    // Create document fragment for better performance
     const fragment = document.createDocumentFragment();
-    
-    favorites.forEach((item, index) => {
-        const card = createCard(item, index);
-        fragment.appendChild(card);
-    });
-    
+    filtered.forEach(item => fragment.appendChild(createCard(item)));
     container.appendChild(fragment);
 }
 
-/**
- * Create card element (optimized)
- */
-function createCard(item, index) {
+function createCard(item) {
     const card = document.createElement('div');
     card.className = `fav-card type-${item.type}`;
     card.dataset.id = item.id;
-    card.dataset.favoriteId = item.favoriteId; // Für Backend Delete
     
     if (item.type === 'art') {
         card.innerHTML = `
@@ -352,7 +253,8 @@ function createCard(item, index) {
             </button>
         `;
     } else {
-        const gradient = item.savedGradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        // ✅ savedGradient aus DB oder Fallback
+        const gradient = item.savedGradient || getGradientForId(item.id);
         card.style.background = gradient;
         card.innerHTML = `
             <p class="fav-card-quote">"${item.text}"</p>
@@ -366,42 +268,39 @@ function createCard(item, index) {
         `;
     }
     
-    const deleteBtn = card.querySelector('.fav-card-delete');
-    
-    // Card click - open detail
     card.addEventListener('click', (e) => {
         if (!e.target.closest('.fav-card-delete')) {
             openDetail(item);
         }
     });
     
-    // Delete click
-    deleteBtn.addEventListener('click', (e) => {
+    card.querySelector('.fav-card-delete').addEventListener('click', (e) => {
         e.stopPropagation();
-        deleteCard(item.id, card);
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.8)';
+        
+        setTimeout(() => {
+            toggleFavorite(item, item.type);
+            renderFavorites();
+            updateAllFavoriteButtons();
+        }, 250);
     });
     
     return card;
 }
 
-/**
- * Create empty state
- */
 function createEmptyState() {
-    const hasSearch = currentSearch.length > 0;
     const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
     
-    if (!isLoggedIn && !hasSearch) {
+    if (!isLoggedIn) {
         setTimeout(() => {
-            const loginBtn = document.querySelector('.fav-login-btn');
-            if (loginBtn) {
-                loginBtn.addEventListener('click', () => {
-                    import('./auth-modal.js').then(module => {
-                        module.openAuthModal('login');
-                    });
-                });
+            const btn = document.querySelector('.fav-login-btn');
+            if (btn) {
+                btn.onclick = () => {
+                    import('./auth-modal.js').then(m => m.openAuthModal('login'));
+                };
             }
-        }, 100);
+        }, 50);
         
         return `
             <div class="fav-empty">
@@ -410,9 +309,7 @@ function createEmptyState() {
                 </svg>
                 <h3 class="fav-empty-title">Melde dich an um Favoriten zu speichern</h3>
                 <p class="fav-empty-text">Speichere deine Lieblingskunstwerke und Zitate</p>
-                <button class="fav-login-btn">
-                    Jetzt anmelden
-                </button>
+                <button class="fav-login-btn">Jetzt anmelden</button>
             </div>
         `;
     }
@@ -422,34 +319,14 @@ function createEmptyState() {
             <svg class="fav-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            <h3 class="fav-empty-title">${hasSearch ? 'Keine Treffer' : 'Noch keine Favoriten'}</h3>
+            <h3 class="fav-empty-title">${currentSearch ? 'Keine Treffer' : 'Noch keine Favoriten'}</h3>
             <p class="fav-empty-text">
-                ${hasSearch 
-                    ? 'Versuche einen anderen Suchbegriff' 
-                    : 'Speichere Kunst und Zitate, indem du auf das Herz klickst'
-                }
+                ${currentSearch ? 'Versuche einen anderen Suchbegriff' : 'Speichere Kunst und Zitate, indem du auf das Herz klickst'}
             </p>
         </div>
     `;
 }
 
-/**
- * Delete card with animation
- */
-function deleteCard(itemId, cardElement) {
-    cardElement.style.opacity = '0';
-    cardElement.style.transform = 'scale(0.8)';
-    
-    setTimeout(async () => {
-        await removeFavorite(itemId);
-        await renderFavorites();
-        updateAllFavoriteButtons();
-    }, 300);
-}
-
-/**
- * Open detail view
- */
 function openDetail(item) {
     if (item.type === 'art') {
         appState.setArtData(item);
@@ -461,49 +338,68 @@ function openDetail(item) {
         }
         switchView('quotes');
     }
+    
+    setTimeout(() => {
+        updateAllFavoriteButtons();
+    }, 50);
 }
 
-/**
- * Switch view helper
- */
 function switchView(viewName) {
-    const navButtons = document.querySelectorAll('#bottom-nav button');
-    navButtons.forEach(btn => {
+    document.querySelectorAll('#bottom-nav button').forEach(btn => {
         btn.classList.toggle('active', btn.id === `nav-${viewName}`);
     });
     
-    const views = document.querySelectorAll('.view');
-    views.forEach(view => {
+    document.querySelectorAll('.view').forEach(view => {
         view.classList.toggle('hidden', view.id !== `view-${viewName}`);
     });
     
     appState.setView(viewName);
+    updateAllFavoriteButtons();
 }
 
-// ===== INITIALIZATION (UNVERÄNDERT!) =====
+// ===== PUBLIC =====
 
-/**
- * Initialize favorites view
- */
-export function initFavoritesView() {
+export function refreshFavoritesView() {
+    isLoaded = false;
+    initFavoritesView();
+}
+
+export async function initFavoritesView() {
+    if (!isLoaded) {
+        const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
+        if (isLoggedIn) {
+            favorites = await fetchFavoritesFromBackend();
+        } else {
+            favorites = [];
+        }
+        isLoaded = true;
+    }
+    
+    setupFavoritesUI();
+    renderFavorites();
+}
+
+let uiSetup = false;
+
+function setupFavoritesUI() {
+    if (uiSetup) return;
+    uiSetup = true;
+    
     const searchInput = document.getElementById('fav-search');
     const searchClear = document.getElementById('fav-search-clear');
     const filterBtns = document.querySelectorAll('.fav-filter-pill');
     
-    let searchTimeout;
+    let timeout;
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            const value = e.target.value;
+            const val = e.target.value;
+            if (searchClear) searchClear.classList.toggle('visible', val.length > 0);
             
-            if (searchClear) {
-                searchClear.classList.toggle('visible', value.length > 0);
-            }
-            
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
-                setSearch(value);
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                setSearch(val);
                 renderFavorites();
-            }, 300);
+            }, 200);
         });
     }
     
@@ -514,7 +410,6 @@ export function initFavoritesView() {
                 searchClear.classList.remove('visible');
                 setSearch('');
                 renderFavorites();
-                searchInput.focus();
             }
         });
     }
@@ -527,7 +422,4 @@ export function initFavoritesView() {
             renderFavorites();
         });
     });
-    
-    // Initial render
-    renderFavorites();
 }

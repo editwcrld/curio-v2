@@ -1,9 +1,12 @@
-import { appState } from './state.js';
-import { refreshFavoritesView } from './fav-engine.js';
-
 /**
- * UI Controller Module - Optimiert
+ * UI Controller Module
+ * ✅ Tab Navigation
+ * ✅ Favorites Refresh
+ * ✅ Herz-Status Update bei jedem Tab-Wechsel
  */
+
+import { appState } from './state.js';
+import { renderFavorites, updateAllFavoriteButtons } from './fav-engine.js';
 
 export function initNavigation() {
     const navButtons = document.querySelectorAll('#bottom-nav button');
@@ -32,13 +35,15 @@ export function switchView(viewName) {
         view.classList.toggle('hidden', view.id !== `view-${viewName}`);
     });
     
-    // Refresh favorites when switching to it
+    // ✅ Refresh favorites when switching to favorites tab
     if (viewName === 'favorites') {
-        // Use requestAnimationFrame for smooth transition
-        requestAnimationFrame(() => {
-            refreshFavoritesView();
-        });
+        renderFavorites();
     }
+    
+    // ✅ ALWAYS update heart buttons when switching views!
+    setTimeout(() => {
+        updateAllFavoriteButtons();
+    }, 50);
 }
 
 export function showLoading(show = true) {

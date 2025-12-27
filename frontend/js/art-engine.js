@@ -1,37 +1,42 @@
-import { API_BASE_URL } from './config.js';
-import { appState } from './state.js';
-import { getRandomArt } from './dummy-data.js';
-
 /**
  * Art Engine Module
- * Handles fetching and displaying daily art content
+ * ✅ Loads from Backend
+ * ✅ Adds initial art to history
  */
+
+import { API_BASE_URL } from './config.js';
+import { appState } from './state.js';
+import { addToArtHistory } from './content-navigation.js';
 
 export async function loadDailyArt() {
     try {
         const response = await fetch(`${API_BASE_URL}/daily/art`);
         
-        // Wenn API nicht verfügbar, verwende Dummy-Daten
         if (!response.ok) {
-            console.warn('API not available, using dummy data');
-            const dummyData = getRandomArt();
-            appState.setArtData(dummyData);
-            return dummyData;
+            throw new Error(`HTTP ${response.status}: Failed to load art`);
         }
         
         const result = await response.json();
-        
-        // FIXED: Backend wrapped data in { success: true, data: {...} }
         const data = result.data || result;
         
         appState.setArtData(data);
+        
+        // ✅ Add to history!
+        addToArtHistory(data);
+        
         return data;
     } catch (error) {
-        console.warn('Error loading daily art, using dummy data:', error);
-        // Fallback auf Dummy-Daten
-        const dummyData = getRandomArt();
-        appState.setArtData(dummyData);
-        return dummyData;
+        console.error('Error loading daily art:', error);
+        
+        appState.setArtData({
+            id: 'error',
+            title: 'Kunst konnte nicht geladen werden',
+            artist: 'Fehler',
+            imageUrl: 'https://via.placeholder.com/800x600?text=Error',
+            description: 'Bitte lade die Seite neu.'
+        });
+        
+        throw error;
     }
 }
 
@@ -41,19 +46,19 @@ export function displayArt(data) {
     const artView = document.getElementById('view-art');
     if (!artView) return;
 
-    const imageEl = artView.querySelector('.main-image');
+    const imageEl = artView.querySelector('.art-image');
     const titleEl = artView.querySelector('.info-title');
-    const metaEl = artView.querySelector('.info-meta');
-    const contentEl = artView.querySelector('.info-content p');
+    const artistEl = artView.querySelector('.info-content p');
 
-    if (imageEl) imageEl.src = data.imageUrl;
+    if (imageEl) {
+        imageEl.src = data.imageUrl;
+        imageEl.alt = data.title;
+    }
     if (titleEl) titleEl.textContent = data.title;
-    if (metaEl) metaEl.textContent = data.artist;
-    if (contentEl) contentEl.textContent = data.description;
+    if (artistEl) artistEl.textContent = data.description || `${data.artist}, ${data.year}`;
 }
 
 export function initArtView() {
-    // Subscribe to state changes
     appState.subscribe((state) => {
         if (state.currentArtData) {
             displayArt(state.currentArtData);

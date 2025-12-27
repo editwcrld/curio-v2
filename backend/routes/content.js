@@ -1,8 +1,9 @@
 /**
- * CURIO BACKEND - Content Routes (UPDATED with Cache)
- * Endpoints: /api/daily/art, /api/daily/quote
- * 
- * UPDATED: Nutzt jetzt Quote Cache statt Dummy Data!
+ * CURIO BACKEND - Content Routes
+ * ✅ /daily/quote - Random aus Cache
+ * ✅ /quote/fresh - Frisch von API + speichert in DB + ECHTE UUID!
+ * ✅ /daily/art - Aus Cache
+ * ✅ /art/fresh - Frisch (TODO: Art API)
  */
 
 const express = require('express');
@@ -11,15 +12,17 @@ const router = express.Router();
 const { optionalAuth, getUserType } = require('../middleware/auth');
 const { incrementLimit, getUserLimits } = require('../config/supabase');
 const { getQuote } = require('../services/quote-cache');
+const { fetchRandomQuote } = require('../services/api-aggregator');
+const { cacheQuote } = require('../services/quote-cache');
 const { LIMITS } = require('../config/constants');
 
 // =====================================================
-// DUMMY DATA (nur für Art - bis Step 9!)
+// DUMMY DATA - STATIC UUIDs!
 // =====================================================
 
 const DUMMY_ART = [
     {
-        id: "art_1",
+        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         title: "Sternennacht",
         artist: "Vincent van Gogh",
         year: "1889",
@@ -27,7 +30,7 @@ const DUMMY_ART = [
         description: "Die Sternennacht ist eines der bekanntesten Werke von Vincent van Gogh."
     },
     {
-        id: "art_2",
+        id: "b2c3d4e5-f6a7-8901-bcde-f12345678901",
         title: "Die große Welle vor Kanagawa",
         artist: "Katsushika Hokusai",
         year: "1831",
@@ -35,7 +38,7 @@ const DUMMY_ART = [
         description: "Dieses ikonische japanische Holzschnittwerk zeigt eine riesige Welle."
     },
     {
-        id: "art_3",
+        id: "c3d4e5f6-a7b8-9012-cdef-123456789012",
         title: "Mona Lisa",
         artist: "Leonardo da Vinci",
         year: "1503",
@@ -53,32 +56,20 @@ function getRandomItem(array) {
 // =====================================================
 
 async function checkAndIncrementLimit(req, type) {
-    // Guest users: No tracking
     if (!req.user) {
-        return {
-            canAccess: true,
-            limitReached: false,
-            userType: 'guest'
-        };
+        return { canAccess: true, limitReached: false, userType: 'guest' };
     }
     
     const userType = getUserType(req);
     const limits = LIMITS[userType];
     
-    // Premium: Unlimited
     if (limits[type] === null) {
-        return {
-            canAccess: true,
-            limitReached: false,
-            userType: 'premium'
-        };
+        return { canAccess: true, limitReached: false, userType: 'premium' };
     }
     
-    // Get current usage
     const usage = await getUserLimits(req.user.id);
     const currentCount = type === 'art' ? usage.art_count : usage.quote_count;
     
-    // Check if limit reached
     if (currentCount >= limits[type]) {
         return {
             canAccess: false,
@@ -89,7 +80,6 @@ async function checkAndIncrementLimit(req, type) {
         };
     }
     
-    // Increment limit
     await incrementLimit(req.user.id, type);
     
     return {
@@ -102,151 +92,16 @@ async function checkAndIncrementLimit(req, type) {
 }
 
 // =====================================================
-// ROUTES
+// QUOTE ROUTES
 // =====================================================
 
 /**
- * GET /api/daily/art
- * Daily artwork (with optional limit tracking)
- * 
- * TODO (Step 9): Replace dummy data with real Art API
- */
-router.get('/daily/art', optionalAuth, async (req, res, next) => {
-    try {
-        // Check limits (only for authenticated users)
-        if (req.user) {
-            const limitCheck = await checkAndIncrementLimit(req, 'art');
-            
-            if (!limitCheck.canAccess) {
-                return res.status(429).json({
-                    success: false,
-                    error: 'Daily limit reached',
-                    limitReached: true,
-                    userType: limitCheck.userType,
-                    limits: {
-                        current: limitCheck.current,
-                        max: limitCheck.max
-                    }
-                });
-            }
-        }
-        
-        // Get art (currently dummy data - TODO: Art API in Step 9)
-        const art = getRandomItem(DUMMY_ART);
-        
-        res.json({
-            success: true,
-            data: art,
-            cached: false,
-            source: 'dummy',  // TODO: Change to 'cache' in Step 9
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
  * GET /api/daily/quote
- * Daily quote (with limit tracking)
- * 
- * UPDATED: Now uses real Quote Cache! ✅
  */
 router.get('/daily/quote', optionalAuth, async (req, res, next) => {
     try {
-        // Check limits (only for authenticated users)
-        if (req.user) {
-            const limitCheck = await checkAndIncrementLimit(req, 'quotes');
-            
-            if (!limitCheck.canAccess) {
-                return res.status(429).json({
-                    success: false,
-                    error: 'Daily limit reached',
-                    limitReached: true,
-                    userType: limitCheck.userType,
-                    limits: {
-                        current: limitCheck.current,
-                        max: limitCheck.max
-                    }
-                });
-            }
-        }
-        
-        // Get quote from cache (REAL DATA!)
         const quote = await getQuote();
         
-        res.json({
-            success: true,
-            data: {
-                id: quote.id,
-                text: quote.text,
-                author: quote.author,
-                source: quote.source || 'Unknown',
-                category: quote.category,
-                backgroundInfo: quote.ai_description || null  // Will be filled in Step 14
-            },
-            cached: true,
-            source: 'cache',
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * GET /api/art/next
- * Next random art
- * 
- * TODO (Step 9): Replace with real Art API
- */
-router.get('/art/next', optionalAuth, async (req, res, next) => {
-    try {
-        // Same limit check as /daily/art
-        if (req.user) {
-            const limitCheck = await checkAndIncrementLimit(req, 'art');
-            
-            if (!limitCheck.canAccess) {
-                return res.status(429).json({
-                    success: false,
-                    error: 'Daily limit reached',
-                    limitReached: true
-                });
-            }
-        }
-        
-        const art = getRandomItem(DUMMY_ART);
-        res.json({
-            success: true,
-            data: art,
-            source: 'dummy',
-            timestamp: new Date().toISOString()
-        });
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * GET /api/quote/next
- * Next random quote (REAL DATA!)
- */
-router.get('/quote/next', optionalAuth, async (req, res, next) => {
-    try {
-        // Same limit check as /daily/quote
-        if (req.user) {
-            const limitCheck = await checkAndIncrementLimit(req, 'quotes');
-            
-            if (!limitCheck.canAccess) {
-                return res.status(429).json({
-                    success: false,
-                    error: 'Daily limit reached',
-                    limitReached: true
-                });
-            }
-        }
-        
-        const quote = await getQuote();
         res.json({
             success: true,
             data: {
@@ -258,12 +113,132 @@ router.get('/quote/next', optionalAuth, async (req, res, next) => {
                 backgroundInfo: quote.ai_description || null
             },
             cached: true,
-            source: 'cache',
-            timestamp: new Date().toISOString()
+            source: 'cache'
         });
     } catch (error) {
         next(error);
     }
+});
+
+/**
+ * GET /api/quote/fresh
+ * ✅ FIXED: Wartet auf DB Insert, gibt echte UUID zurück!
+ */
+router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
+    try {
+        if (req.user) {
+            const limitCheck = await checkAndIncrementLimit(req, 'quotes');
+            
+            if (!limitCheck.canAccess) {
+                return res.status(429).json({
+                    success: false,
+                    error: 'Daily limit reached',
+                    limitReached: true
+                });
+            }
+        }
+        
+        // Fetch fresh from API
+        const freshQuote = await fetchRandomQuote();
+        
+        // Save to DB and GET THE REAL ID!
+        const cachedQuote = await cacheQuote(freshQuote);
+        
+        if (cachedQuote) {
+            res.json({
+                success: true,
+                data: {
+                    id: cachedQuote.id,
+                    text: cachedQuote.text,
+                    author: cachedQuote.author,
+                    source: cachedQuote.source || 'Unknown',
+                    category: cachedQuote.category || null,
+                    backgroundInfo: cachedQuote.ai_description || null
+                },
+                cached: false,
+                source: 'api'
+            });
+        } else {
+            // Duplicate - get from cache
+            const existingQuote = await getQuote();
+            
+            res.json({
+                success: true,
+                data: {
+                    id: existingQuote.id,
+                    text: existingQuote.text,
+                    author: existingQuote.author,
+                    source: existingQuote.source || 'Unknown',
+                    category: existingQuote.category || null,
+                    backgroundInfo: existingQuote.ai_description || null
+                },
+                cached: true,
+                source: 'cache-duplicate'
+            });
+        }
+    } catch (error) {
+        try {
+            const cachedQuote = await getQuote();
+            res.json({
+                success: true,
+                data: {
+                    id: cachedQuote.id,
+                    text: cachedQuote.text,
+                    author: cachedQuote.author,
+                    source: cachedQuote.source || 'Unknown',
+                    category: cachedQuote.category,
+                    backgroundInfo: cachedQuote.ai_description || null
+                },
+                cached: true,
+                source: 'cache-fallback'
+            });
+        } catch (fallbackError) {
+            next(error);
+        }
+    }
+});
+
+router.get('/quote/next', optionalAuth, async (req, res, next) => {
+    req.url = '/quote/fresh';
+    router.handle(req, res, next);
+});
+
+// =====================================================
+// ART ROUTES
+// =====================================================
+
+router.get('/daily/art', optionalAuth, async (req, res, next) => {
+    try {
+        const art = getRandomItem(DUMMY_ART);
+        res.json({ success: true, data: art, cached: true, source: 'dummy' });
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.get('/art/fresh', optionalAuth, async (req, res, next) => {
+    try {
+        if (req.user) {
+            const limitCheck = await checkAndIncrementLimit(req, 'art');
+            if (!limitCheck.canAccess) {
+                return res.status(429).json({
+                    success: false,
+                    error: 'Daily limit reached',
+                    limitReached: true
+                });
+            }
+        }
+        
+        const art = getRandomItem(DUMMY_ART);
+        res.json({ success: true, data: art, cached: false, source: 'dummy-fresh' });
+    } catch (error) {
+        next(error);
+    }
+});
+
+router.get('/art/next', optionalAuth, async (req, res, next) => {
+    req.url = '/art/fresh';
+    router.handle(req, res, next);
 });
 
 module.exports = router;

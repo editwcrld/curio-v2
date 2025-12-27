@@ -1,6 +1,7 @@
 /**
  * CURIO BACKEND - Favorites Routes
- * CRUD Operations for User Favorites
+ * ✅ CRUD Operations
+ * ✅ Gradient/Metadata Support
  */
 
 const express = require('express');
@@ -11,26 +12,20 @@ const { requireAuth } = require('../middleware/auth');
 const { ValidationError } = require('../middleware/error');
 
 // =====================================================
-// ALL ROUTES REQUIRE AUTHENTICATION
+// GET /api/favorites - List all
 // =====================================================
 
-/**
- * GET /api/favorites
- * Get all favorites for current user
- * 
- * Returns: Array of favorites with full artwork/quote data
- */
 router.get('/', requireAuth, async (req, res, next) => {
     try {
         const userId = req.user.id;
         
-        // Get all favorites with joined data
         const { data, error } = await supabase
             .from('favorites')
             .select(`
                 id,
                 artwork_id,
                 quote_id,
+                metadata,
                 created_at,
                 artworks (
                     id,
@@ -54,9 +49,11 @@ router.get('/', requireAuth, async (req, res, next) => {
         
         if (error) throw error;
         
-        // Transform data to frontend format
+        // Transform to frontend format
         const favorites = data.map(fav => {
-            if (fav.artwork_id) {
+            const metadata = fav.metadata || {};
+            
+            if (fav.artwork_id && fav.artworks) {
                 return {
                     favoriteId: fav.id,
                     type: 'art',
@@ -66,9 +63,10 @@ router.get('/', requireAuth, async (req, res, next) => {
                     year: fav.artworks.year,
                     imageUrl: fav.artworks.image_url,
                     description: fav.artworks.ai_description,
-                    savedAt: fav.created_at
+                    savedAt: fav.created_at,
+                    savedGradient: metadata.gradient || null
                 };
-            } else {
+            } else if (fav.quote_id && fav.quotes) {
                 return {
                     favoriteId: fav.id,
                     type: 'quotes',
@@ -78,10 +76,12 @@ router.get('/', requireAuth, async (req, res, next) => {
                     source: fav.quotes.source,
                     category: fav.quotes.category,
                     backgroundInfo: fav.quotes.ai_description,
-                    savedAt: fav.created_at
+                    savedAt: fav.created_at,
+                    savedGradient: metadata.gradient || null  // ✅ Gradient aus DB!
                 };
             }
-        });
+            return null;
+        }).filter(Boolean);
         
         res.json({
             success: true,
@@ -92,16 +92,14 @@ router.get('/', requireAuth, async (req, res, next) => {
     }
 });
 
-/**
- * POST /api/favorites
- * Add new favorite
- * 
- * Body: { type: 'art' | 'quotes', itemId: 'uuid' }
- */
+// =====================================================
+// POST /api/favorites - Add new
+// =====================================================
+
 router.post('/', requireAuth, async (req, res, next) => {
     try {
         const userId = req.user.id;
-        const { type, itemId } = req.body;
+        const { type, itemId, gradient } = req.body;  // ✅ gradient hinzugefügt!
         
         if (!type || !itemId) {
             throw new ValidationError('Type and itemId required');
@@ -123,8 +121,15 @@ router.post('/', requireAuth, async (req, res, next) => {
             return res.json({
                 success: true,
                 message: 'Already favorited',
-                alreadyExists: true
+                alreadyExists: true,
+                data: { favoriteId: existing.id }
             });
+        }
+        
+        // Build metadata
+        const metadata = {};
+        if (gradient) {
+            metadata.gradient = gradient;  // ✅ Gradient speichern!
         }
         
         // Insert favorite
@@ -133,7 +138,8 @@ router.post('/', requireAuth, async (req, res, next) => {
             .insert({
                 user_id: userId,
                 artwork_id: type === 'art' ? itemId : null,
-                quote_id: type === 'quotes' ? itemId : null
+                quote_id: type === 'quotes' ? itemId : null,
+                metadata: Object.keys(metadata).length > 0 ? metadata : null
             })
             .select()
             .single();
@@ -154,16 +160,15 @@ router.post('/', requireAuth, async (req, res, next) => {
     }
 });
 
-/**
- * DELETE /api/favorites/:favoriteId
- * Remove favorite
- */
+// =====================================================
+// DELETE /api/favorites/:favoriteId - Remove
+// =====================================================
+
 router.delete('/:favoriteId', requireAuth, async (req, res, next) => {
     try {
         const userId = req.user.id;
         const { favoriteId } = req.params;
         
-        // Delete only if owned by user (RLS also enforces this)
         const { error } = await supabase
             .from('favorites')
             .delete()
@@ -181,10 +186,10 @@ router.delete('/:favoriteId', requireAuth, async (req, res, next) => {
     }
 });
 
-/**
- * GET /api/favorites/check/:type/:itemId
- * Check if item is favorited
- */
+// =====================================================
+// GET /api/favorites/check/:type/:itemId - Check status
+// =====================================================
+
 router.get('/check/:type/:itemId', requireAuth, async (req, res, next) => {
     try {
         const userId = req.user.id;
@@ -196,7 +201,7 @@ router.get('/check/:type/:itemId', requireAuth, async (req, res, next) => {
         
         const { data, error } = await supabase
             .from('favorites')
-            .select('id')
+            .select('id, metadata')
             .eq('user_id', userId)
             .eq(type === 'art' ? 'artwork_id' : 'quote_id', itemId)
             .maybeSingle();
@@ -206,7 +211,8 @@ router.get('/check/:type/:itemId', requireAuth, async (req, res, next) => {
         res.json({
             success: true,
             isFavorited: !!data,
-            favoriteId: data?.id || null
+            favoriteId: data?.id || null,
+            gradient: data?.metadata?.gradient || null
         });
     } catch (error) {
         next(error);

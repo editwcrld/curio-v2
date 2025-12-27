@@ -1,11 +1,12 @@
+/**
+ * Quote Engine Module
+ * ✅ Loads from Backend
+ * ✅ Adds initial quote to history
+ */
+
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import { appState } from './state.js';
-
-/**
- * Quote Engine Module - PRODUCTION VERSION
- * Handles fetching and displaying daily quotes
- * ✅ NO DUMMY DATA - Always from Backend!
- */
+import { addToQuoteHistory } from './content-navigation.js';
 
 export async function loadDailyQuote() {
     try {
@@ -16,26 +17,25 @@ export async function loadDailyQuote() {
         }
         
         const result = await response.json();
-        
-        // Backend wrapped data in { success: true, data: {...} }
         const data = result.data || result;
         
-        appState.setQuoteData(data);
-        
-        // Set random gradient for this quote
         const gradient = getRandomGradient();
+        
+        appState.setQuoteData(data);
         appState.setGradient(gradient);
+        
+        // ✅ Add to history!
+        addToQuoteHistory(data, gradient);
         
         return data;
     } catch (error) {
         console.error('Error loading daily quote:', error);
         
-        // Show error to user
         appState.setQuoteData({
             id: 'error',
             text: 'Quotes konnten nicht geladen werden',
             author: 'Fehler',
-            backgroundInfo: 'Bitte lade die Seite neu oder versuche es später erneut.'
+            backgroundInfo: 'Bitte lade die Seite neu.'
         });
         
         throw error;
@@ -64,7 +64,6 @@ export function displayQuote(data, gradient) {
 }
 
 export function initQuoteView() {
-    // Subscribe to state changes
     appState.subscribe((state) => {
         if (state.currentQuoteData) {
             displayQuote(state.currentQuoteData, state.currentGradient);
