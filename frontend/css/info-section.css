@@ -24,6 +24,11 @@
     height: 165px;
 }
 
+/* ✅ Integriert von info-drag-handler.css */
+.info-section.dragging {
+    transition: none !important;
+}
+
 .info-section.expanded { 
     height: 60vh; 
 }
