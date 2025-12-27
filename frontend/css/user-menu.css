@@ -1,8 +1,8 @@
 /**
  * User Menu Styles
  * ✅ Glass-Morphism Design
- * ✅ Mobile-optimiert (Bottom Sheet)
- * ✅ Desktop: Dropdown
+ * ✅ Mobile: Below header (not bottom)
+ * ✅ Desktop: Dropdown below user icon
  * ✅ Smooth Animations
  */
 
@@ -30,16 +30,33 @@
 }
 
 /* =====================================================
-   BACKDROP - in mobile version definiert
+   BACKDROP
    ===================================================== */
 
+.user-menu-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.user-menu.active .user-menu-backdrop {
+    opacity: 1;
+}
+
 /* =====================================================
-   MENU CONTENT - MOBILE (Bottom Sheet über Bottom Nav!)
+   MENU CONTENT - MOBILE (Below Header!)
    ===================================================== */
 
 .user-menu-content {
     position: absolute;
-    bottom: 90px; /* ✅ Höher über der Bottom Nav */
+    top: 70px; /* ✅ Below header */
     left: 12px;
     right: 12px;
     background: linear-gradient(
@@ -51,13 +68,13 @@
     -webkit-backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 16px 20px 20px;
-    transform: translateY(20px);
+    transform: translateY(-20px);
     opacity: 0;
     transition: transform 0.3s ease, opacity 0.3s ease;
     box-shadow: 
-        0 -10px 40px rgba(0, 0, 0, 0.5),
+        0 10px 40px rgba(0, 0, 0, 0.5),
         0 0 0 1px rgba(255, 255, 255, 0.1);
-    max-height: calc(80vh - 100px);
+    max-height: calc(80vh - 80px);
     overflow-y: auto;
 }
 
@@ -65,12 +82,6 @@
     transform: translateY(0);
     opacity: 1;
 }
-
-.user-menu.active .user-menu-content {
-    transform: translateY(0);
-}
-
-/* Kein Drag handle mehr - wir haben X-Button */
 
 /* =====================================================
    CLOSE BUTTON
@@ -258,7 +269,6 @@
         position: absolute;
         top: 60px;
         right: 16px;
-        bottom: auto;
         left: auto;
         width: 280px;
         border-radius: 16px;
@@ -294,30 +304,4 @@
         width: 16px;
         height: 16px;
     }
-}
-
-/* =====================================================
-   SAFE AREA (iPhone Notch) - nicht mehr nötig da über Nav
-   ===================================================== */
-
-
-/* =====================================================
-   BACKDROP - Voller Screen für Outside-Click
-   ===================================================== */
-
-.user-menu-backdrop {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0; /* ✅ Voller Screen für Klick-Detection */
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.user-menu.active .user-menu-backdrop {
-    opacity: 1;
 }

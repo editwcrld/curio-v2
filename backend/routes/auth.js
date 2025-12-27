@@ -1,18 +1,15 @@
 /**
  * CURIO BACKEND - Auth Routes
- * Authentication Endpoints: Signup, Login, Logout
+ * Login, Signup, Logout mit Supabase Auth
  */
 
 const express = require('express');
 const router = express.Router();
-
 const { supabase } = require('../config/db');
-const { isPremium } = require('../config/supabase');
-const { requireAuth } = require('../middleware/auth');
-const { ValidationError, UnauthorizedError } = require('../middleware/error');
+const { ValidationError } = require('../middleware/error');
 
 // =====================================================
-// INPUT VALIDATION
+// VALIDATION HELPERS
 // =====================================================
 
 /**
@@ -24,16 +21,9 @@ function isValidEmail(email) {
 }
 
 /**
- * Validate password strength
+ * Validate signup input (WITH password length check)
  */
-function isValidPassword(password) {
-    return password && password.length >= 6;
-}
-
-/**
- * Sanitize and validate auth input
- */
-function validateAuthInput(email, password) {
+function validateSignupInput(email, password) {
     if (!email || !password) {
         throw new ValidationError('Email and password are required');
     }
@@ -42,14 +32,25 @@ function validateAuthInput(email, password) {
         throw new ValidationError('Invalid email format');
     }
     
-    if (!isValidPassword(password)) {
+    // ✅ Password length check ONLY for signup
+    if (password.length < 6) {
         throw new ValidationError('Password must be at least 6 characters');
     }
+}
+
+/**
+ * Validate login input (NO password length check)
+ */
+function validateLoginInput(email, password) {
+    if (!email || !password) {
+        throw new ValidationError('Email and password are required');
+    }
     
-    return {
-        email: email.trim().toLowerCase(),
-        password: password
-    };
+    if (!isValidEmail(email)) {
+        throw new ValidationError('Invalid email format');
+    }
+    
+    // ✅ NO password length check for login - let Supabase handle wrong credentials
 }
 
 // =====================================================
@@ -58,68 +59,35 @@ function validateAuthInput(email, password) {
 
 /**
  * POST /api/auth/signup
- * Create new user account
- * 
- * Body: { email, password }
- * Returns: { user, session }
+ * Register new user
  */
 router.post('/signup', async (req, res, next) => {
     try {
-        const { email, password } = validateAuthInput(
-            req.body.email,
-            req.body.password
-        );
+        const { email, password } = req.body;
         
-        // Create user with Supabase Auth
+        // ✅ Use signup validation (with password length check)
+        validateSignupInput(email, password);
+        
         const { data, error } = await supabase.auth.signUp({
             email,
-            password,
-            options: {
-                data: {
-                    // Optional: Additional user metadata
-                    created_via: 'curio_backend'
-                }
-            }
+            password
         });
         
         if (error) {
-            // Handle specific errors
-            if (error.message.includes('already registered')) {
-                throw new ValidationError('Email already in use');
-            }
-            
-            if (error.message.includes('Password')) {
-                throw new ValidationError(error.message);
-            }
-            
-            throw error;
+            throw new ValidationError(error.message);
         }
-        
-        if (!data.user || !data.session) {
-            throw new Error('Signup failed - no user or session returned');
-        }
-        
-        // Check premium status
-        const premium = await isPremium(email);
         
         res.status(201).json({
             success: true,
             message: 'Account created successfully',
             data: {
-                user: {
+                user: data.user ? {
                     id: data.user.id,
-                    email: data.user.email,
-                    created_at: data.user.created_at
-                },
-                session: {
-                    access_token: data.session.access_token,
-                    refresh_token: data.session.refresh_token,
-                    expires_in: data.session.expires_in,
-                    expires_at: data.session.expires_at
-                },
-                isPremium: premium
+                    email: data.user.email
+                } : null
             }
         });
+        
     } catch (error) {
         next(error);
     }
@@ -128,38 +96,23 @@ router.post('/signup', async (req, res, next) => {
 /**
  * POST /api/auth/login
  * Login existing user
- * 
- * Body: { email, password }
- * Returns: { user, session }
  */
 router.post('/login', async (req, res, next) => {
     try {
-        const { email, password } = validateAuthInput(
-            req.body.email,
-            req.body.password
-        );
+        const { email, password } = req.body;
         
-        // Sign in with Supabase Auth
+        // ✅ Use login validation (NO password length check)
+        validateLoginInput(email, password);
+        
         const { data, error } = await supabase.auth.signInWithPassword({
             email,
             password
         });
         
         if (error) {
-            // Handle specific errors
-            if (error.message.includes('Invalid')) {
-                throw new UnauthorizedError('Invalid email or password');
-            }
-            
-            throw error;
+            // ✅ Generic error message for security
+            throw new ValidationError('Invalid email or password');
         }
-        
-        if (!data.user || !data.session) {
-            throw new UnauthorizedError('Login failed');
-        }
-        
-        // Check premium status
-        const premium = await isPremium(email);
         
         res.json({
             success: true,
@@ -167,18 +120,16 @@ router.post('/login', async (req, res, next) => {
             data: {
                 user: {
                     id: data.user.id,
-                    email: data.user.email,
-                    last_sign_in_at: data.user.last_sign_in_at
+                    email: data.user.email
                 },
                 session: {
                     access_token: data.session.access_token,
                     refresh_token: data.session.refresh_token,
-                    expires_in: data.session.expires_in,
                     expires_at: data.session.expires_at
-                },
-                isPremium: premium
+                }
             }
         });
+        
     } catch (error) {
         next(error);
     }
@@ -186,105 +137,67 @@ router.post('/login', async (req, res, next) => {
 
 /**
  * POST /api/auth/logout
- * Logout current user
- * Requires: Authentication
- * 
- * Returns: { success: true }
+ * Logout user (invalidate token)
  */
-router.post('/logout', requireAuth, async (req, res, next) => {
+router.post('/logout', async (req, res, next) => {
     try {
-        // Get token from request
-        const token = req.headers.authorization?.replace('Bearer ', '');
+        // Get token from header
+        const authHeader = req.headers.authorization;
         
-        if (!token) {
-            throw new UnauthorizedError('No token provided');
-        }
-        
-        // Sign out with Supabase
-        // Note: We use admin API to invalidate token
-        const { error } = await supabase.auth.admin.signOut(token);
-        
-        if (error) {
-            console.warn('Logout error:', error.message);
-            // Don't throw - logout should always succeed client-side
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            
+            // Sign out from Supabase
+            await supabase.auth.signOut();
         }
         
         res.json({
             success: true,
             message: 'Logout successful'
         });
+        
     } catch (error) {
         next(error);
     }
 });
 
 /**
- * GET /api/auth/session
- * Validate current session / token
- * Requires: Authentication
- * 
- * Returns: { user, valid: true }
+ * GET /api/auth/me
+ * Get current user info
  */
-router.get('/session', requireAuth, async (req, res, next) => {
+router.get('/me', async (req, res, next) => {
     try {
-        const user = req.user;
+        const authHeader = req.headers.authorization;
+        
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({
+                success: false,
+                message: 'No token provided'
+            });
+        }
+        
+        const token = authHeader.split(' ')[1];
+        
+        const { data: { user }, error } = await supabase.auth.getUser(token);
+        
+        if (error || !user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid or expired token'
+            });
+        }
         
         res.json({
             success: true,
-            valid: true,
             data: {
                 user: {
                     id: user.id,
                     email: user.email,
-                    isPremium: user.isPremium
+                    created_at: user.created_at
                 }
             }
         });
-    } catch (error) {
-        next(error);
-    }
-});
-
-/**
- * POST /api/auth/refresh
- * Refresh access token using refresh token
- * 
- * Body: { refresh_token }
- * Returns: { session }
- */
-router.post('/refresh', async (req, res, next) => {
-    try {
-        const { refresh_token } = req.body;
         
-        if (!refresh_token) {
-            throw new ValidationError('Refresh token required');
-        }
-        
-        // Refresh session with Supabase
-        const { data, error } = await supabase.auth.refreshSession({
-            refresh_token
-        });
-        
-        if (error) {
-            throw new UnauthorizedError('Invalid or expired refresh token');
-        }
-        
-        if (!data.session) {
-            throw new UnauthorizedError('Failed to refresh session');
-        }
-        
-        res.json({
-            success: true,
-            message: 'Token refreshed',
-            data: {
-                session: {
-                    access_token: data.session.access_token,
-                    refresh_token: data.session.refresh_token,
-                    expires_in: data.session.expires_in,
-                    expires_at: data.session.expires_at
-                }
-            }
-        });
     } catch (error) {
         next(error);
     }

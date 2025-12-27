@@ -109,6 +109,7 @@ async function handleLogin(e) {
     
     clearInputErrors();
     
+    // ✅ Only check if fields are filled - NO password length check for login!
     if (!email || !password) {
         if (!email) emailInput.classList.add('error');
         if (!password) passwordInput.classList.add('error');
@@ -171,7 +172,7 @@ async function handleLogin(e) {
         } else {
             emailInput.classList.add('error');
             passwordInput.classList.add('error');
-            // Backend sendet { error: true, message: "..." }
+            // ✅ Show proper error message for login
             const errorMsg = data.message || data.error_description || 
                              (typeof data.error === 'string' ? data.error : 'Falsches Passwort oder Email');
             showError(errorMsg);
@@ -203,6 +204,7 @@ async function handleSignup(e) {
         return;
     }
     
+    // ✅ Password length check ONLY for signup!
     if (password.length < 6) {
         passwordInput.classList.add('error');
         showError('Passwort muss mindestens 6 Zeichen lang sein');
