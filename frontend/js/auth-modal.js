@@ -129,19 +129,13 @@ async function handleLogin(e) {
         const data = await response.json();
         
         if (response.ok && data.success) {
-            // Debug: Log full response
-            console.log('🔍 Login response:', JSON.stringify(data, null, 2));
-            
-            // ✅ Token ist unter data.data.session.access_token (Backend Response Format)
+            // Token ist unter data.data.session.access_token (Backend Response Format)
             const token = data.data?.session?.access_token || 
                           data.session?.access_token || 
                           data.token ||
                           data.access_token;
             
-            console.log('🔑 Extracted token:', token ? token.substring(0, 50) + '...' : 'NULL');
-            
             if (!token) {
-                console.error('❌ No token in response:', data);
                 showError('Login fehlgeschlagen - kein Token erhalten');
                 submitBtn.classList.remove('loading');
                 submitBtn.disabled = false;
@@ -151,7 +145,6 @@ async function handleLogin(e) {
             // Validate token format (JWT has 3 parts separated by dots)
             const tokenParts = token.split('.');
             if (tokenParts.length !== 3) {
-                console.error('❌ Invalid token format, parts:', tokenParts.length);
                 showError('Login fehlgeschlagen - ungültiges Token-Format');
                 submitBtn.classList.remove('loading');
                 submitBtn.disabled = false;
@@ -162,8 +155,6 @@ async function handleLogin(e) {
             localStorage.setItem('auth_token', token);
             localStorage.setItem('user_logged_in', 'true');
             localStorage.setItem('user_email', email);
-            
-            console.log('✅ Login successful, token saved (length:', token.length, ')');
             
             updateUserIconState(true, email);
             
