@@ -33,12 +33,26 @@ export function initUserMenu() {
         }
     });
     
-    // ✅ Close when clicking bottom nav items
-    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
-        item.addEventListener('click', () => {
-            if (menuOpen) closeUserMenu();
-        });
+    // ✅ Close when clicking bottom nav buttons (by ID)
+    const navButtons = ['nav-art', 'nav-quotes', 'nav-favorites'];
+    navButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.addEventListener('click', () => {
+                if (menuOpen) closeUserMenu();
+            });
+        }
     });
+    
+    // ✅ Also try by parent selector
+    const bottomNav = document.getElementById('bottom-nav');
+    if (bottomNav) {
+        bottomNav.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (menuOpen) closeUserMenu();
+            });
+        });
+    }
     
     // ✅ Close when clicking app logo
     const appLogo = document.querySelector('.app-logo');
