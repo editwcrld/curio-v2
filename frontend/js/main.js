@@ -13,7 +13,7 @@ import { initSwipeHandler } from './swipe-handler.js';
 import { initAuthModal, checkAuthState } from './auth-modal.js';
 import { initUserMenu } from './user-menu.js';
 import { initLightbox } from './lightbox.js';
-import { showAppLoading, hideAppLoading } from './loading.js';
+import { hideAppLoading, showErrorScreen } from './loading.js';
 import { initLimits } from './limits.js';
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import './toast.js';
@@ -31,23 +31,14 @@ function getLastView() {
 // ===== LOAD CONTENT =====
 
 async function loadContentForView(viewName) {
-    try {
-        // Beide laden von /daily/today - das ist ein einziger API Call
-        // Die Engines cachen das Ergebnis für den Tag
-        if (viewName === 'art') {
-            await loadDailyArt();
-            // Quote im Hintergrund (teilt denselben API Call wegen Cache)
-            loadDailyQuote().catch(() => {});
-        } else if (viewName === 'quotes') {
-            await loadDailyQuote();
-            // Art im Hintergrund
-            loadDailyArt().catch(() => {});
-        } else if (viewName === 'favorites') {
-            // Beide laden für Favorites View
-            await Promise.all([loadDailyArt(), loadDailyQuote()]);
-        }
-    } catch (error) {
-        // Silent fail - content will show error state
+    if (viewName === 'art') {
+        await loadDailyArt();
+        loadDailyQuote().catch(() => {});
+    } else if (viewName === 'quotes') {
+        await loadDailyQuote();
+        loadDailyArt().catch(() => {});
+    } else if (viewName === 'favorites') {
+        await Promise.all([loadDailyArt(), loadDailyQuote()]);
     }
 }
 
@@ -55,7 +46,7 @@ async function loadContentForView(viewName) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        showAppLoading();
+        // Loading screen is already in HTML, no need to create it
         
         const lastView = getLastView();
         
@@ -85,11 +76,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         updateAllFavoriteButtons();
         hideAppLoading();
+        
     } catch (error) {
-        hideAppLoading();
-        if (window.showToast) {
-            window.showToast('Fehler beim Laden. Bitte neu laden.', 'error');
-        }
+        console.error('App initialization failed:', error);
+        
+        // Show beautiful error screen instead of broken UI
+        showErrorScreen('Unable to load content');
     }
 });
 

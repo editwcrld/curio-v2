@@ -5,6 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Daily Art & Quotes</title>
     
+    <!-- CRITICAL: Inline styles for instant loading screen (no black flash) -->
+    <style>
+        body { margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .app-loading-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+    </style>
+    
     <!-- CSS Imports -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/layout.css">
@@ -12,6 +27,7 @@
     <link rel="stylesheet" href="css/navigation-controls.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/app-loading.css">
     <link rel="stylesheet" href="css/art-section.css">
     <link rel="stylesheet" href="css/quote-section.css">
     <link rel="stylesheet" href="css/info-section.css">
@@ -23,6 +39,36 @@
     <link rel="stylesheet" href="css/user-menu.css">
 </head>
 <body>
+    <!-- INSTANT LOADING SCREEN (in HTML to prevent black flash) -->
+    <div id="app-loading-screen" class="app-loading-screen">
+        <div class="loading-bg-shapes">
+            <div class="loading-shape"></div>
+            <div class="loading-shape"></div>
+            <div class="loading-shape"></div>
+            <div class="loading-shape"></div>
+        </div>
+        
+        <div class="loading-logo-container">
+            <div class="loading-logo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                    <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+            <h1 class="loading-app-name">Curio</h1>
+            <p class="loading-tagline">Daily Art & Quotes</p>
+        </div>
+        
+        <div class="loading-progress-container">
+            <div class="loading-dots">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+            <p class="loading-status">Loading your daily inspiration...</p>
+        </div>
+    </div>
+
     <div id="app">
         <!-- App Header (Logo & User Icon) -->
         <header class="app-header">
