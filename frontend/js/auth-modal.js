@@ -171,7 +171,10 @@ async function handleLogin(e) {
         } else {
             emailInput.classList.add('error');
             passwordInput.classList.add('error');
-            showError(data.error || 'Falsches Passwort oder Email');
+            // Backend sendet { error: true, message: "..." }
+            const errorMsg = data.message || data.error_description || 
+                             (typeof data.error === 'string' ? data.error : 'Falsches Passwort oder Email');
+            showError(errorMsg);
         }
     } catch (error) {
         console.error('Login error:', error);
@@ -228,7 +231,10 @@ async function handleSignup(e) {
             }, 1500);
         } else {
             emailInput.classList.add('error');
-            showError(data.error || 'Registrierung fehlgeschlagen');
+            // Backend sendet { error: true, message: "..." }
+            const errorMsg = data.message || data.error_description || 
+                             (typeof data.error === 'string' ? data.error : 'Registrierung fehlgeschlagen');
+            showError(errorMsg);
         }
     } catch (error) {
         console.error('Signup error:', error);
