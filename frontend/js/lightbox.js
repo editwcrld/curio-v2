@@ -10,6 +10,7 @@
  * - Mouse wheel zoom (desktop)
  * - Fit to screen button
  * - Close button
+ * - ✅ Smooth slide-down close animation
  */
 
 // ===== SINGLETON STATE =====
@@ -91,6 +92,7 @@ export function openLightbox(imageSrc) {
     // Reset overlay opacity (critical fix!)
     LightboxState.overlay.style.opacity = '';
     LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+    LightboxState.image.style.opacity = '1';
     
     // Show loading
     loading.style.display = 'block';
@@ -120,31 +122,56 @@ export function openLightbox(imageSrc) {
     img.src = imageSrc;
 }
 
-export function closeLightbox() {
+/**
+ * ✅ Close with smooth slide-down animation
+ */
+export function closeLightbox(withSlideDown = false) {
     if (!LightboxState.isOpen) return;
     
     // Mark as closed immediately to prevent race conditions
     LightboxState.isOpen = false;
     
     const overlay = LightboxState.overlay;
+    const image = LightboxState.image;
     if (!overlay) return;
     
-    // Animate out
-    overlay.style.transition = 'opacity 0.3s ease';
-    overlay.classList.remove('active');
     document.body.style.overflow = '';
     
-    // Clean up after animation
-    setTimeout(() => {
-        LightboxState.reset();
-        if (LightboxState.image) {
-            LightboxState.image.style.transform = '';
-        }
-        // Reset opacity to default
-        if (overlay) {
-            overlay.style.opacity = '';
-        }
-    }, 300);
+    if (withSlideDown && image) {
+        // ✅ Smooth slide down + fade out
+        image.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+        image.style.transform = `translate(${LightboxState.translateX}px, ${window.innerHeight}px) scale(${LightboxState.scale})`;
+        image.style.opacity = '0';
+        
+        overlay.style.transition = 'opacity 0.3s ease-out';
+        overlay.style.opacity = '0';
+        
+        setTimeout(() => {
+            overlay.classList.remove('active');
+            cleanupAfterClose();
+        }, 300);
+    } else {
+        // Normal fade out
+        overlay.style.transition = 'opacity 0.3s ease';
+        overlay.classList.remove('active');
+        
+        setTimeout(() => {
+            cleanupAfterClose();
+        }, 300);
+    }
+}
+
+function cleanupAfterClose() {
+    LightboxState.reset();
+    if (LightboxState.image) {
+        LightboxState.image.style.transform = '';
+        LightboxState.image.style.opacity = '';
+        LightboxState.image.style.transition = '';
+    }
+    if (LightboxState.overlay) {
+        LightboxState.overlay.style.opacity = '';
+        LightboxState.overlay.style.transition = '';
+    }
 }
 
 // ===== TRANSFORM =====
@@ -283,11 +310,12 @@ function handleTouchEnd(e) {
             velocity > SWIPE_VELOCITY_THRESHOLD;
         
         if (shouldClose) {
-            closeLightbox();
+            // ✅ Close with smooth slide-down animation
+            closeLightbox(true);
         } else {
-            // Snap back
+            // Snap back smoothly
             LightboxState.translateY = 0;
-            LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+            LightboxState.overlay.style.transition = 'opacity 0.25s ease';
             LightboxState.overlay.style.opacity = '';
             applyTransform(true);
         }
@@ -389,12 +417,12 @@ function initTopSwipeAreaClose(swipeArea) {
         const deltaY = currentY - startY;
         
         if (deltaY > 80) {
-            // Close
-            closeLightbox();
+            // ✅ Close with slide-down
+            closeLightbox(true);
         } else {
             // Snap back
             LightboxState.translateY = 0;
-            LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+            LightboxState.overlay.style.transition = 'opacity 0.25s ease';
             LightboxState.overlay.style.opacity = '';
             applyTransform(true);
         }
@@ -431,10 +459,11 @@ function initTopSwipeAreaClose(swipeArea) {
         const deltaY = currentY - startY;
         
         if (deltaY > 80) {
-            closeLightbox();
+            // ✅ Close with slide-down
+            closeLightbox(true);
         } else {
             LightboxState.translateY = 0;
-            LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+            LightboxState.overlay.style.transition = 'opacity 0.25s ease';
             LightboxState.overlay.style.opacity = '';
             applyTransform(true);
         }
@@ -519,7 +548,7 @@ function createLightboxDOM() {
     LightboxState.container = document.getElementById('lightbox-container');
     
     // Buttons
-    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox-close').addEventListener('click', () => closeLightbox(false));
     document.getElementById('lightbox-fit').addEventListener('click', fitToScreen);
     
     // Top swipe area - drag down to close
@@ -529,7 +558,7 @@ function createLightboxDOM() {
     // Keyboard
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && LightboxState.isOpen) {
-            closeLightbox();
+            closeLightbox(false);
         }
     });
     
@@ -548,7 +577,7 @@ function createLightboxDOM() {
     // Click on background to close (only when not zoomed)
     LightboxState.overlay.addEventListener('click', (e) => {
         if (e.target === LightboxState.overlay && LightboxState.scale === MIN_SCALE) {
-            closeLightbox();
+            closeLightbox(false);
         }
     });
 }

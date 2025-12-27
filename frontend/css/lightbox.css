@@ -35,11 +35,10 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding-top: 12px;
+    padding-top: 14px;
     cursor: grab;
     z-index: 20002;
     touch-action: none;
-    /* Glassmorphism matching app design */
     background: linear-gradient(
         to bottom,
         rgba(0, 0, 0, 0.6) 0%,
@@ -52,24 +51,26 @@
     cursor: grabbing;
 }
 
-/* Drag Handle Bar - More visible */
+/* ✅ Drag Handle Bar - Larger, more visible with shadow for any background */
 .lightbox-drag-handle-bar {
-    width: 48px;
-    height: 5px;
-    background: rgba(255, 255, 255, 0.7);
+    width: 60px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.8);
     border-radius: 3px;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 .lightbox-top-swipe-area:hover .lightbox-drag-handle-bar {
-    background: rgba(255, 255, 255, 0.9);
-    width: 56px;
+    background: rgba(255, 255, 255, 0.95);
+    width: 70px;
 }
 
 .lightbox-top-swipe-area:active .lightbox-drag-handle-bar {
     background: white;
-    width: 64px;
+    width: 80px;
 }
 
 /* =====================================================
@@ -79,10 +80,10 @@
 .lightbox-zoom-indicator {
     margin-top: 12px;
     padding: 8px 18px;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 20px;
     color: white;
     font-size: 14px;
@@ -90,6 +91,7 @@
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .lightbox-zoom-indicator.visible {
@@ -135,6 +137,7 @@
 
 /* =====================================================
    BOTTOM CONTROLS - Fit and Close together
+   ✅ Always visible with dark background + shadow
    ===================================================== */
 
 .lightbox-controls {
@@ -148,10 +151,10 @@
     z-index: 20001;
 }
 
-/* Fit Button - Glassmorphism style */
+/* ✅ Fit Button - Dark bg for visibility on any image */
 .lightbox-fit {
     padding: 14px 24px;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.25);
@@ -164,16 +167,18 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 .lightbox-fit:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.8);
     border-color: rgba(255, 255, 255, 0.4);
-    transform: translateY(-2px);
 }
 
 .lightbox-fit:active {
-    transform: translateY(0);
+    transform: scale(0.96);
 }
 
 .lightbox-fit svg {
@@ -182,12 +187,12 @@
     stroke: white;
 }
 
-/* Close Button - Glassmorphism style */
+/* ✅ Close Button - Dark bg for visibility on any image */
 .lightbox-close {
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.65);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.25);
@@ -197,10 +202,13 @@
     justify-content: center;
     cursor: pointer;
     transition: all 0.2s ease;
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
 .lightbox-close:hover {
-    background: rgba(255, 100, 100, 0.3);
+    background: rgba(200, 60, 60, 0.8);
     border-color: rgba(255, 100, 100, 0.5);
 }
 
@@ -236,7 +244,7 @@
 }
 
 /* =====================================================
-   SWIPE INDICATOR
+   SWIPE INDICATOR - Subtle pill with dark background
    ===================================================== */
 
 .lightbox-swipe-indicator {
@@ -244,14 +252,23 @@
     top: 100px;
     left: 50%;
     transform: translateX(-50%);
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
     font-weight: 500;
     z-index: 20001;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s;
-    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .lightbox-swipe-indicator.visible {
@@ -259,15 +276,14 @@
 }
 
 .lightbox-swipe-icon {
-    width: 24px;
-    height: 24px;
-    margin: 0 auto 6px;
+    width: 16px;
+    height: 16px;
     animation: swipe-down 2s ease-in-out infinite;
 }
 
 @keyframes swipe-down {
     0%, 100% { transform: translateY(0); opacity: 0.6; }
-    50% { transform: translateY(8px); opacity: 1; }
+    50% { transform: translateY(4px); opacity: 1; }
 }
 
 /* =====================================================
@@ -277,12 +293,17 @@
 @media (max-width: 768px) {
     .lightbox-top-swipe-area {
         height: 90px;
-        padding-top: 10px;
+        padding-top: 12px;
     }
     
     .lightbox-drag-handle-bar {
         width: 56px;
         height: 5px;
+    }
+    
+    .lightbox-top-swipe-area:hover .lightbox-drag-handle-bar,
+    .lightbox-top-swipe-area:active .lightbox-drag-handle-bar {
+        width: 64px;
     }
     
     .lightbox-controls {
@@ -318,7 +339,14 @@
     }
     
     .lightbox-swipe-indicator {
-        top: 95px;
+        top: 90px;
+        padding: 6px 12px;
+        font-size: 11px;
+    }
+    
+    .lightbox-swipe-icon {
+        width: 14px;
+        height: 14px;
     }
 }
 
