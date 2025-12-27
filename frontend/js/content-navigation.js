@@ -43,8 +43,9 @@ export function initContentNavigation() {
     
     if (isLoggedIn()) {
         setTimeout(() => {
-            prefetchQuote();
-            prefetchArt();
+            // Only prefetch if user has remaining limits
+            if (canNavigate('quotes')) prefetchQuote();
+            if (canNavigate('art')) prefetchArt();
         }, PREFETCH_DELAY_MS);
     }
 }
@@ -181,6 +182,8 @@ async function goNextQuote() {
 async function prefetchQuote() {
     if (!isLoggedIn() || isPrefetchingQuote || prefetchedQuote) return;
     if (quotePrefetchRetries >= MAX_PREFETCH_RETRIES) return;
+    // Don't prefetch if limit already reached
+    if (!canNavigate('quotes')) return;
     
     isPrefetchingQuote = true;
     
@@ -305,6 +308,8 @@ async function goNextArt() {
 async function prefetchArt() {
     if (!isLoggedIn() || isPrefetchingArt || prefetchedArt) return;
     if (artPrefetchRetries >= MAX_PREFETCH_RETRIES) return;
+    // Don't prefetch if limit already reached
+    if (!canNavigate('art')) return;
     
     isPrefetchingArt = true;
     
