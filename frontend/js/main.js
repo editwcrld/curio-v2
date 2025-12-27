@@ -32,20 +32,19 @@ function getLastView() {
 
 async function loadContentForView(viewName) {
     try {
-        if (viewName === 'art' || viewName === 'favorites') {
-            await loadDailyArt();
-        }
-        
-        if (viewName === 'quotes' || viewName === 'favorites') {
-            await loadDailyQuote();
-        }
-        
-        // Preload other in background
+        // Beide laden von /daily/today - das ist ein einziger API Call
+        // Die Engines cachen das Ergebnis für den Tag
         if (viewName === 'art') {
+            await loadDailyArt();
+            // Quote im Hintergrund (teilt denselben API Call wegen Cache)
             loadDailyQuote().catch(() => {});
-        }
-        if (viewName === 'quotes') {
+        } else if (viewName === 'quotes') {
+            await loadDailyQuote();
+            // Art im Hintergrund
             loadDailyArt().catch(() => {});
+        } else if (viewName === 'favorites') {
+            // Beide laden für Favorites View
+            await Promise.all([loadDailyArt(), loadDailyQuote()]);
         }
     } catch (error) {
         // Silent fail - content will show error state

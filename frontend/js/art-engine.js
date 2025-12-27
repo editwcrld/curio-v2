@@ -1,6 +1,6 @@
 /**
  * Art Engine Module
- * ✅ Backend API (Real Art Institute Data!)
+ * ✅ Nutzt /daily/today für fixes Tages-Content
  * ✅ Language Support (DE/EN)
  */
 
@@ -8,26 +8,48 @@ import { API_BASE_URL } from './config.js';
 import { appState } from './state.js';
 import { addToArtHistory } from './content-navigation.js';
 
+// Cache für Tages-Content (damit nicht jeder Reload neu fetcht)
+let dailyArtCache = null;
+let dailyArtDate = null;
+
+function getTodayDate() {
+    return new Date().toISOString().split('T')[0];
+}
+
 export async function loadDailyArt() {
     try {
-        const response = await fetch(`${API_BASE_URL}/daily/art`);
+        const today = getTodayDate();
+        
+        // Return cached if same day
+        if (dailyArtCache && dailyArtDate === today) {
+            appState.setArtData(dailyArtCache);
+            addToArtHistory(dailyArtCache);
+            return dailyArtCache;
+        }
+        
+        // Fetch from /daily/today (fixes Tages-Content)
+        const response = await fetch(`${API_BASE_URL}/daily/today`);
         
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: Failed to load art`);
+            throw new Error(`HTTP ${response.status}: Failed to load daily content`);
         }
         
         const result = await response.json();
-        const data = result.data || result;
+        const art = result.data?.art || result.art;
         
-        appState.setArtData(data);
+        if (!art) {
+            throw new Error('No art in daily content');
+        }
         
-        // Add to history
-        addToArtHistory(data);
+        // Cache for today
+        dailyArtCache = art;
+        dailyArtDate = today;
         
-        return data;
+        appState.setArtData(art);
+        addToArtHistory(art);
+        
+        return art;
     } catch (error) {
-        console.error('Error loading daily art:', error);
-        
         appState.setArtData({
             id: 'error',
             title: 'Artwork nicht verfügbar',
@@ -62,7 +84,7 @@ export function displayArt(data) {
         titleEl.textContent = `${data.artist || 'Unknown'}${year}`;
     }
     
-    // ✅ Set description in current language
+    // Set description in current language
     if (contentEl) {
         const lang = localStorage.getItem('curio_language') || 'de';
         let description;
@@ -85,10 +107,16 @@ export function initArtView() {
         }
     });
     
-    // ✅ Listen for language changes
+    // Listen for language changes
     window.addEventListener('languageChanged', () => {
         if (appState.currentArtData) {
             displayArt(appState.currentArtData);
         }
     });
+}
+
+// Clear cache (für manuellen Reset)
+export function clearDailyArtCache() {
+    dailyArtCache = null;
+    dailyArtDate = null;
 }

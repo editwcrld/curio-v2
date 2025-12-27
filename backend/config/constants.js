@@ -12,7 +12,7 @@
  * Diese Liste ist nur als Fallback, falls DB nicht erreichbar.
  */
 const PREMIUM_FALLBACK_EMAILS = [
-    'editw_orld@proton.me'
+    'editw_rld@proton.me'
 ];
 
 // =====================================================
@@ -21,20 +21,20 @@ const PREMIUM_FALLBACK_EMAILS = [
 
 /**
  * Daily Navigation Limits pro User-Typ
- * Diese Werte werden auch in app_config DB Tabelle gespeichert
+ * Guest: 3, Registered: 10, Premium: 50
  */
 const LIMITS = {
     guest: {
-        art: 5,
-        quotes: 5
+        art: 3,
+        quotes: 3
     },
     registered: {
-        art: 20,
-        quotes: 20
+        art: 10,
+        quotes: 10
     },
     premium: {
-        art: null,      // null = unlimited
-        quotes: null
+        art: 50,
+        quotes: 50
     }
 };
 

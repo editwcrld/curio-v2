@@ -1,44 +1,71 @@
 /**
  * Quote Engine Module
- * ✅ Backend API
+ * ✅ Nutzt /daily/today für fixes Tages-Content
  * ✅ Language Support (DE/EN)
- * ✅ Random Gradient
  */
 
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import { appState } from './state.js';
 import { addToQuoteHistory } from './content-navigation.js';
 
+// Cache für Tages-Content
+let dailyQuoteCache = null;
+let dailyQuoteDate = null;
+let dailyQuoteGradient = null;
+
+function getTodayDate() {
+    return new Date().toISOString().split('T')[0];
+}
+
 export async function loadDailyQuote() {
     try {
-        const response = await fetch(`${API_BASE_URL}/daily/quote`);
+        const today = getTodayDate();
+        
+        // Return cached if same day
+        if (dailyQuoteCache && dailyQuoteDate === today) {
+            appState.setQuoteData(dailyQuoteCache);
+            appState.setGradient(dailyQuoteGradient);
+            addToQuoteHistory(dailyQuoteCache, dailyQuoteGradient);
+            return dailyQuoteCache;
+        }
+        
+        // Fetch from /daily/today (fixes Tages-Content)
+        const response = await fetch(`${API_BASE_URL}/daily/today`);
         
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: Failed to load quote`);
+            throw new Error(`HTTP ${response.status}: Failed to load daily content`);
         }
         
         const result = await response.json();
-        const data = result.data || result;
+        const quote = result.data?.quote || result.quote;
         
-        // Set random gradient
+        if (!quote) {
+            throw new Error('No quote in daily content');
+        }
+        
+        // Generate gradient for today (consistent for the day)
         const gradient = getRandomGradient();
         
-        appState.setQuoteData(data);
+        // Cache for today
+        dailyQuoteCache = quote;
+        dailyQuoteDate = today;
+        dailyQuoteGradient = gradient;
+        
+        appState.setQuoteData(quote);
         appState.setGradient(gradient);
+        addToQuoteHistory(quote, gradient);
         
-        // Add to history
-        addToQuoteHistory(data, gradient);
-        
-        return data;
+        return quote;
     } catch (error) {
-        console.error('Error loading daily quote:', error);
+        const fallbackGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
         
         appState.setQuoteData({
             id: 'error',
-            text: 'Quotes konnten nicht geladen werden',
+            text: 'Zitat nicht verfügbar',
             author: 'Fehler',
             backgroundInfo: 'Bitte lade die Seite neu.'
         });
+        appState.setGradient(fallbackGradient);
         
         throw error;
     }
@@ -46,27 +73,36 @@ export async function loadDailyQuote() {
 
 export function displayQuote(data, gradient) {
     if (!data) return;
-
+    
     const quoteView = document.getElementById('view-quotes');
     if (!quoteView) return;
-
-    const containerEl = quoteView.querySelector('.quote-container');
-    const textEl = quoteView.querySelector('.quote-text');
+    
+    const quoteTextEl = quoteView.querySelector('.quote-text');
     const authorEl = quoteView.querySelector('.quote-author');
     const titleEl = quoteView.querySelector('.info-title');
     const contentEl = quoteView.querySelector('.info-content p');
-
-    // Set gradient
-    if (containerEl && gradient) {
-        containerEl.style.background = gradient;
-    }
     
     // Set quote text
-    if (textEl) textEl.textContent = data.text;
-    if (authorEl) authorEl.textContent = data.author;
-    if (titleEl) titleEl.textContent = data.author;
+    if (quoteTextEl) {
+        quoteTextEl.textContent = `"${data.text}"`;
+    }
     
-    // ✅ Set description in current language
+    // Set author (main display)
+    if (authorEl) {
+        authorEl.textContent = `— ${data.author}`;
+    }
+    
+    // Set info-title (Author name in info panel)
+    if (titleEl) {
+        titleEl.textContent = data.author || 'Unknown';
+    }
+    
+    // Set gradient background
+    if (gradient) {
+        quoteView.style.background = gradient;
+    }
+    
+    // Set description in current language
     if (contentEl) {
         const lang = localStorage.getItem('curio_language') || 'de';
         let description;
@@ -89,10 +125,17 @@ export function initQuoteView() {
         }
     });
     
-    // ✅ Listen for language changes
+    // Listen for language changes
     window.addEventListener('languageChanged', () => {
         if (appState.currentQuoteData) {
             displayQuote(appState.currentQuoteData, appState.currentGradient);
         }
     });
+}
+
+// Clear cache (für manuellen Reset)
+export function clearDailyQuoteCache() {
+    dailyQuoteCache = null;
+    dailyQuoteDate = null;
+    dailyQuoteGradient = null;
 }

@@ -1,151 +1,165 @@
 /**
- * Limits Module - FIXED VERSION
- * Synchronizes with Backend Premium Status
+ * Limits Module
+ * Handles daily navigation limits for guests, registered, and premium users
+ * Backend-ready: localStorage structure mimics future API responses
  */
 
-import { API_BASE_URL } from './config.js';
-
+// ========================================
+// LIMIT CONFIGURATION
+// Guest: 3, Registered: 10, Premium: 50
+// ========================================
 const LIMITS = {
-    guest: { art: 2, quotes: 2 },
-    registered: { art: 20, quotes: 20 },
-    premium: { art: Infinity, quotes: Infinity }
+    guest: {
+        art: 3,
+        quotes: 3
+    },
+    registered: {
+        art: 10,
+        quotes: 10
+    },
+    premium: {
+        art: 50,
+        quotes: 50
+    }
 };
 
-/**
- * Get user type from localStorage + Backend
- */
+const STORAGE_KEYS = {
+    LIMITS: 'user_limits_v1',
+    LAST_RESET: 'limits_last_reset_v1',
+    USER_TYPE: 'user_type_v1'
+};
+
+// ========================================
+// USER TYPE DETECTION
+// ========================================
+
 export function getUserType() {
-    // Check if user is logged in
-    const token = localStorage.getItem('auth_token');
-    if (!token) return 'guest';
-    
-    // Check premium status from localStorage (set during login!)
     const isPremium = localStorage.getItem('user_premium') === 'true';
     if (isPremium) return 'premium';
     
-    return 'registered';
+    const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
+    if (isLoggedIn) return 'registered';
+    
+    return 'guest';
 }
 
-/**
- * Get current limits based on user type
- */
 export function getCurrentLimits() {
-    return LIMITS[getUserType()];
+    const userType = getUserType();
+    return LIMITS[userType];
 }
 
-/**
- * Check if limits should be reset (24h passed)
- */
+// ========================================
+// 24H RESET LOGIC
+// ========================================
+
 function shouldResetLimits() {
-    const lastReset = localStorage.getItem('limits_last_reset_v1');
+    const lastReset = localStorage.getItem(STORAGE_KEYS.LAST_RESET);
     if (!lastReset) return true;
     
-    const hoursPassed = (new Date() - new Date(lastReset)) / (1000 * 60 * 60);
+    const lastResetTime = new Date(lastReset);
+    const now = new Date();
+    const hoursPassed = (now - lastResetTime) / (1000 * 60 * 60);
+    
     return hoursPassed >= 24;
 }
 
-/**
- * Reset limits to 0
- */
 function resetLimits() {
-    localStorage.setItem('user_limits_v1', JSON.stringify({
-        art: { used: 0 },
-        quotes: { used: 0 }
-    }));
-    localStorage.setItem('limits_last_reset_v1', new Date().toISOString());
+    const emptyLimits = {
+        art: { used: 0, remaining: 0 },
+        quotes: { used: 0, remaining: 0 }
+    };
+    
+    localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(emptyLimits));
+    localStorage.setItem(STORAGE_KEYS.LAST_RESET, new Date().toISOString());
 }
 
-/**
- * Initialize limits (called on app load)
- */
 export function initLimits() {
     if (shouldResetLimits()) {
         resetLimits();
     }
 }
 
-/**
- * Get current usage
- */
+// ========================================
+// LIMIT TRACKING
+// ========================================
+
 export function getLimitUsage() {
-    const stored = localStorage.getItem('user_limits_v1');
-    const limits = getCurrentLimits();
+    const stored = localStorage.getItem(STORAGE_KEYS.LIMITS);
+    const userLimits = getCurrentLimits();
     
-    const usage = stored ? JSON.parse(stored) : { art: { used: 0 }, quotes: { used: 0 } };
-    
-    return {
-        art: { 
-            used: usage.art?.used || 0, 
-            remaining: limits.art === Infinity ? Infinity : Math.max(0, limits.art - (usage.art?.used || 0))
-        },
-        quotes: { 
-            used: usage.quotes?.used || 0, 
-            remaining: limits.quotes === Infinity ? Infinity : Math.max(0, limits.quotes - (usage.quotes?.used || 0))
-        }
+    let usage = stored ? JSON.parse(stored) : {
+        art: { used: 0, remaining: userLimits.art },
+        quotes: { used: 0, remaining: userLimits.quotes }
     };
+    
+    usage.art.remaining = userLimits.art - usage.art.used;
+    usage.quotes.remaining = userLimits.quotes - usage.quotes.used;
+    
+    return usage;
 }
 
-/**
- * Check if user can navigate (has remaining quota)
- */
 export function canNavigate(type) {
-    const userType = getUserType();
-    
-    // Premium: Always allowed
-    if (userType === 'premium') {
-        return true;
-    }
-    
-    // Others: Check limits
     const usage = getLimitUsage();
-    return usage[type].remaining > 0;
+    const limit = getCurrentLimits()[type];
+    
+    return usage[type].used < limit;
 }
 
-/**
- * Increment usage counter
- */
 export function incrementUsage(type) {
-    // Don't track for premium users
-    if (getUserType() === 'premium') {
-        return;
-    }
-    
-    const stored = localStorage.getItem('user_limits_v1');
-    const usage = stored ? JSON.parse(stored) : { art: { used: 0 }, quotes: { used: 0 } };
-    
-    usage[type].used = (usage[type].used || 0) + 1;
-    
-    localStorage.setItem('user_limits_v1', JSON.stringify(usage));
+    const usage = getLimitUsage();
+    usage[type].used += 1;
+    localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(usage));
 }
 
-/**
- * Get remaining count for a type
- */
 export function getRemainingCount(type) {
-    return getLimitUsage()[type].remaining;
+    const usage = getLimitUsage();
+    return usage[type].remaining;
 }
 
-/**
- * Handle when limit is reached
- */
+// ========================================
+// LIMIT REACHED HANDLERS
+// ========================================
+
 export function handleLimitReached(type) {
     const userType = getUserType();
     
     if (userType === 'guest') {
-        // Show login modal for guests
-        import('./auth-modal.js').then(m => m.openAuthModal('login'));
-        setTimeout(() => updateAuthModalWithLimitInfo(type), 150);
+        showGuestLimitModal(type);
     } else if (userType === 'registered') {
-        // Show upgrade modal for registered users
-        import('./limit-modal.js').then(m => m.openUpgradeModal(type));
+        showUpgradeModal(type);
+    } else if (userType === 'premium') {
+        // Premium hat jetzt auch Limits (50)
+        showPremiumLimitModal(type);
     }
-    // Premium users should never reach here!
 }
 
-/**
- * Update auth modal with limit info
- */
+function showPremiumLimitModal(type) {
+    const typeName = type === 'art' ? 'Kunstwerke' : 'Zitate';
+    if (window.showToast) {
+        window.showToast(`Tageslimit von 50 ${typeName} erreicht. Morgen geht's weiter!`, 'info');
+    }
+}
+
+function showGuestLimitModal(type) {
+    import('./auth-modal.js').then(module => {
+        module.openAuthModal('login');
+    });
+    
+    setTimeout(() => {
+        updateAuthModalWithLimitInfo(type);
+    }, 150);
+}
+
+function showUpgradeModal(type) {
+    import('./limit-modal.js').then(module => {
+        module.openUpgradeModal(type);
+    }).catch(() => {});
+}
+
 function updateAuthModalWithLimitInfo(type) {
+    const usage = getLimitUsage();
+    const limits = getCurrentLimits();
+    
     const authHeader = document.querySelector('.auth-header');
     if (!authHeader) return;
     
@@ -156,37 +170,83 @@ function updateAuthModalWithLimitInfo(type) {
         authHeader.after(limitInfo);
     }
     
-    const usage = getLimitUsage();
-    const limits = getCurrentLimits();
     const typeName = type === 'art' ? 'Kunstwerke' : 'Zitate';
+    const registeredLimit = LIMITS.registered[type];
     
+    // Simple box without any icons
     limitInfo.innerHTML = `
         <div class="limit-warning">
-            <p class="limit-title">Tageslimit erreicht</p>
-            <p class="limit-description">
-                Du hast <strong>${usage[type].used}/${limits[type]} ${typeName}</strong> für heute angesehen. 
-                Melde dich an für <strong>20 ${typeName}</strong> pro Tag!
-            </p>
+            <div class="limit-text">
+                <p class="limit-title">Tageslimit erreicht</p>
+                <p class="limit-description">
+                    Du hast <strong>${usage[type].used}/${limits[type]} ${typeName}</strong> für heute angesehen. 
+                    Melde dich an für <strong>${registeredLimit} ${typeName}</strong> pro Tag!
+                </p>
+            </div>
         </div>
     `;
 }
 
-/**
- * Sync limits with backend (for debugging)
- */
-export function syncLimitsWithBackend() {
+// ========================================
+// API-READY STRUCTURE
+// ========================================
+
+export async function syncLimitsWithBackend() {
     return {
         userType: getUserType(),
         limits: getCurrentLimits(),
         usage: getLimitUsage(),
-        resetAt: localStorage.getItem('limits_last_reset_v1'),
-        isPremium: localStorage.getItem('user_premium') === 'true'
+        resetAt: localStorage.getItem(STORAGE_KEYS.LAST_RESET)
     };
 }
 
-/**
- * Track navigation (for compatibility)
- */
-export function trackNavigationOnBackend(type) {
+export async function trackNavigationOnBackend(type) {
     incrementUsage(type);
+}
+
+// ========================================
+// DEBUG HELPERS
+// ========================================
+
+export function debugResetLimits() {
+    resetLimits();
+    console.log('🔧 Debug: Limits manually reset');
+}
+
+export function debugSetUserType(type) {
+    if (type === 'premium') {
+        localStorage.setItem('user_premium', 'true');
+        localStorage.setItem('user_logged_in', 'true');
+    } else if (type === 'registered') {
+        localStorage.removeItem('user_premium');
+        localStorage.setItem('user_logged_in', 'true');
+    } else {
+        localStorage.removeItem('user_premium');
+        localStorage.removeItem('user_logged_in');
+    }
+    console.log(`🔧 Debug: User type set to ${type}`);
+}
+
+export function debugGetInfo() {
+    return {
+        userType: getUserType(),
+        limits: getCurrentLimits(),
+        usage: getLimitUsage(),
+        lastReset: localStorage.getItem(STORAGE_KEYS.LAST_RESET)
+    };
+}
+
+export function debugTestUpgradeModal() {
+    console.log('🧪 Testing upgrade modal...');
+    showUpgradeModal('art');
+}
+
+export function debugSetLimitReached(type) {
+    const limits = getCurrentLimits();
+    const usage = {
+        art: { used: limits.art, remaining: 0 },
+        quotes: { used: limits.quotes, remaining: 0 }
+    };
+    localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(usage));
+    console.log(`🔧 Debug: ${type} limit set to maximum (${limits[type]}/${limits[type]})`);
 }
