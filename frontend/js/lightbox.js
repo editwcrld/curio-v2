@@ -1,383 +1,387 @@
 /**
  * Image Lightbox Module
- * Complete rewrite with proper touch gesture handling
+ * Complete rewrite with bulletproof state management
+ * 
+ * Features:
+ * - Pinch to zoom
+ * - Pan when zoomed
+ * - Swipe down to close (only when not zoomed)
+ * - Mouse wheel zoom (desktop)
+ * - Fit to screen button
+ * - Close button
  */
 
-// State management
-let currentScale = 1;
-let translateX = 0;
-let translateY = 0;
-let imageElement = null;
-let containerElement = null;
-let overlayElement = null;
+// ===== SINGLETON STATE =====
+const LightboxState = {
+    isOpen: false,
+    scale: 1,
+    translateX: 0,
+    translateY: 0,
+    
+    // Touch tracking
+    touchStartY: 0,
+    touchStartX: 0,
+    touchStartTime: 0,
+    lastTouchY: 0,
+    lastTouchX: 0,
+    
+    // Gesture detection
+    gestureType: null, // 'none' | 'pan' | 'pinch' | 'swipe-close'
+    initialPinchDistance: 0,
+    initialPinchScale: 1,
+    
+    // Mouse drag (desktop)
+    isDragging: false,
+    dragStartX: 0,
+    dragStartY: 0,
+    
+    // DOM references
+    overlay: null,
+    container: null,
+    image: null,
+    
+    reset() {
+        this.scale = 1;
+        this.translateX = 0;
+        this.translateY = 0;
+        this.gestureType = null;
+        this.isDragging = false;
+    }
+};
 
-// Desktop mouse state
-let isMouseDragging = false;
-let mouseStartX = 0;
-let mouseStartY = 0;
-
-// Touch gesture state
-let touchStartX = 0;
-let touchStartY = 0;
-let touchStartTime = 0;
-let initialTouchDistance = 0;
-let initialPinchScale = 1;
-let isTouchActive = false;
-let isPinching = false;
-let isVerticalSwipe = false;
-let swipeDirection = null;
-
-// Constants
+// ===== CONSTANTS =====
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
-const ZOOM_STEP = 0.5;
-const SWIPE_CLOSE_THRESHOLD = 80;
-const SWIPE_VELOCITY_THRESHOLD = 0.3;
+const SWIPE_CLOSE_THRESHOLD = 100;
+const SWIPE_VELOCITY_THRESHOLD = 0.5;
 
-/**
- * Initialize lightbox
- */
+// ===== INITIALIZATION =====
+
 export function initLightbox() {
-    const artImages = document.querySelectorAll('#view-art .main-image');
-    
-    artImages.forEach(img => {
-        img.addEventListener('click', () => {
-            openLightbox(img.src);
-        });
+    // Make images clickable
+    document.querySelectorAll('#view-art .main-image').forEach(img => {
         img.style.cursor = 'zoom-in';
-    });
-    
-    const navButtons = document.querySelectorAll('.nav-button');
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const overlay = document.getElementById('lightbox-overlay');
-            if (overlay && overlay.classList.contains('active')) {
-                closeLightbox();
-            }
-        });
+        img.addEventListener('click', () => openLightbox(img.src));
     });
 }
 
-/**
- * Open lightbox
- */
+// ===== OPEN / CLOSE =====
+
 export function openLightbox(imageSrc) {
+    // Prevent double-open
+    if (LightboxState.isOpen) return;
+    
+    // Create DOM if needed
     if (!document.getElementById('lightbox-overlay')) {
-        createLightbox();
+        createLightboxDOM();
     }
     
-    overlayElement = document.getElementById('lightbox-overlay');
-    const image = document.getElementById('lightbox-image');
+    // Get references
+    LightboxState.overlay = document.getElementById('lightbox-overlay');
+    LightboxState.container = document.getElementById('lightbox-container');
+    LightboxState.image = document.getElementById('lightbox-image');
+    
     const loading = document.getElementById('lightbox-loading');
-    containerElement = document.getElementById('lightbox-container');
     
-    resetState();
+    // Reset state
+    LightboxState.reset();
+    applyTransform(false);
     
+    // Reset overlay opacity (critical fix!)
+    LightboxState.overlay.style.opacity = '';
+    LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+    
+    // Show loading
     loading.style.display = 'block';
-    image.style.display = 'none';
+    LightboxState.image.style.display = 'none';
     
+    // Load image
     const img = new Image();
     img.onload = () => {
-        image.src = imageSrc;
-        imageElement = image;
-        
-        updateImageTransform();
-        
+        LightboxState.image.src = imageSrc;
         loading.style.display = 'none';
-        image.style.display = 'block';
+        LightboxState.image.style.display = 'block';
         
-        overlayElement.classList.add('active');
+        // Activate
+        LightboxState.overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
+        LightboxState.isOpen = true;
         
+        // Show hint on mobile
         if (window.innerWidth <= 768) {
-            showSwipeIndicator();
+            showSwipeHint();
         }
+    };
+    img.onerror = () => {
+        loading.style.display = 'none';
+        closeLightbox();
     };
     img.src = imageSrc;
 }
 
-/**
- * Close lightbox
- */
 export function closeLightbox() {
-    if (!overlayElement) return;
+    if (!LightboxState.isOpen) return;
     
-    overlayElement.classList.remove('active');
+    // Mark as closed immediately to prevent race conditions
+    LightboxState.isOpen = false;
+    
+    const overlay = LightboxState.overlay;
+    if (!overlay) return;
+    
+    // Animate out
+    overlay.style.transition = 'opacity 0.3s ease';
+    overlay.classList.remove('active');
     document.body.style.overflow = '';
     
+    // Clean up after animation
     setTimeout(() => {
-        resetState();
+        LightboxState.reset();
+        if (LightboxState.image) {
+            LightboxState.image.style.transform = '';
+        }
+        // Reset opacity to default
+        if (overlay) {
+            overlay.style.opacity = '';
+        }
     }, 300);
 }
 
-/**
- * Reset state
- */
-function resetState() {
-    currentScale = 1;
-    translateX = 0;
-    translateY = 0;
-    isMouseDragging = false;
-    isTouchActive = false;
-    isPinching = false;
-    isVerticalSwipe = false;
-    swipeDirection = null;
+// ===== TRANSFORM =====
+
+function applyTransform(smooth = false) {
+    const img = LightboxState.image;
+    if (!img) return;
+    
+    img.style.transition = smooth ? 'transform 0.3s ease' : 'none';
+    img.style.transform = `translate(${LightboxState.translateX}px, ${LightboxState.translateY}px) scale(${LightboxState.scale})`;
 }
 
-/**
- * Update image transform
- */
-function updateImageTransform(smooth = false) {
-    if (!imageElement) return;
+function setScale(newScale, smooth = true) {
+    LightboxState.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
     
-    if (smooth) {
-        imageElement.classList.remove('no-transition');
-    } else {
-        imageElement.classList.add('no-transition');
+    // Reset position when fully zoomed out
+    if (LightboxState.scale === MIN_SCALE) {
+        LightboxState.translateX = 0;
+        LightboxState.translateY = 0;
     }
     
-    imageElement.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentScale})`;
-}
-
-/**
- * Set zoom level
- */
-function setZoom(scale, smooth = true) {
-    currentScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale));
-    
-    if (currentScale === MIN_SCALE) {
-        translateX = 0;
-        translateY = 0;
-    }
-    
-    updateImageTransform(smooth);
+    applyTransform(smooth);
     showZoomIndicator();
 }
 
-/**
- * Fit to screen
- */
 function fitToScreen() {
-    setZoom(1, true);
+    setScale(1, true);
 }
 
-/**
- * Calculate distance between two touch points
- */
-function getTouchDistance(touch1, touch2) {
-    const dx = touch2.clientX - touch1.clientX;
-    const dy = touch2.clientY - touch1.clientY;
+// ===== TOUCH HANDLERS =====
+
+function handleTouchStart(e) {
+    if (!LightboxState.isOpen) return;
+    
+    const touches = e.touches;
+    LightboxState.touchStartTime = Date.now();
+    
+    if (touches.length === 2) {
+        // PINCH START
+        e.preventDefault();
+        LightboxState.gestureType = 'pinch';
+        LightboxState.initialPinchDistance = getTouchDistance(touches[0], touches[1]);
+        LightboxState.initialPinchScale = LightboxState.scale;
+        
+    } else if (touches.length === 1) {
+        // SINGLE TOUCH START
+        const touch = touches[0];
+        LightboxState.touchStartX = touch.clientX;
+        LightboxState.touchStartY = touch.clientY;
+        LightboxState.lastTouchX = touch.clientX;
+        LightboxState.lastTouchY = touch.clientY;
+        LightboxState.gestureType = null; // Will be determined on move
+    }
+}
+
+function handleTouchMove(e) {
+    if (!LightboxState.isOpen) return;
+    
+    const touches = e.touches;
+    
+    if (LightboxState.gestureType === 'pinch' && touches.length === 2) {
+        // PINCH ZOOM
+        e.preventDefault();
+        const currentDistance = getTouchDistance(touches[0], touches[1]);
+        const scaleRatio = currentDistance / LightboxState.initialPinchDistance;
+        setScale(LightboxState.initialPinchScale * scaleRatio, false);
+        return;
+    }
+    
+    if (touches.length !== 1) return;
+    
+    const touch = touches[0];
+    const deltaX = touch.clientX - LightboxState.touchStartX;
+    const deltaY = touch.clientY - LightboxState.touchStartY;
+    const moveDeltaX = touch.clientX - LightboxState.lastTouchX;
+    const moveDeltaY = touch.clientY - LightboxState.lastTouchY;
+    
+    // Determine gesture type on first significant move
+    if (!LightboxState.gestureType) {
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+        
+        if (absX < 10 && absY < 10) {
+            // Not enough movement yet
+            return;
+        }
+        
+        if (LightboxState.scale > MIN_SCALE) {
+            // Zoomed in = always pan
+            LightboxState.gestureType = 'pan';
+        } else if (deltaY > 0 && absY > absX * 1.2) {
+            // Swiping down and more vertical than horizontal
+            LightboxState.gestureType = 'swipe-close';
+        } else {
+            // Horizontal swipe - ignore (let it pass through)
+            LightboxState.gestureType = 'ignore';
+        }
+    }
+    
+    // Handle based on gesture type
+    if (LightboxState.gestureType === 'pan') {
+        e.preventDefault();
+        LightboxState.translateX += moveDeltaX;
+        LightboxState.translateY += moveDeltaY;
+        applyTransform(false);
+        
+    } else if (LightboxState.gestureType === 'swipe-close') {
+        e.preventDefault();
+        // Only allow downward movement
+        const swipeY = Math.max(0, deltaY);
+        LightboxState.translateY = swipeY;
+        
+        // Fade overlay based on swipe distance
+        const opacity = Math.max(0.3, 1 - (swipeY / 300));
+        LightboxState.overlay.style.opacity = opacity;
+        LightboxState.overlay.style.transition = 'none';
+        
+        applyTransform(false);
+    }
+    
+    LightboxState.lastTouchX = touch.clientX;
+    LightboxState.lastTouchY = touch.clientY;
+}
+
+function handleTouchEnd(e) {
+    if (!LightboxState.isOpen) return;
+    
+    const gestureType = LightboxState.gestureType;
+    const duration = Date.now() - LightboxState.touchStartTime;
+    const velocity = Math.abs(LightboxState.translateY) / Math.max(duration, 1);
+    
+    if (gestureType === 'swipe-close') {
+        // Check if should close
+        const shouldClose = 
+            LightboxState.translateY > SWIPE_CLOSE_THRESHOLD || 
+            velocity > SWIPE_VELOCITY_THRESHOLD;
+        
+        if (shouldClose) {
+            closeLightbox();
+        } else {
+            // Snap back
+            LightboxState.translateY = 0;
+            LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+            LightboxState.overlay.style.opacity = '';
+            applyTransform(true);
+        }
+    }
+    
+    // Reset gesture
+    LightboxState.gestureType = null;
+}
+
+function handleTouchCancel() {
+    if (!LightboxState.isOpen) return;
+    
+    // Reset everything on cancel
+    LightboxState.gestureType = null;
+    
+    if (LightboxState.scale === MIN_SCALE) {
+        LightboxState.translateX = 0;
+        LightboxState.translateY = 0;
+    }
+    
+    LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+    LightboxState.overlay.style.opacity = '';
+    applyTransform(true);
+}
+
+// ===== MOUSE HANDLERS (Desktop) =====
+
+function handleWheel(e) {
+    if (!LightboxState.isOpen) return;
+    e.preventDefault();
+    
+    const delta = e.deltaY > 0 ? -0.5 : 0.5;
+    setScale(LightboxState.scale + delta, true);
+}
+
+function handleMouseDown(e) {
+    if (!LightboxState.isOpen || LightboxState.scale <= MIN_SCALE) return;
+    
+    LightboxState.isDragging = true;
+    LightboxState.dragStartX = e.clientX - LightboxState.translateX;
+    LightboxState.dragStartY = e.clientY - LightboxState.translateY;
+    
+    LightboxState.container.style.cursor = 'grabbing';
+}
+
+function handleMouseMove(e) {
+    if (!LightboxState.isDragging) return;
+    
+    LightboxState.translateX = e.clientX - LightboxState.dragStartX;
+    LightboxState.translateY = e.clientY - LightboxState.dragStartY;
+    applyTransform(false);
+}
+
+function handleMouseUp() {
+    if (!LightboxState.isDragging) return;
+    
+    LightboxState.isDragging = false;
+    if (LightboxState.container) {
+        LightboxState.container.style.cursor = 'grab';
+    }
+}
+
+// ===== UTILITIES =====
+
+function getTouchDistance(t1, t2) {
+    const dx = t2.clientX - t1.clientX;
+    const dy = t2.clientY - t1.clientY;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-/**
- * Handle touch start
- */
-function handleTouchStart(e) {
-    if (!overlayElement || !overlayElement.classList.contains('active')) return;
-    
-    const touches = e.touches;
-    isTouchActive = true;
-    touchStartTime = Date.now();
-    
-    if (touches.length === 1) {
-        // Single touch - setup for pan or swipe
-        const touch = touches[0];
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-        mouseStartX = touchStartX - translateX;
-        mouseStartY = touchStartY - translateY;
-        
-        isPinching = false;
-        isVerticalSwipe = false;
-        swipeDirection = null;
-        
-    } else if (touches.length === 2) {
-        // Two fingers - pinch zoom
-        isPinching = true;
-        isVerticalSwipe = false;
-        initialTouchDistance = getTouchDistance(touches[0], touches[1]);
-        initialPinchScale = currentScale;
-    }
-}
-
-/**
- * Handle touch move
- */
-function handleTouchMove(e) {
-    if (!isTouchActive || !overlayElement) return;
-    
-    const touches = e.touches;
-    
-    if (isPinching && touches.length === 2) {
-        // Pinch zoom
-        e.preventDefault();
-        
-        const currentDistance = getTouchDistance(touches[0], touches[1]);
-        const scaleChange = currentDistance / initialTouchDistance;
-        const newScale = initialPinchScale * scaleChange;
-        
-        setZoom(newScale, false);
-        
-    } else if (touches.length === 1 && !isPinching) {
-        const touch = touches[0];
-        const deltaX = touch.clientX - touchStartX;
-        const deltaY = touch.clientY - touchStartY;
-        
-        // Determine swipe direction if not yet determined
-        if (!swipeDirection && (Math.abs(deltaX) > 10 || Math.abs(deltaY) > 10)) {
-            if (Math.abs(deltaY) > Math.abs(deltaX) * 1.5) {
-                swipeDirection = 'vertical';
-                isVerticalSwipe = true;
-            } else {
-                swipeDirection = 'horizontal';
-            }
-        }
-        
-        if (currentScale > MIN_SCALE) {
-            // Pan zoomed image
-            e.preventDefault();
-            translateX = touch.clientX - mouseStartX;
-            translateY = touch.clientY - mouseStartY;
-            updateImageTransform(false);
-            
-        } else if (isVerticalSwipe && deltaY > 0) {
-            // Swipe down to close (only when not zoomed)
-            e.preventDefault();
-            
-            translateY = deltaY;
-            const opacity = Math.max(0, 1 - (deltaY / 400));
-            overlayElement.style.opacity = opacity;
-            updateImageTransform(false);
-        }
-    }
-}
-
-/**
- * Handle touch end
- */
-function handleTouchEnd(e) {
-    if (!isTouchActive || !overlayElement) return;
-    
-    const touchDuration = Date.now() - touchStartTime;
-    const velocity = Math.abs(translateY) / touchDuration;
-    
-    // Check if should close (swipe down far enough or fast enough)
-    if (isVerticalSwipe && currentScale === MIN_SCALE) {
-        if (translateY > SWIPE_CLOSE_THRESHOLD || velocity > SWIPE_VELOCITY_THRESHOLD) {
-            closeLightbox();
-            return;
-        }
-    }
-    
-    // Reset position and opacity if not closing
-    if (overlayElement) {
-        overlayElement.style.opacity = '1';
-    }
-    
-    if (currentScale === MIN_SCALE && translateY !== 0) {
-        translateY = 0;
-        updateImageTransform(true);
-    }
-    
-    isTouchActive = false;
-    isPinching = false;
-    isVerticalSwipe = false;
-    swipeDirection = null;
-}
-
-/**
- * Handle mouse wheel zoom
- */
-function handleWheel(e) {
-    e.preventDefault();
-    
-    const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-    const newScale = currentScale + delta;
-    
-    setZoom(newScale, true);
-}
-
-/**
- * Handle mouse down
- */
-function handleMouseDown(e) {
-    if (currentScale <= MIN_SCALE) return;
-    
-    isMouseDragging = true;
-    mouseStartX = e.clientX - translateX;
-    mouseStartY = e.clientY - translateY;
-    
-    if (containerElement) {
-        containerElement.classList.add('dragging');
-    }
-    imageElement.classList.add('no-transition');
-}
-
-/**
- * Handle mouse move
- */
-function handleMouseMove(e) {
-    if (!isMouseDragging) return;
-    
-    translateX = e.clientX - mouseStartX;
-    translateY = e.clientY - mouseStartY;
-    
-    updateImageTransform(false);
-}
-
-/**
- * Handle mouse up
- */
-function handleMouseUp() {
-    if (!isMouseDragging) return;
-    
-    isMouseDragging = false;
-    
-    if (containerElement) {
-        containerElement.classList.remove('dragging');
-    }
-    if (imageElement) {
-        imageElement.classList.remove('no-transition');
-    }
-}
-
-/**
- * Show zoom indicator
- */
 function showZoomIndicator() {
     const indicator = document.getElementById('lightbox-zoom-indicator');
     if (!indicator) return;
     
-    const percentage = Math.round(currentScale * 100);
-    indicator.textContent = `${percentage}%`;
+    indicator.textContent = `${Math.round(LightboxState.scale * 100)}%`;
     indicator.classList.add('visible');
     
-    clearTimeout(indicator.hideTimeout);
-    indicator.hideTimeout = setTimeout(() => {
+    clearTimeout(indicator._timeout);
+    indicator._timeout = setTimeout(() => {
         indicator.classList.remove('visible');
     }, 1000);
 }
 
-/**
- * Show swipe indicator
- */
-function showSwipeIndicator() {
-    const indicator = document.getElementById('lightbox-swipe-indicator');
-    if (!indicator) return;
+function showSwipeHint() {
+    const hint = document.getElementById('lightbox-swipe-indicator');
+    if (!hint) return;
     
-    indicator.classList.add('visible');
-    
-    setTimeout(() => {
-        indicator.classList.remove('visible');
-    }, 3000);
+    hint.classList.add('visible');
+    setTimeout(() => hint.classList.remove('visible'), 2500);
 }
 
-/**
- * Create lightbox HTML
- */
-function createLightbox() {
-    const lightboxHTML = `
+// ===== DOM CREATION =====
+
+function createLightboxDOM() {
+    const html = `
         <div id="lightbox-overlay" class="lightbox-overlay">
             <div id="lightbox-container" class="lightbox-container">
                 <div id="lightbox-loading" class="lightbox-loading"></div>
@@ -401,7 +405,7 @@ function createLightbox() {
             <div id="lightbox-zoom-indicator" class="lightbox-zoom-indicator">100%</div>
             
             <div id="lightbox-swipe-indicator" class="lightbox-swipe-indicator">
-                <svg class="lightbox-swipe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <polyline points="19 12 12 19 5 12"/>
                 </svg>
@@ -410,40 +414,39 @@ function createLightbox() {
         </div>
     `;
     
-    document.body.insertAdjacentHTML('beforeend', lightboxHTML);
-    initLightboxEvents();
-}
-
-/**
- * Initialize all lightbox event listeners
- */
-function initLightboxEvents() {
-    overlayElement = document.getElementById('lightbox-overlay');
-    containerElement = document.getElementById('lightbox-container');
-    const closeBtn = document.getElementById('lightbox-close');
-    const fitBtn = document.getElementById('lightbox-fit');
+    document.body.insertAdjacentHTML('beforeend', html);
     
-    // Close button
-    closeBtn.addEventListener('click', closeLightbox);
+    // Get references
+    LightboxState.overlay = document.getElementById('lightbox-overlay');
+    LightboxState.container = document.getElementById('lightbox-container');
     
-    // Fit to screen button
-    fitBtn.addEventListener('click', fitToScreen);
+    // Buttons
+    document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+    document.getElementById('lightbox-fit').addEventListener('click', fitToScreen);
     
-    // Escape key
+    // Keyboard
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && overlayElement && overlayElement.classList.contains('active')) {
+        if (e.key === 'Escape' && LightboxState.isOpen) {
             closeLightbox();
         }
     });
     
+    // Touch events on container
+    LightboxState.container.addEventListener('touchstart', handleTouchStart, { passive: false });
+    LightboxState.container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    LightboxState.container.addEventListener('touchend', handleTouchEnd, { passive: true });
+    LightboxState.container.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+    
     // Mouse events
-    containerElement.addEventListener('wheel', handleWheel, { passive: false });
-    containerElement.addEventListener('mousedown', handleMouseDown);
+    LightboxState.container.addEventListener('wheel', handleWheel, { passive: false });
+    LightboxState.container.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     
-    // Touch events - all with proper passive settings
-    containerElement.addEventListener('touchstart', handleTouchStart, { passive: true });
-    containerElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-    containerElement.addEventListener('touchend', handleTouchEnd, { passive: true });
+    // Click on background to close (only when not zoomed)
+    LightboxState.overlay.addEventListener('click', (e) => {
+        if (e.target === LightboxState.overlay && LightboxState.scale === MIN_SCALE) {
+            closeLightbox();
+        }
+    });
 }
