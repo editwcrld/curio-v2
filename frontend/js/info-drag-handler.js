@@ -1,6 +1,7 @@
 /**
- * Scroll Expand Module
- * ONLY drag-handle swipe up/down for expand/collapse
+ * Info Drag Handler Module
+ * Swipe up/down on info-header area to expand/collapse
+ * Improved touch targets for mobile
  */
 
 // ===== STATE =====
@@ -19,44 +20,94 @@ const DragState = {
 export function initScrollExpand() {
     DragState.maxHeight = window.innerHeight * 0.6;
     
+    // Update minHeight for mobile
+    if (window.innerWidth <= 480) {
+        DragState.minHeight = 155;
+    }
+    
     initDragHandle('art');
     initDragHandle('quotes');
     
     window.addEventListener('resize', () => {
         DragState.maxHeight = window.innerHeight * 0.6;
+        DragState.minHeight = window.innerWidth <= 480 ? 155 : 165;
     });
 }
 
 function initDragHandle(viewType) {
     const infoSection = document.querySelector(`#view-${viewType} .info-section`);
+    const infoHeader = infoSection?.querySelector('.info-header');
     const dragHandle = infoSection?.querySelector('.drag-handle');
     
-    if (!dragHandle || !infoSection) return;
+    if (!infoHeader || !infoSection) return;
     
-    // Touch events
-    dragHandle.addEventListener('touchstart', (e) => handleDragStart(e, infoSection), { passive: true });
-    dragHandle.addEventListener('touchmove', (e) => handleDragMove(e, infoSection), { passive: false });
-    dragHandle.addEventListener('touchend', (e) => handleDragEnd(e, infoSection), { passive: true });
+    // ✅ Make the ENTIRE info-header a drag target (much bigger than just drag-handle)
+    // This makes it much easier to grab on mobile
     
-    // Mouse events
-    dragHandle.addEventListener('mousedown', (e) => handleDragStart(e, infoSection));
+    // Touch events on info-header
+    infoHeader.addEventListener('touchstart', (e) => {
+        // Only start drag if touching the top part (drag-handle area)
+        const touch = e.touches[0];
+        const headerRect = infoHeader.getBoundingClientRect();
+        const touchY = touch.clientY - headerRect.top;
+        
+        // Allow drag from top 50px of header (where drag-handle is)
+        if (touchY <= 50) {
+            handleDragStart(e, infoSection);
+        }
+    }, { passive: true });
+    
+    infoHeader.addEventListener('touchmove', (e) => {
+        if (DragState.isDragging && DragState.activeSection === infoSection) {
+            handleDragMove(e, infoSection);
+        }
+    }, { passive: false });
+    
+    infoHeader.addEventListener('touchend', (e) => {
+        if (DragState.isDragging && DragState.activeSection === infoSection) {
+            handleDragEnd(e, infoSection);
+        }
+    }, { passive: true });
+    
+    // Also keep drag-handle specific events for precision dragging
+    if (dragHandle) {
+        dragHandle.addEventListener('touchstart', (e) => handleDragStart(e, infoSection), { passive: true });
+        dragHandle.addEventListener('touchmove', (e) => {
+            if (DragState.isDragging && DragState.activeSection === infoSection) {
+                handleDragMove(e, infoSection);
+            }
+        }, { passive: false });
+        dragHandle.addEventListener('touchend', (e) => {
+            if (DragState.isDragging && DragState.activeSection === infoSection) {
+                handleDragEnd(e, infoSection);
+            }
+        }, { passive: true });
+    }
+    
+    // Mouse events (for desktop testing)
+    infoHeader.addEventListener('mousedown', (e) => {
+        const headerRect = infoHeader.getBoundingClientRect();
+        const mouseY = e.clientY - headerRect.top;
+        if (mouseY <= 50) {
+            handleDragStart(e, infoSection);
+        }
+    });
+    
     document.addEventListener('mousemove', (e) => {
         if (DragState.isDragging && DragState.activeSection === infoSection) {
             handleDragMove(e, infoSection);
         }
     });
+    
     document.addEventListener('mouseup', (e) => {
         if (DragState.isDragging && DragState.activeSection === infoSection) {
             handleDragEnd(e, infoSection);
         }
     });
     
-    // CRITICAL FIX: Clear inline height when info-section is clicked elsewhere
-    // This prevents conflict between swipe (inline height) and click (CSS class)
+    // Clear inline height when info-section is clicked (for toggle)
     infoSection.addEventListener('click', (e) => {
-        // Only if click is NOT on drag-handle
-        if (!e.target.closest('.drag-handle')) {
-            // Clear any inline height so CSS .expanded class works properly
+        if (!e.target.closest('.drag-handle') && !DragState.isDragging) {
             infoSection.style.height = '';
         }
     });
@@ -80,7 +131,7 @@ function handleDragStart(e, infoSection) {
 function handleDragMove(e, infoSection) {
     if (!DragState.isDragging) return;
     
-    // Only preventDefault if event is cancelable (fixes browser warning)
+    // Only preventDefault if event is cancelable
     if (e.cancelable) {
         e.preventDefault();
     }
@@ -119,14 +170,12 @@ function handleDragEnd(e, infoSection) {
         infoSection.style.height = `${DragState.maxHeight}px`;
         infoSection.classList.add('expanded');
     } else {
-        // CRITICAL: Clear inline height so CSS handles collapsed state
         infoSection.style.height = '';
         infoSection.classList.remove('expanded');
     }
     
     setTimeout(() => {
         infoSection.style.transition = '';
-        // If collapsed, ensure no inline height remains
         if (!shouldExpand) {
             infoSection.style.height = '';
         }

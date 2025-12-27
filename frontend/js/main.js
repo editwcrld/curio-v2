@@ -16,6 +16,7 @@ import { initLightbox } from './lightbox.js';
 import { hideAppLoading, showErrorScreen } from './loading.js';
 import { initScrollExpand } from './info-drag-handler.js';
 import { initLimits } from './limits.js';
+import { initOnboarding } from './onboarding.js';
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import './toast.js';
 
@@ -78,6 +79,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         updateAllFavoriteButtons();
         hideAppLoading();
+        
+        // ✅ Initialize onboarding for first-time guest users
+        initOnboarding();
         
     } catch (error) {
         console.error('App initialization failed:', error);
