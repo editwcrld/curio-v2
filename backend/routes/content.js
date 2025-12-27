@@ -1,8 +1,8 @@
 /**
  * CURIO BACKEND - Content Routes
- * ✅ /daily/quote - Random aus Cache (schnell)
- * ✅ /quote/fresh - Frisch + AI (wartet)
- * ✅ NUR EIN AI Call pro Quote!
+ * ✅ AI wird IMMER generiert (auch bei /daily)
+ * ✅ /daily verbraucht KEINE Limits
+ * ✅ /fresh verbraucht Limits
  */
 
 const express = require('express');
@@ -10,61 +10,31 @@ const router = express.Router();
 
 const { optionalAuth, getUserType } = require('../middleware/auth');
 const { incrementLimit, getUserLimits } = require('../config/supabase');
-const { getQuote, cacheQuote, getRandomCachedQuote } = require('../services/quote-cache');
-const { fetchRandomQuote } = require('../services/api-aggregator');
 const { supabase } = require('../config/db');
 const { LIMITS } = require('../config/constants');
 
-// AI Import (optional)
+// Quote Services
+const { getQuote, cacheQuote, getRandomCachedQuote } = require('../services/quote-cache');
+const { fetchRandomQuote } = require('../services/api-aggregator');
+
+// Art Services
+const { getArt, cacheArt, getRandomCachedArt } = require('../services/art-cache');
+const { fetchRandomArtwork } = require('../services/art-api');
+
+// AI Service
 let generateQuoteDescription = null;
+let generateArtDescription = null;
 try {
     const mistral = require('../services/mistral-ai');
     generateQuoteDescription = mistral.generateQuoteDescription;
+    generateArtDescription = mistral.generateArtDescription;
     console.log('✅ Mistral AI available');
 } catch (e) {
     console.warn('⚠️ Mistral AI not available');
 }
 
 // =====================================================
-// DUMMY ART DATA
-// =====================================================
-
-const DUMMY_ART = [
-    {
-        id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        title: "Sternennacht",
-        artist: "Vincent van Gogh",
-        year: "1889",
-        imageUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=800&q=80",
-        ai_description_de: "Die Sternennacht ist eines der bekanntesten Werke von Vincent van Gogh, gemalt im Juni 1889.",
-        ai_description_en: "The Starry Night is one of Vincent van Gogh's most famous works, painted in June 1889."
-    },
-    {
-        id: "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-        title: "Die große Welle vor Kanagawa",
-        artist: "Katsushika Hokusai",
-        year: "1831",
-        imageUrl: "https://images.unsplash.com/photo-1578301978162-7aae4d755744?w=800&q=80",
-        ai_description_de: "Dieses ikonische japanische Holzschnittwerk zeigt eine riesige Welle vor dem Berg Fuji.",
-        ai_description_en: "This iconic Japanese woodblock print shows a massive wave with Mount Fuji in the background."
-    },
-    {
-        id: "c3d4e5f6-a7b8-9012-cdef-123456789012",
-        title: "Mona Lisa",
-        artist: "Leonardo da Vinci",
-        year: "1503",
-        imageUrl: "https://images.unsplash.com/photo-1561214115-f2f134cc4912?w=800&q=80",
-        ai_description_de: "Die Mona Lisa ist eines der berühmtesten Gemälde der Welt, gemalt von Leonardo da Vinci.",
-        ai_description_en: "The Mona Lisa is one of the most famous paintings in the world, created by Leonardo da Vinci."
-    }
-];
-
-function getRandomItem(array) {
-    return array[Math.floor(Math.random() * array.length)];
-}
-
-// =====================================================
-// HELPER: Check Limits
+// HELPER: Check Limits (NUR für /fresh!)
 // =====================================================
 
 async function checkAndIncrementLimit(req, type) {
@@ -92,37 +62,33 @@ async function checkAndIncrementLimit(req, type) {
 }
 
 // =====================================================
-// HELPER: Generate AI (EINMAL pro Quote!)
+// HELPER: Ensure AI Description (QUOTE)
 // =====================================================
 
-async function ensureAIDescription(quoteId, quoteData) {
-    // Check if AI already exists in DB
+async function ensureQuoteAI(quoteId, quoteData) {
+    // Check if already exists
     const { data: existing } = await supabase
         .from('quotes')
         .select('ai_description_de, ai_description_en')
         .eq('id', quoteId)
         .single();
     
-    // Already has AI? Return it!
-    if (existing?.ai_description_de) {
+    if (existing?.ai_description_de && existing?.ai_description_en) {
         console.log(`✅ AI already exists for quote ${quoteId}`);
         return existing;
     }
     
-    // No Mistral? Return empty
     if (!generateQuoteDescription || !process.env.MISTRAL_API_KEY) {
         console.log('⚠️ Mistral not available, skipping AI');
         return { ai_description_de: null, ai_description_en: null };
     }
     
-    // Generate AI (ONLY ONCE!)
     console.log(`🤖 Generating AI for quote ${quoteId}...`);
     
     try {
         const descriptions = await generateQuoteDescription(quoteData);
         
-        // Save to DB
-        const { error } = await supabase
+        await supabase
             .from('quotes')
             .update({
                 ai_description_de: descriptions.de,
@@ -130,18 +96,86 @@ async function ensureAIDescription(quoteId, quoteData) {
             })
             .eq('id', quoteId);
         
-        if (error) throw error;
-        
         console.log(`✅ AI saved for quote ${quoteId}`);
-        
-        return {
-            ai_description_de: descriptions.de,
-            ai_description_en: descriptions.en
-        };
+        return { ai_description_de: descriptions.de, ai_description_en: descriptions.en };
     } catch (error) {
-        console.error(`❌ AI generation failed:`, error.message);
+        console.error(`❌ Quote AI failed:`, error.message);
         return { ai_description_de: null, ai_description_en: null };
     }
+}
+
+// =====================================================
+// HELPER: Ensure AI Description (ART)
+// =====================================================
+
+async function ensureArtAI(artId, artData) {
+    // Check if already exists
+    const { data: existing } = await supabase
+        .from('artworks')
+        .select('ai_description_de, ai_description_en')
+        .eq('id', artId)
+        .single();
+    
+    if (existing?.ai_description_de && existing?.ai_description_en) {
+        console.log(`✅ AI already exists for artwork ${artId}`);
+        return existing;
+    }
+    
+    if (!generateArtDescription || !process.env.MISTRAL_API_KEY) {
+        console.log('⚠️ Mistral not available, skipping AI');
+        return { ai_description_de: null, ai_description_en: null };
+    }
+    
+    console.log(`🤖 Generating AI for artwork ${artId}...`);
+    
+    try {
+        const descriptions = await generateArtDescription(artData);
+        
+        await supabase
+            .from('artworks')
+            .update({
+                ai_description_de: descriptions.de,
+                ai_description_en: descriptions.en
+            })
+            .eq('id', artId);
+        
+        console.log(`✅ AI saved for artwork ${artId}`);
+        return { ai_description_de: descriptions.de, ai_description_en: descriptions.en };
+    } catch (error) {
+        console.error(`❌ Art AI failed:`, error.message);
+        return { ai_description_de: null, ai_description_en: null };
+    }
+}
+
+// =====================================================
+// FORMAT RESPONSE HELPERS
+// =====================================================
+
+function formatQuoteResponse(quote, ai) {
+    return {
+        id: quote.id,
+        text: quote.text,
+        author: quote.author,
+        source: quote.source || 'Unknown',
+        category: quote.category,
+        ai_description_de: ai.ai_description_de || quote.ai_description_de || null,
+        ai_description_en: ai.ai_description_en || quote.ai_description_en || null,
+        backgroundInfo: ai.ai_description_de || ai.ai_description_en || quote.ai_description_de || null
+    };
+}
+
+function formatArtResponse(art, ai) {
+    return {
+        id: art.id,
+        title: art.title,
+        artist: art.artist,
+        year: art.year,
+        imageUrl: art.image_url,
+        ai_description_de: ai.ai_description_de || art.ai_description_de || null,
+        ai_description_en: ai.ai_description_en || art.ai_description_en || null,
+        backgroundInfo: ai.ai_description_de || ai.ai_description_en || art.ai_description_de || null,
+        metadata: art.metadata || {}
+    };
 }
 
 // =====================================================
@@ -149,27 +183,29 @@ async function ensureAIDescription(quoteId, quoteData) {
 // =====================================================
 
 /**
- * GET /api/daily/quote
- * Random from cache - FAST, may not have AI
+ * GET /api/daily/quote - Random from cache + AI (NO LIMITS!)
  */
 router.get('/daily/quote', optionalAuth, async (req, res, next) => {
     try {
-        const quote = await getQuote();
+        console.log('📥 Loading daily quote...');
+        
+        // Get from cache or fetch fresh
+        let quote = await getRandomCachedQuote();
+        
+        if (!quote) {
+            console.log('⚠️ Cache empty, fetching fresh...');
+            const freshQuote = await fetchRandomQuote();
+            quote = await cacheQuote(freshQuote);
+        }
+        
+        // ✅ IMMER AI sicherstellen!
+        const ai = await ensureQuoteAI(quote.id, { text: quote.text, author: quote.author });
         
         res.json({
             success: true,
-            data: {
-                id: quote.id,
-                text: quote.text,
-                author: quote.author,
-                source: quote.source || 'Unknown',
-                category: quote.category,
-                backgroundInfo: quote.ai_description_de || quote.ai_description_en || null,
-                ai_description_de: quote.ai_description_de || null,
-                ai_description_en: quote.ai_description_en || null
-            },
+            data: formatQuoteResponse(quote, ai),
             cached: true,
-            source: 'cache'
+            source: 'daily'
         });
     } catch (error) {
         next(error);
@@ -177,111 +213,62 @@ router.get('/daily/quote', optionalAuth, async (req, res, next) => {
 });
 
 /**
- * GET /api/quote/fresh
- * Fresh quote - WAITS for AI!
+ * GET /api/quote/fresh - Fresh + AI (USES LIMITS!)
  */
 router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
     try {
-        // Check limits
+        // ✅ Check limits
         if (req.user) {
             const limitCheck = await checkAndIncrementLimit(req, 'quotes');
             if (!limitCheck.canAccess) {
-                return res.status(429).json({
-                    success: false,
-                    error: 'Daily limit reached',
-                    limitReached: true
+                return res.status(429).json({ 
+                    success: false, 
+                    error: 'Daily limit reached', 
+                    limitReached: true 
                 });
             }
         }
         
-        // Fetch fresh from API
         console.log('📥 Fetching fresh quote...');
         const freshQuote = await fetchRandomQuote();
-        
-        // Save to DB (NO AI here!)
         const cachedQuote = await cacheQuote(freshQuote);
         
         if (cachedQuote) {
-            // Generate AI (ONCE!)
-            const aiDescriptions = await ensureAIDescription(cachedQuote.id, {
-                text: cachedQuote.text,
-                author: cachedQuote.author
+            const ai = await ensureQuoteAI(cachedQuote.id, { 
+                text: cachedQuote.text, 
+                author: cachedQuote.author 
             });
             
             res.json({
                 success: true,
-                data: {
-                    id: cachedQuote.id,
-                    text: cachedQuote.text,
-                    author: cachedQuote.author,
-                    source: cachedQuote.source || 'Unknown',
-                    category: cachedQuote.category || null,
-                    backgroundInfo: aiDescriptions.ai_description_de || aiDescriptions.ai_description_en || null,
-                    ai_description_de: aiDescriptions.ai_description_de,
-                    ai_description_en: aiDescriptions.ai_description_en
-                },
+                data: formatQuoteResponse(cachedQuote, ai),
                 cached: false,
-                source: 'api+ai'
+                source: 'fresh'
             });
         } else {
-            // Duplicate - get from cache with AI
+            // Fallback to cache
             const existingQuote = await getRandomCachedQuote();
-            
             if (existingQuote) {
-                const aiDescriptions = await ensureAIDescription(existingQuote.id, {
-                    text: existingQuote.text,
-                    author: existingQuote.author
+                const ai = await ensureQuoteAI(existingQuote.id, { 
+                    text: existingQuote.text, 
+                    author: existingQuote.author 
                 });
-                
                 res.json({
                     success: true,
-                    data: {
-                        id: existingQuote.id,
-                        text: existingQuote.text,
-                        author: existingQuote.author,
-                        source: existingQuote.source || 'Unknown',
-                        category: existingQuote.category || null,
-                        backgroundInfo: aiDescriptions.ai_description_de || existingQuote.ai_description_de || null,
-                        ai_description_de: aiDescriptions.ai_description_de || existingQuote.ai_description_de,
-                        ai_description_en: aiDescriptions.ai_description_en || existingQuote.ai_description_en
-                    },
+                    data: formatQuoteResponse(existingQuote, ai),
                     cached: true,
-                    source: 'cache-with-ai'
+                    source: 'fallback'
                 });
             } else {
                 throw new Error('No quotes available');
             }
         }
     } catch (error) {
-        // Fallback
-        try {
-            const cachedQuote = await getRandomCachedQuote();
-            if (cachedQuote) {
-                res.json({
-                    success: true,
-                    data: {
-                        id: cachedQuote.id,
-                        text: cachedQuote.text,
-                        author: cachedQuote.author,
-                        source: cachedQuote.source || 'Unknown',
-                        category: cachedQuote.category,
-                        backgroundInfo: cachedQuote.ai_description_de || null,
-                        ai_description_de: cachedQuote.ai_description_de,
-                        ai_description_en: cachedQuote.ai_description_en
-                    },
-                    cached: true,
-                    source: 'cache-fallback'
-                });
-            } else {
-                next(error);
-            }
-        } catch (fallbackError) {
-            next(error);
-        }
+        next(error);
     }
 });
 
-router.get('/quote/next', optionalAuth, async (req, res, next) => {
+router.get('/quote/next', optionalAuth, (req, res, next) => {
     req.url = '/quote/fresh';
     router.handle(req, res, next);
 });
@@ -290,32 +277,99 @@ router.get('/quote/next', optionalAuth, async (req, res, next) => {
 // ART ROUTES
 // =====================================================
 
+/**
+ * GET /api/daily/art - Random from cache + AI (NO LIMITS!)
+ */
 router.get('/daily/art', optionalAuth, async (req, res, next) => {
     try {
-        const art = getRandomItem(DUMMY_ART);
-        res.json({ success: true, data: art, cached: true, source: 'dummy' });
+        console.log('🎨 Loading daily art...');
+        
+        // Get from cache or fetch fresh
+        let art = await getRandomCachedArt();
+        
+        if (!art) {
+            console.log('⚠️ Art cache empty, fetching fresh...');
+            const freshArt = await fetchRandomArtwork();
+            art = await cacheArt(freshArt);
+        }
+        
+        // ✅ IMMER AI sicherstellen!
+        const ai = await ensureArtAI(art.id, { 
+            title: art.title, 
+            artist: art.artist, 
+            year: art.year 
+        });
+        
+        res.json({
+            success: true,
+            data: formatArtResponse(art, ai),
+            cached: true,
+            source: 'daily'
+        });
     } catch (error) {
         next(error);
     }
 });
 
+/**
+ * GET /api/art/fresh - Fresh + AI (USES LIMITS!)
+ */
 router.get('/art/fresh', optionalAuth, async (req, res, next) => {
     try {
+        // ✅ Check limits
         if (req.user) {
             const limitCheck = await checkAndIncrementLimit(req, 'art');
             if (!limitCheck.canAccess) {
-                return res.status(429).json({ success: false, error: 'Daily limit reached', limitReached: true });
+                return res.status(429).json({ 
+                    success: false, 
+                    error: 'Daily limit reached', 
+                    limitReached: true 
+                });
             }
         }
         
-        const art = getRandomItem(DUMMY_ART);
-        res.json({ success: true, data: art, cached: false, source: 'dummy-fresh' });
+        console.log('🎨 Fetching fresh artwork...');
+        const freshArt = await fetchRandomArtwork();
+        const cachedArt = await cacheArt(freshArt);
+        
+        if (cachedArt) {
+            const ai = await ensureArtAI(cachedArt.id, { 
+                title: cachedArt.title, 
+                artist: cachedArt.artist, 
+                year: cachedArt.year 
+            });
+            
+            res.json({
+                success: true,
+                data: formatArtResponse(cachedArt, ai),
+                cached: false,
+                source: 'fresh'
+            });
+        } else {
+            // Fallback to cache
+            const existingArt = await getRandomCachedArt();
+            if (existingArt) {
+                const ai = await ensureArtAI(existingArt.id, { 
+                    title: existingArt.title, 
+                    artist: existingArt.artist, 
+                    year: existingArt.year 
+                });
+                res.json({
+                    success: true,
+                    data: formatArtResponse(existingArt, ai),
+                    cached: true,
+                    source: 'fallback'
+                });
+            } else {
+                throw new Error('No artworks available');
+            }
+        }
     } catch (error) {
         next(error);
     }
 });
 
-router.get('/art/next', optionalAuth, async (req, res, next) => {
+router.get('/art/next', optionalAuth, (req, res, next) => {
     req.url = '/art/fresh';
     router.handle(req, res, next);
 });

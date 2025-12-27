@@ -1,7 +1,7 @@
 /**
  * Art Engine Module
- * ✅ Loads from Backend
- * ✅ Adds initial art to history
+ * ✅ Backend API (Real Art Institute Data!)
+ * ✅ Language Support (DE/EN)
  */
 
 import { API_BASE_URL } from './config.js';
@@ -21,7 +21,7 @@ export async function loadDailyArt() {
         
         appState.setArtData(data);
         
-        // ✅ Add to history!
+        // Add to history
         addToArtHistory(data);
         
         return data;
@@ -30,10 +30,10 @@ export async function loadDailyArt() {
         
         appState.setArtData({
             id: 'error',
-            title: 'Kunst konnte nicht geladen werden',
+            title: 'Artwork nicht verfügbar',
             artist: 'Fehler',
-            imageUrl: 'https://via.placeholder.com/800x600?text=Error',
-            description: 'Bitte lade die Seite neu.'
+            imageUrl: '',
+            backgroundInfo: 'Bitte lade die Seite neu.'
         });
         
         throw error;
@@ -46,22 +46,49 @@ export function displayArt(data) {
     const artView = document.getElementById('view-art');
     if (!artView) return;
 
-    const imageEl = artView.querySelector('.art-image');
+    const imageEl = artView.querySelector('.main-image');
     const titleEl = artView.querySelector('.info-title');
-    const artistEl = artView.querySelector('.info-content p');
+    const contentEl = artView.querySelector('.info-content p');
 
-    if (imageEl) {
+    // Set image
+    if (imageEl && data.imageUrl) {
         imageEl.src = data.imageUrl;
-        imageEl.alt = data.title;
+        imageEl.alt = data.title || 'Artwork';
     }
-    if (titleEl) titleEl.textContent = data.title;
-    if (artistEl) artistEl.textContent = data.description || `${data.artist}, ${data.year}`;
+    
+    // Set title (Artist - Year)
+    if (titleEl) {
+        const year = data.year ? ` (${data.year})` : '';
+        titleEl.textContent = `${data.artist || 'Unknown'}${year}`;
+    }
+    
+    // ✅ Set description in current language
+    if (contentEl) {
+        const lang = localStorage.getItem('curio_language') || 'de';
+        let description;
+        
+        if (lang === 'en') {
+            description = data.ai_description_en || data.ai_description_de || data.backgroundInfo || '';
+        } else {
+            description = data.ai_description_de || data.ai_description_en || data.backgroundInfo || '';
+        }
+        
+        contentEl.textContent = description;
+    }
 }
 
 export function initArtView() {
+    // Subscribe to state changes
     appState.subscribe((state) => {
         if (state.currentArtData) {
             displayArt(state.currentArtData);
+        }
+    });
+    
+    // ✅ Listen for language changes
+    window.addEventListener('languageChanged', () => {
+        if (appState.currentArtData) {
+            displayArt(appState.currentArtData);
         }
     });
 }

@@ -1,6 +1,7 @@
 /**
  * CURIO BACKEND - Mistral AI Service
  * Generates descriptions in German AND English
+ * ✅ Kein Markdown im Output!
  */
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
@@ -11,6 +12,28 @@ const FALLBACK_QUOTE_DE = 'Dieses Zitat lädt zum Nachdenken ein und bietet eine
 const FALLBACK_QUOTE_EN = 'This quote invites reflection and offers timeless wisdom.';
 const FALLBACK_ART_DE = 'Dieses Kunstwerk zeigt die meisterhafte Technik seines Schöpfers.';
 const FALLBACK_ART_EN = 'This artwork demonstrates the masterful technique of its creator.';
+
+/**
+ * Remove markdown formatting from AI output
+ */
+function cleanMarkdown(text) {
+    if (!text) return text;
+    
+    return text
+        // Remove bold **text**
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        // Remove italic *text*
+        .replace(/\*([^*]+)\*/g, '$1')
+        // Remove headers # ## ###
+        .replace(/^#{1,3}\s+/gm, '')
+        // Remove bullet points
+        .replace(/^[-*]\s+/gm, '')
+        // Remove numbered lists
+        .replace(/^\d+\.\s+/gm, '')
+        // Clean up extra whitespace
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+}
 
 async function callMistral(prompt, maxTokens = 500) {
     const apiKey = process.env.MISTRAL_API_KEY;
@@ -41,7 +64,10 @@ async function callMistral(prompt, maxTokens = 500) {
         }
         
         const data = await response.json();
-        return data.choices?.[0]?.message?.content?.trim() || null;
+        const content = data.choices?.[0]?.message?.content?.trim() || null;
+        
+        // Clean markdown from output
+        return cleanMarkdown(content);
     } catch (error) {
         console.error('❌ Mistral API failed:', error.message);
         return null;
@@ -55,11 +81,13 @@ async function generateQuoteDescription(quote) {
     
     const promptDE = `Schreibe einen kurzen informativen Text (150-200 Wörter) über dieses Zitat und seinen Autor:
 "${text}" - ${author}
-Wer war der Autor? Was bedeutet das Zitat? Nur Fließtext, keine Listen.`;
+
+WICHTIG: Schreibe NUR Fließtext. Keine Überschriften, keine Titel, keine Formatierung wie ** oder #. Beginne direkt mit dem Text.`;
 
     const promptEN = `Write a brief informative text (150-200 words) about this quote and its author:
 "${text}" - ${author}
-Who was the author? What does the quote mean? Just prose, no lists.`;
+
+IMPORTANT: Write ONLY prose. No headings, no titles, no formatting like ** or #. Start directly with the text.`;
 
     const [descDE, descEN] = await Promise.all([
         callMistral(promptDE, 300),
@@ -79,11 +107,13 @@ async function generateArtDescription(artwork) {
     
     const promptDE = `Schreibe einen informativen Text (200-300 Wörter) über dieses Kunstwerk:
 "${title}" von ${artist} (${year || 'unbekannt'})
-Wer war der Künstler? Was macht das Werk besonders? Nur Fließtext.`;
+
+WICHTIG: Schreibe NUR Fließtext. Keine Überschriften, keine Titel am Anfang, keine Formatierung wie ** oder #. Beginne direkt mit dem informativen Text über das Kunstwerk.`;
 
     const promptEN = `Write an informative text (200-300 words) about this artwork:
 "${title}" by ${artist} (${year || 'unknown'})
-Who was the artist? What makes this work special? Just prose.`;
+
+IMPORTANT: Write ONLY prose. No headings, no title at the beginning, no formatting like ** or #. Start directly with the informative text about the artwork.`;
 
     const [descDE, descEN] = await Promise.all([
         callMistral(promptDE, 400),
@@ -100,6 +130,7 @@ module.exports = {
     generateQuoteDescription,
     generateArtDescription,
     callMistral,
+    cleanMarkdown,
     FALLBACK_QUOTE_DE,
     FALLBACK_QUOTE_EN,
     FALLBACK_ART_DE,

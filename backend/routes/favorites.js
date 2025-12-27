@@ -2,6 +2,7 @@
  * CURIO BACKEND - Favorites Routes
  * ✅ CRUD Operations
  * ✅ Gradient/Metadata Support
+ * ✅ ai_description_de + ai_description_en
  */
 
 const express = require('express');
@@ -33,7 +34,8 @@ router.get('/', requireAuth, async (req, res, next) => {
                     artist,
                     year,
                     image_url,
-                    ai_description
+                    ai_description_de,
+                    ai_description_en
                 ),
                 quotes (
                     id,
@@ -41,7 +43,8 @@ router.get('/', requireAuth, async (req, res, next) => {
                     author,
                     source,
                     category,
-                    ai_description
+                    ai_description_de,
+                    ai_description_en
                 )
             `)
             .eq('user_id', userId)
@@ -62,7 +65,9 @@ router.get('/', requireAuth, async (req, res, next) => {
                     artist: fav.artworks.artist,
                     year: fav.artworks.year,
                     imageUrl: fav.artworks.image_url,
-                    description: fav.artworks.ai_description,
+                    ai_description_de: fav.artworks.ai_description_de,
+                    ai_description_en: fav.artworks.ai_description_en,
+                    backgroundInfo: fav.artworks.ai_description_de || fav.artworks.ai_description_en,
                     savedAt: fav.created_at,
                     savedGradient: metadata.gradient || null
                 };
@@ -75,9 +80,11 @@ router.get('/', requireAuth, async (req, res, next) => {
                     author: fav.quotes.author,
                     source: fav.quotes.source,
                     category: fav.quotes.category,
-                    backgroundInfo: fav.quotes.ai_description,
+                    ai_description_de: fav.quotes.ai_description_de,
+                    ai_description_en: fav.quotes.ai_description_en,
+                    backgroundInfo: fav.quotes.ai_description_de || fav.quotes.ai_description_en,
                     savedAt: fav.created_at,
-                    savedGradient: metadata.gradient || null  // ✅ Gradient aus DB!
+                    savedGradient: metadata.gradient || null
                 };
             }
             return null;
@@ -99,14 +106,14 @@ router.get('/', requireAuth, async (req, res, next) => {
 router.post('/', requireAuth, async (req, res, next) => {
     try {
         const userId = req.user.id;
-        const { type, itemId, gradient } = req.body;  // ✅ gradient hinzugefügt!
+        const { type, itemId, gradient } = req.body;
         
         if (!type || !itemId) {
-            throw new ValidationError('Type and itemId required');
+            throw new ValidationError('type and itemId are required');
         }
         
         if (!['art', 'quotes'].includes(type)) {
-            throw new ValidationError('Type must be "art" or "quotes"');
+            throw new ValidationError('type must be "art" or "quotes"');
         }
         
         // Check if already favorited
@@ -118,7 +125,7 @@ router.post('/', requireAuth, async (req, res, next) => {
             .maybeSingle();
         
         if (existing) {
-            return res.json({
+            return res.status(200).json({
                 success: true,
                 message: 'Already favorited',
                 alreadyExists: true,
@@ -129,7 +136,7 @@ router.post('/', requireAuth, async (req, res, next) => {
         // Build metadata
         const metadata = {};
         if (gradient) {
-            metadata.gradient = gradient;  // ✅ Gradient speichern!
+            metadata.gradient = gradient;
         }
         
         // Insert favorite

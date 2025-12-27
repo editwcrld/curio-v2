@@ -1,14 +1,13 @@
 /**
  * Quote Engine Module
- * ✅ Loads from Backend
+ * ✅ Backend API
  * ✅ Language Support (DE/EN)
+ * ✅ Random Gradient
  */
 
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import { appState } from './state.js';
-
-// Diese werden dynamisch importiert wenn verfügbar
-let addToQuoteHistoryFn = null;
+import { addToQuoteHistory } from './content-navigation.js';
 
 export async function loadDailyQuote() {
     try {
@@ -21,15 +20,14 @@ export async function loadDailyQuote() {
         const result = await response.json();
         const data = result.data || result;
         
+        // Set random gradient
         const gradient = getRandomGradient();
         
         appState.setQuoteData(data);
         appState.setGradient(gradient);
         
-        // Add to history (if available)
-        if (addToQuoteHistoryFn) {
-            addToQuoteHistoryFn(data, gradient);
-        }
+        // Add to history
+        addToQuoteHistory(data, gradient);
         
         return data;
     } catch (error) {
@@ -58,14 +56,17 @@ export function displayQuote(data, gradient) {
     const titleEl = quoteView.querySelector('.info-title');
     const contentEl = quoteView.querySelector('.info-content p');
 
+    // Set gradient
     if (containerEl && gradient) {
         containerEl.style.background = gradient;
     }
+    
+    // Set quote text
     if (textEl) textEl.textContent = data.text;
     if (authorEl) authorEl.textContent = data.author;
     if (titleEl) titleEl.textContent = data.author;
     
-    // Show description - check language preference
+    // ✅ Set description in current language
     if (contentEl) {
         const lang = localStorage.getItem('curio_language') || 'de';
         let description;
@@ -88,15 +89,10 @@ export function initQuoteView() {
         }
     });
     
-    // Listen for language changes
+    // ✅ Listen for language changes
     window.addEventListener('languageChanged', () => {
         if (appState.currentQuoteData) {
             displayQuote(appState.currentQuoteData, appState.currentGradient);
         }
     });
-}
-
-// Set history function (called from content-navigation)
-export function setAddToHistoryFn(fn) {
-    addToQuoteHistoryFn = fn;
 }

@@ -1,10 +1,10 @@
 /**
- * Content Navigation - MIT HISTORY SYSTEM
+ * Content Navigation
  * ✅ Back = Vorheriges anzeigen (kein API Call!)
- * ✅ Next = IMMER neuer Content (außer nach Back)
+ * ✅ Next = Neuer Content
  * ✅ History für Quotes UND Art
- * ✅ Prefetch im Hintergrund (nutzt /daily = kein Limit)
- * ✅ Navigation nutzt /fresh (wartet auf AI!)
+ * ✅ Prefetch NUR für eingeloggte User!
+ * ✅ Längere Delays für API Schonung
  */
 
 import { appState } from './state.js';
@@ -28,6 +28,9 @@ let isPrefetchingQuote = false;
 let isPrefetchingArt = false;
 let isNavigating = false;
 
+// ===== PREFETCH DELAY (API Schonung) =====
+const PREFETCH_DELAY_MS = 3000;  // 3 Sekunden warten vor Prefetch
+
 // ===== INITIALIZATION =====
 
 export function initContentNavigation() {
@@ -39,9 +42,20 @@ export function initContentNavigation() {
         btn.addEventListener('click', handleNext);
     });
     
-    // Start prefetching (uses /daily endpoint = no limit consumed)
-    prefetchQuote();
-    prefetchArt();
+    // ✅ Prefetch NUR wenn eingeloggt!
+    if (isLoggedIn()) {
+        setTimeout(() => {
+            prefetchQuote();
+            prefetchArt();
+        }, PREFETCH_DELAY_MS);
+    }
+}
+
+// ===== HELPER =====
+
+function isLoggedIn() {
+    return localStorage.getItem('user_logged_in') === 'true' && 
+           localStorage.getItem('auth_token');
 }
 
 // ===== HANDLERS =====
@@ -85,7 +99,7 @@ function goBackQuote() {
 }
 
 async function goNextQuote() {
-    // ✅ Wenn wir in der History sind (nach Back), zeige nächstes aus History
+    // Wenn wir in der History sind, zeige nächstes aus History
     if (quoteHistoryIndex < quoteHistory.length - 1 && quoteHistoryIndex >= 0) {
         quoteHistoryIndex++;
         const item = quoteHistory[quoteHistoryIndex];
@@ -96,8 +110,6 @@ async function goNextQuote() {
         updateAllFavoriteButtons();
         return;
     }
-    
-    // ✅ Am Ende der History = neuer Content!
     
     // Check limits
     if (!canNavigate('quotes')) {
@@ -110,14 +122,13 @@ async function goNextQuote() {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    // ✅ Haben wir Prefetch? (Hat vielleicht kein AI)
-    if (prefetchedQuote) {
+    // Haben wir Prefetch?
+    if (prefetchedQuote && isLoggedIn()) {
         const quote = prefetchedQuote;
         const gradient = getRandomGradient();
         
         prefetchedQuote = null;
         
-        // Add to history
         quoteHistory.push({ quote, gradient });
         quoteHistoryIndex = quoteHistory.length - 1;
         
@@ -128,17 +139,12 @@ async function goNextQuote() {
         incrementUsage('quotes');
         updateAllFavoriteButtons();
         
-        // Prefetch next
-        prefetchQuote();
+        // Prefetch next (mit Delay)
+        setTimeout(() => prefetchQuote(), PREFETCH_DELAY_MS);
         
         isNavigating = false;
-        
-        // ✅ Wenn kein AI, im Hintergrund nachladen
-        if (!quote.ai_description_de && !quote.ai_description_en) {
-            fetchAIForQuote(quote.id);
-        }
     } else {
-        // ✅ Kein Prefetch - fetch fresh (WARTET auf AI!)
+        // Fetch fresh (WARTET auf AI!)
         showContentLoading('view-quotes');
         
         try {
@@ -150,7 +156,6 @@ async function goNextQuote() {
             const quote = result.data;
             const gradient = getRandomGradient();
             
-            // Add to history
             quoteHistory.push({ quote, gradient });
             quoteHistoryIndex = quoteHistory.length - 1;
             
@@ -161,7 +166,10 @@ async function goNextQuote() {
             incrementUsage('quotes');
             updateAllFavoriteButtons();
             
-            prefetchQuote();
+            // Prefetch nur wenn eingeloggt
+            if (isLoggedIn()) {
+                setTimeout(() => prefetchQuote(), PREFETCH_DELAY_MS);
+            }
         } catch (error) {
             console.error('Quote navigation error:', error);
         } finally {
@@ -171,30 +179,16 @@ async function goNextQuote() {
     }
 }
 
-// ===== FETCH AI FOR EXISTING QUOTE =====
-
-async function fetchAIForQuote(quoteId) {
-    try {
-        // Re-fetch quote to get AI description
-        const response = await fetch(`${API_BASE_URL}/daily/quote`);
-        if (!response.ok) return;
-        
-        // The backend will have generated AI by now for the cached quote
-        // This is a background update - don't block UI
-    } catch (error) {
-        // Silent fail
-    }
-}
-
-// ===== PREFETCH (uses /daily = no limit consumed) =====
+// ===== PREFETCH QUOTES (NUR für eingeloggte User!) =====
 
 async function prefetchQuote() {
+    // ✅ NICHT prefetchen wenn nicht eingeloggt!
+    if (!isLoggedIn()) return;
     if (isPrefetchingQuote || prefetchedQuote) return;
     
     isPrefetchingQuote = true;
     
     try {
-        // ✅ Use /quote/fresh to get AI text included!
         const token = localStorage.getItem('auth_token');
         const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
         
@@ -203,7 +197,7 @@ async function prefetchQuote() {
         if (response.ok) {
             const result = await response.json();
             prefetchedQuote = result.data;
-            console.log('✅ Quote prefetched with AI:', prefetchedQuote.ai_description_de ? 'yes' : 'no');
+            console.log('✅ Quote prefetched');
         }
     } catch (error) {
         console.error('Quote prefetch error:', error);
@@ -226,7 +220,7 @@ function goBackArt() {
 }
 
 async function goNextArt() {
-    // ✅ Wenn wir in der History sind (nach Back), zeige nächstes
+    // Wenn wir in der History sind, zeige nächstes
     if (artHistoryIndex < artHistory.length - 1 && artHistoryIndex >= 0) {
         artHistoryIndex++;
         const art = artHistory[artHistoryIndex];
@@ -236,8 +230,6 @@ async function goNextArt() {
         updateAllFavoriteButtons();
         return;
     }
-    
-    // ✅ Am Ende = neuer Content!
     
     // Check limits
     if (!canNavigate('art')) {
@@ -250,7 +242,7 @@ async function goNextArt() {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    if (prefetchedArt) {
+    if (prefetchedArt && isLoggedIn()) {
         const art = prefetchedArt;
         prefetchedArt = null;
         
@@ -263,7 +255,7 @@ async function goNextArt() {
         incrementUsage('art');
         updateAllFavoriteButtons();
         
-        prefetchArt();
+        setTimeout(() => prefetchArt(), PREFETCH_DELAY_MS);
         
         isNavigating = false;
     } else {
@@ -286,7 +278,9 @@ async function goNextArt() {
             incrementUsage('art');
             updateAllFavoriteButtons();
             
-            prefetchArt();
+            if (isLoggedIn()) {
+                setTimeout(() => prefetchArt(), PREFETCH_DELAY_MS);
+            }
         } catch (error) {
             console.error('Art navigation error:', error);
         } finally {
@@ -296,7 +290,11 @@ async function goNextArt() {
     }
 }
 
+// ===== PREFETCH ART (NUR für eingeloggte User!) =====
+
 async function prefetchArt() {
+    // ✅ NICHT prefetchen wenn nicht eingeloggt!
+    if (!isLoggedIn()) return;
     if (isPrefetchingArt || prefetchedArt) return;
     
     isPrefetchingArt = true;
@@ -310,6 +308,7 @@ async function prefetchArt() {
         if (response.ok) {
             const result = await response.json();
             prefetchedArt = result.data;
+            console.log('✅ Art prefetched');
         }
     } catch (error) {
         // Silent fail

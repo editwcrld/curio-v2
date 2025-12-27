@@ -1,12 +1,12 @@
 /**
- * CURIO BACKEND - Quote Cache Service
+ * CURIO BACKEND - Art Cache Service
  * ✅ Reduziert: MIN_CACHE_SIZE = 2
  * ✅ Längere Delays: 3 Sekunden
  * ✅ KEINE AI Generation hier!
  */
 
 const { supabase } = require('../config/db');
-const { fetchRandomQuote, fetchMultipleQuotes } = require('./api-aggregator');
+const { fetchRandomArtwork, fetchMultipleArtworks } = require('./art-api');
 
 // ✅ REDUZIERT für API Schonung
 const MIN_CACHE_SIZE = 2;
@@ -18,108 +18,109 @@ const API_DELAY_MS = 3000;  // 3 Sekunden
 async function getCacheCount() {
     try {
         const { count, error } = await supabase
-            .from('quotes')
+            .from('artworks')
             .select('*', { count: 'exact', head: true });
         
         if (error) throw error;
         return count || 0;
     } catch (error) {
-        console.error('getCacheCount error:', error);
+        console.error('Art getCacheCount error:', error);
         return 0;
     }
 }
 
-async function isDuplicate(text, author) {
+async function isDuplicate(externalId) {
     try {
         const { data, error } = await supabase
-            .from('quotes')
+            .from('artworks')
             .select('id')
-            .eq('text', text)
-            .eq('author', author)
+            .eq('external_id', externalId)
             .maybeSingle();
         
         if (error) throw error;
         return data ? data : null;
     } catch (error) {
-        console.error('isDuplicate error:', error);
+        console.error('Art isDuplicate error:', error);
         return null;
     }
 }
 
 /**
- * Cache quote to DB - NO AI generation here!
+ * Cache artwork to DB - NO AI generation here!
  */
-async function cacheQuote(quote) {
+async function cacheArt(artwork) {
     try {
-        console.log('📝 Caching quote:', quote.text.substring(0, 40) + '...');
+        console.log('🖼️ Caching artwork:', artwork.title.substring(0, 40) + '...');
         
         // Check for duplicates
-        const existing = await isDuplicate(quote.text, quote.author);
+        const existing = await isDuplicate(artwork.externalId);
         if (existing) {
-            console.log('⚠️ Quote exists, returning ID:', existing.id);
+            console.log('⚠️ Artwork exists, returning ID:', existing.id);
             const { data } = await supabase
-                .from('quotes')
+                .from('artworks')
                 .select('*')
                 .eq('id', existing.id)
                 .single();
             return data;
         }
         
-        console.log('📤 Inserting with source_api:', quote.sourceApi);
+        console.log('📤 Inserting artwork:', artwork.title);
         
         // Insert WITHOUT AI
         const { data, error } = await supabase
-            .from('quotes')
+            .from('artworks')
             .insert({
-                text: quote.text,
-                author: quote.author,
-                source: quote.source || null,
-                category: quote.category || null,
-                source_api: quote.sourceApi
+                external_id: artwork.externalId,
+                title: artwork.title,
+                artist: artwork.artist,
+                year: artwork.year,
+                image_url: artwork.imageUrl,
+                source_api: artwork.sourceApi || 'artic',
+                metadata: artwork.metadata || {}
             })
             .select()
             .single();
         
         if (error) {
-            console.error('❌ Insert error:', error);
+            console.error('❌ Art insert error:', error);
             throw error;
         }
         
-        console.log('✅ Quote cached with ID:', data.id);
+        console.log('✅ Artwork cached with ID:', data.id);
         return data;
     } catch (error) {
-        console.error('cacheQuote error:', error);
+        console.error('cacheArt error:', error);
         return null;
     }
 }
 
-async function cacheMultipleQuotes(quotes) {
+async function cacheMultipleArtworks(artworks) {
     let cached = 0;
     
-    for (const quote of quotes) {
-        const result = await cacheQuote(quote);
+    for (const artwork of artworks) {
+        const result = await cacheArt(artwork);
         if (result) cached++;
         // ✅ Längerer Delay
         await new Promise(r => setTimeout(r, API_DELAY_MS));
     }
     
-    console.log(`📦 Cached ${cached}/${quotes.length} quotes`);
+    console.log(`📦 Cached ${cached}/${artworks.length} artworks`);
     return cached;
 }
 
-async function getRandomCachedQuote() {
+async function getRandomCachedArt() {
     try {
         const count = await getCacheCount();
         
         if (count === 0) {
-            console.warn('⚠️ Quote cache empty!');
+            console.warn('⚠️ Art cache empty!');
             return null;
         }
         
         const randomOffset = Math.floor(Math.random() * count);
         
         const { data, error } = await supabase
-            .from('quotes')
+            .from('artworks')
             .select('*')
             .range(randomOffset, randomOffset)
             .single();
@@ -128,7 +129,7 @@ async function getRandomCachedQuote() {
         
         return data;
     } catch (error) {
-        console.error('getRandomCachedQuote error:', error);
+        console.error('getRandomCachedArt error:', error);
         return null;
     }
 }
@@ -136,58 +137,58 @@ async function getRandomCachedQuote() {
 async function ensureCacheFilled() {
     try {
         const count = await getCacheCount();
-        console.log(`📊 Quote cache: ${count}/${MIN_CACHE_SIZE} quotes`);
+        console.log(`📊 Art cache: ${count}/${MIN_CACHE_SIZE} artworks`);
         
         if (count >= MIN_CACHE_SIZE) {
-            console.log('✅ Quote cache is healthy');
+            console.log('✅ Art cache is healthy');
             return;
         }
         
-        console.log('🔄 Filling quote cache...');
+        console.log('🔄 Filling art cache...');
         
-        const quotes = await fetchMultipleQuotes(BATCH_SIZE);
+        const artworks = await fetchMultipleArtworks(BATCH_SIZE);
         
-        if (quotes.length > 0) {
-            await cacheMultipleQuotes(quotes);
+        if (artworks.length > 0) {
+            await cacheMultipleArtworks(artworks);
         }
     } catch (error) {
         console.error('ensureCacheFilled error:', error);
     }
 }
 
-async function getQuote() {
+async function getArt() {
     try {
-        let quote = await getRandomCachedQuote();
+        let art = await getRandomCachedArt();
         
-        if (quote) {
+        if (art) {
             // Background refill wenn nötig
             getCacheCount().then(count => {
                 if (count < MIN_CACHE_SIZE) {
                     ensureCacheFilled().catch(console.error);
                 }
             });
-            return quote;
+            return art;
         }
         
         // Cache miss - fetch from API
-        console.warn('⚠️ Cache miss, fetching from API...');
-        const freshQuote = await fetchRandomQuote();
+        console.warn('⚠️ Art cache miss, fetching from API...');
+        const freshArt = await fetchRandomArtwork();
         
-        const cached = await cacheQuote(freshQuote);
+        const cached = await cacheArt(freshArt);
         ensureCacheFilled().catch(console.error);
         
-        return cached || freshQuote;
+        return cached || freshArt;
     } catch (error) {
-        console.error('getQuote error:', error);
+        console.error('getArt error:', error);
         throw error;
     }
 }
 
 module.exports = {
-    getQuote,
-    getRandomCachedQuote,
-    cacheQuote,
-    cacheMultipleQuotes,
+    getArt,
+    getRandomCachedArt,
+    cacheArt,
+    cacheMultipleArtworks,
     ensureCacheFilled,
     getCacheCount,
     isDuplicate

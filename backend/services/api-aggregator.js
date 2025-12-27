@@ -68,6 +68,7 @@ async function fetchQuoteFromNinjas() {
                 text: quote.quote,
                 author: quote.author || 'Unknown',
                 source: 'api-ninjas',
+                sourceApi: 'ninjas',  // ✅ For DB ENUM
                 category: quote.category || category
             };
         }
@@ -97,6 +98,7 @@ async function fetchQuoteFromQuotable() {
                 text: response.data.content,
                 author: response.data.author || 'Unknown',
                 source: 'quotable',
+                sourceApi: 'quotable',  // ✅ For DB ENUM
                 category: response.data.tags?.[0] || 'wisdom'
             };
         }
@@ -124,6 +126,7 @@ async function fetchQuoteFromZenQuotes() {
                 text: quote.q,
                 author: quote.a || 'Unknown',
                 source: 'zenquotes',
+                sourceApi: 'zenquotes',  // ✅ For DB ENUM
                 category: 'wisdom'
             };
         }
