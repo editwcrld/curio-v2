@@ -111,6 +111,15 @@ export function incrementUsage(type) {
     localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(usage));
 }
 
+export function syncLimitToMax(type) {
+    // Called when backend returns 429 - sync frontend to max
+    const usage = getLimitUsage();
+    const limit = getCurrentLimits()[type];
+    usage[type].used = limit;
+    usage[type].remaining = 0;
+    localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(usage));
+}
+
 export function getRemainingCount(type) {
     const usage = getLimitUsage();
     return usage[type].remaining;

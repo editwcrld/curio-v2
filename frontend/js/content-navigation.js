@@ -9,7 +9,7 @@ import { displayArt } from './art-engine.js';
 import { displayQuote } from './quote-engine.js';
 import { updateAllFavoriteButtons, getFavoriteIds } from './fav-engine.js';
 import { showContentLoading, hideContentLoading } from './loading.js';
-import { canNavigate, handleLimitReached, incrementUsage } from './limits.js';
+import { canNavigate, handleLimitReached, incrementUsage, syncLimitToMax } from './limits.js';
 
 // ===== HISTORY =====
 const quoteHistory = [];
@@ -148,6 +148,16 @@ async function goNextQuote() {
             headers: getAuthHeaders() 
         });
         
+        // Handle 429 - Limit reached
+        if (response.status === 429) {
+            hideContentLoading('view-quotes');
+            isNavigating = false;
+            // Sync frontend limit to max (backend says limit reached)
+            syncLimitToMax('quotes');
+            handleLimitReached('quotes');
+            return;
+        }
+        
         if (!response.ok) throw new Error('Failed to fetch');
         
         const result = await response.json();
@@ -275,6 +285,16 @@ async function goNextArt() {
         const response = await fetch(`${API_BASE_URL}/art/fresh`, { 
             headers: getAuthHeaders() 
         });
+        
+        // Handle 429 - Limit reached
+        if (response.status === 429) {
+            hideContentLoading('view-art');
+            isNavigating = false;
+            // Sync frontend limit to max (backend says limit reached)
+            syncLimitToMax('art');
+            handleLimitReached('art');
+            return;
+        }
         
         if (!response.ok) throw new Error('Failed to fetch');
         
