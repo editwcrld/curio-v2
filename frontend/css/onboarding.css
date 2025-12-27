@@ -1,5 +1,5 @@
 /* =====================================================
-   ONBOARDING OVERLAY - TikTok Style Tutorial
+   ONBOARDING OVERLAY - Minimal & Modern
    ===================================================== */
 
 .onboarding-overlay {
@@ -8,7 +8,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.96);
     z-index: 9999;
     opacity: 0;
     visibility: hidden;
@@ -21,12 +21,32 @@
 }
 
 /* =====================================================
-   HIGHLIGHT AREAS - Brighter regions
+   HIGHLIGHT AREA - Art/Image Focus
    ===================================================== */
 
-/* Highlight for info section (bottom card) */
+.onboarding-highlight-art {
+    position: fixed;
+    top: 75px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 88%;
+    max-width: 380px;
+    bottom: 340px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+.onboarding-highlight-art.visible {
+    opacity: 1;
+}
+
+/* Info section highlight */
 .onboarding-highlight-info {
-    position: absolute;
+    position: fixed;
     bottom: 115px;
     left: 50%;
     transform: translateX(-50%);
@@ -34,279 +54,216 @@
     max-width: var(--ui-max-width, 420px);
     height: 165px;
     border-radius: var(--radius-l, 20px);
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: 
-        0 0 60px rgba(102, 126, 234, 0.3),
-        inset 0 0 30px rgba(255, 255, 255, 0.05);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.6s ease;
 }
 
 .onboarding-highlight-info.visible {
     opacity: 1;
 }
 
-/* Highlight for art/image area (upper area) */
-.onboarding-highlight-art {
-    position: absolute;
-    top: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
-    max-width: 350px;
-    height: 45%;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.06);
-    box-shadow: 
-        0 0 60px rgba(102, 126, 234, 0.25),
-        inset 0 0 30px rgba(255, 255, 255, 0.03);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.5s ease;
-}
-
-.onboarding-highlight-art.visible {
-    opacity: 1;
-}
-
 @media (max-width: 480px) {
-    .onboarding-highlight-info {
-        height: 155px;
-    }
-    
     .onboarding-highlight-art {
         top: 70px;
-        height: 40%;
+        bottom: 330px;
+    }
+    
+    .onboarding-highlight-info {
+        height: 155px;
     }
 }
 
 /* =====================================================
-   INSTRUCTION STEPS
+   INSTRUCTION STEPS - Compact with 2 lines
    ===================================================== */
 
 .onboarding-step {
     position: absolute;
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 14px 20px;
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 16px;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
     color: white;
-    font-size: 15px;
-    font-weight: 600;
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.5s ease, transform 0.5s ease;
-    white-space: nowrap;
+    transform: scale(0.9);
+    transition: opacity 0.4s ease, transform 0.4s ease;
 }
 
 .onboarding-step.visible {
     opacity: 1;
-    transform: translateY(0);
+    transform: scale(1);
 }
 
-/* Step 1: Swipe Right - positioned on the left side */
+/* Step 1: Tap for fullscreen - TOP position (green circle area) */
 .onboarding-step-1 {
-    top: 38%;
-    left: 16px;
-    transform: translateX(-30px);
+    top: 55px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
 }
 
 .onboarding-step-1.visible {
-    transform: translateX(0);
+    transform: translateX(-50%) scale(1);
 }
 
-/* Step 2: Swipe Left - positioned on the right side */
+/* Step 2: Swipe right/next - RIGHT side */
 .onboarding-step-2 {
-    top: 38%;
+    top: 50%;
     right: 16px;
-    transform: translateX(30px);
+    transform: translateY(-50%) scale(0.9);
 }
 
 .onboarding-step-2.visible {
-    transform: translateX(0);
+    transform: translateY(-50%) scale(1);
 }
 
-/* Step 3: Tap art - positioned in upper area, pointing down */
+/* Step 3: Swipe left/back - LEFT side */
 .onboarding-step-3 {
-    top: 28%;
-    left: 50%;
-    transform: translateX(-50%) translateY(20px);
-    flex-direction: column;
-    text-align: center;
-    gap: 8px;
+    top: 50%;
+    left: 16px;
+    transform: translateY(-50%) scale(0.9);
 }
 
 .onboarding-step-3.visible {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(-50%) scale(1);
 }
 
-/* Step 4: Tap card - positioned just above info section */
+/* Step 4: Tap or swipe up - INSIDE info section (green circle area) */
 .onboarding-step-4 {
-    bottom: 295px;
+    bottom: 160px;
     left: 50%;
-    transform: translateX(-50%) translateY(20px);
+    transform: translateX(-50%) scale(0.9);
 }
 
 .onboarding-step-4.visible {
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(-50%) scale(1);
 }
 
 @media (max-width: 480px) {
-    .onboarding-step-3 {
-        top: 22%;
+    .onboarding-step {
+        padding: 8px 12px;
+        gap: 8px;
+    }
+    
+    .onboarding-step-1 {
+        top: 50px;
     }
     
     .onboarding-step-4 {
-        bottom: 285px;
-    }
-}
-
-@media (max-height: 700px) {
-    .onboarding-step-3 {
-        top: 18%;
-    }
-    
-    .onboarding-step-4 {
-        bottom: 275px;
+        bottom: 155px;
     }
 }
 
 /* =====================================================
-   PULSING ICONS - TikTok Style
+   ICONS
    ===================================================== */
 
 .onboarding-icon {
-    width: 42px;
-    height: 42px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
+    background: rgba(102, 126, 234, 0.9);
+    border-radius: 8px;
     flex-shrink: 0;
-    animation: iconPulse 2s ease-in-out infinite;
 }
 
 .onboarding-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 14px;
+    height: 14px;
     color: white;
     stroke-width: 2.5;
 }
 
-/* Swipe icons have movement animation */
+/* Subtle animations */
 .onboarding-step-1 .onboarding-icon svg {
-    animation: swipeRight 1.5s ease-in-out infinite;
+    animation: nudgeDown 1.5s ease-in-out infinite;
 }
 
 .onboarding-step-2 .onboarding-icon svg {
-    animation: swipeLeft 1.5s ease-in-out infinite;
+    animation: nudgeLeft 2s ease-in-out infinite;
 }
 
-/* Tap art icon - pointing down */
 .onboarding-step-3 .onboarding-icon svg {
-    animation: tapDown 1.2s ease-in-out infinite;
+    animation: nudgeRight 2s ease-in-out infinite;
 }
 
-/* Tap card icon - pointing down to card */
 .onboarding-step-4 .onboarding-icon svg {
-    animation: tapDown 1.2s ease-in-out infinite;
+    animation: nudgeUp 1.5s ease-in-out infinite;
 }
 
-@keyframes iconPulse {
-    0%, 100% {
-        box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.6);
-    }
-    50% {
-        box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
-    }
+@keyframes nudgeRight {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(2px); }
 }
 
-@keyframes swipeLeft {
-    0%, 100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    50% {
-        transform: translateX(-5px);
-        opacity: 0.7;
-    }
+@keyframes nudgeLeft {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-2px); }
 }
 
-@keyframes swipeRight {
-    0%, 100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-    50% {
-        transform: translateX(5px);
-        opacity: 0.7;
-    }
+@keyframes nudgeDown {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(2px); }
 }
 
-@keyframes tapDown {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(4px);
-    }
+@keyframes nudgeUp {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
 }
 
 /* =====================================================
-   TEXT STYLING
+   TEXT - Two lines
    ===================================================== */
 
 .onboarding-text {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 1px;
 }
 
 .onboarding-text-main {
-    font-size: 14px;
-    font-weight: 700;
-    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+    white-space: nowrap;
 }
 
 .onboarding-text-sub {
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 500;
-    color: rgba(255, 255, 255, 0.6);
-}
-
-/* Center text for vertical layout (step 3) */
-.onboarding-step-3 .onboarding-text {
-    align-items: center;
+    color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
 }
 
 /* =====================================================
-   SKIP / GOT IT BUTTON
+   GOT IT BUTTON
    ===================================================== */
 
 .onboarding-skip {
     position: absolute;
-    bottom: 45px;
+    bottom: 55px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 14px 48px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 12px 36px;
+    background: rgba(102, 126, 234, 0.9);
     border: none;
-    border-radius: 30px;
+    border-radius: 24px;
     color: white;
-    font-size: 14px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.5s ease, transform 0.2s ease;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
+    transition: opacity 0.4s ease, transform 0.15s ease;
+    letter-spacing: 0.3px;
 }
 
 .onboarding-skip.visible {
@@ -314,74 +271,40 @@
 }
 
 .onboarding-skip:active {
-    transform: translateX(-50%) scale(0.95);
+    transform: translateX(-50%) scale(0.96);
 }
 
 /* =====================================================
-   PROGRESS DOTS
+   PROGRESS DOTS - Below button
    ===================================================== */
 
 .onboarding-dots {
     position: absolute;
-    bottom: 100px;
+    bottom: 25px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
-    gap: 8px;
+    gap: 5px;
 }
 
 .onboarding-dot {
-    width: 8px;
-    height: 8px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.2);
     transition: all 0.3s ease;
 }
 
 .onboarding-dot.active {
-    background: white;
-    width: 24px;
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    width: 16px;
+    border-radius: 3px;
 }
 
 /* =====================================================
-   MOBILE ADJUSTMENTS
+   HIDE ON DESKTOP
    ===================================================== */
 
-@media (max-width: 380px) {
-    .onboarding-step {
-        padding: 12px 14px;
-        gap: 10px;
-    }
-    
-    .onboarding-icon {
-        width: 36px;
-        height: 36px;
-    }
-    
-    .onboarding-icon svg {
-        width: 18px;
-        height: 18px;
-    }
-    
-    .onboarding-text-main {
-        font-size: 13px;
-    }
-    
-    .onboarding-text-sub {
-        font-size: 10px;
-    }
-    
-    .onboarding-step-1 {
-        left: 10px;
-    }
-    
-    .onboarding-step-2 {
-        right: 10px;
-    }
-}
-
-/* Hide on desktop */
 @media (min-width: 769px) {
     .onboarding-overlay {
         display: none !important;

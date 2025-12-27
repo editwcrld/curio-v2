@@ -1,27 +1,15 @@
 /**
  * Onboarding Module
- * TikTok-style tutorial for first-time guest users on mobile
+ * Minimal tutorial for first-time guest users on mobile
  */
 
 const ONBOARDING_KEY = 'curio_onboarding_seen';
 
 // Check if user should see onboarding
 function shouldShowOnboarding() {
-    // Only on mobile/tablet
-    if (window.innerWidth > 768) {
-        return false;
-    }
-    
-    // Not for logged in users
-    if (localStorage.getItem('user_logged_in') === 'true') {
-        return false;
-    }
-    
-    // Not if already seen
-    if (localStorage.getItem(ONBOARDING_KEY) === 'true') {
-        return false;
-    }
-    
+    if (window.innerWidth > 768) return false;
+    if (localStorage.getItem('user_logged_in') === 'true') return false;
+    if (localStorage.getItem(ONBOARDING_KEY) === 'true') return false;
     return true;
 }
 
@@ -36,25 +24,25 @@ function createOnboardingOverlay() {
         <div class="onboarding-highlight-art"></div>
         <div class="onboarding-highlight-info"></div>
         
-        <!-- Step 1: Swipe Right (left side) -->
+        <!-- Step 1: Tap for fullscreen (TOP - at header) -->
         <div class="onboarding-step onboarding-step-1" data-step="1">
             <div class="onboarding-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                    <polyline points="12 5 19 12 12 19"/>
+                    <path d="M12 5v14"/>
+                    <polyline points="19 12 12 19 5 12"/>
                 </svg>
             </div>
             <div class="onboarding-text">
-                <span class="onboarding-text-main">Swipe right</span>
-                <span class="onboarding-text-sub">Go back</span>
+                <span class="onboarding-text-main">Tap for fullscreen</span>
+                <span class="onboarding-text-sub">View artwork in detail</span>
             </div>
         </div>
         
-        <!-- Step 2: Swipe Left (right side) -->
+        <!-- Step 2: Swipe left/next (RIGHT side) -->
         <div class="onboarding-step onboarding-step-2" data-step="2">
             <div class="onboarding-text">
                 <span class="onboarding-text-main">Swipe left</span>
-                <span class="onboarding-text-sub">New art or quote</span>
+                <span class="onboarding-text-sub">Next art / quote</span>
             </div>
             <div class="onboarding-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
@@ -64,55 +52,54 @@ function createOnboardingOverlay() {
             </div>
         </div>
         
-        <!-- Step 3: Tap art (upper area, pointing down) -->
+        <!-- Step 3: Swipe right/back (LEFT side) -->
         <div class="onboarding-step onboarding-step-3" data-step="3">
             <div class="onboarding-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 5v14"/>
-                    <polyline points="19 12 12 19 5 12"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
                 </svg>
             </div>
             <div class="onboarding-text">
-                <span class="onboarding-text-main">Tap image</span>
-                <span class="onboarding-text-sub">View full picture</span>
+                <span class="onboarding-text-main">Swipe right</span>
+                <span class="onboarding-text-sub">Previous art / quote</span>
             </div>
         </div>
         
-        <!-- Step 4: Tap card (above info section) -->
+        <!-- Step 4: Tap or swipe up (INSIDE info section) -->
         <div class="onboarding-step onboarding-step-4" data-step="4">
             <div class="onboarding-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 5v14"/>
-                    <polyline points="19 12 12 19 5 12"/>
+                    <path d="M12 19V5"/>
+                    <polyline points="5 12 12 5 19 12"/>
                 </svg>
             </div>
             <div class="onboarding-text">
-                <span class="onboarding-text-main">Tap card</span>
-                <span class="onboarding-text-sub">Read description</span>
+                <span class="onboarding-text-main">Tap or swipe up</span>
+                <span class="onboarding-text-sub">Expand description</span>
             </div>
         </div>
         
-        <!-- Progress dots -->
-        <div class="onboarding-dots">
-            <div class="onboarding-dot active" data-dot="1"></div>
-            <div class="onboarding-dot" data-dot="2"></div>
-            <div class="onboarding-dot" data-dot="3"></div>
-            <div class="onboarding-dot" data-dot="4"></div>
-        </div>
-        
         <!-- Got it button -->
-        <button class="onboarding-skip">Got it!</button>
+        <button class="onboarding-skip">Got it</button>
+        
+        <!-- Progress dots (below button) -->
+        <div class="onboarding-dots">
+            <div class="onboarding-dot active"></div>
+            <div class="onboarding-dot"></div>
+            <div class="onboarding-dot"></div>
+            <div class="onboarding-dot"></div>
+        </div>
     `;
     
     return overlay;
 }
 
-// Show onboarding with sequential animations
+// Show onboarding
 function showOnboarding() {
     const overlay = createOnboardingOverlay();
     document.body.appendChild(overlay);
     
-    // Activate overlay
     requestAnimationFrame(() => {
         overlay.classList.add('active');
     });
@@ -123,94 +110,67 @@ function showOnboarding() {
     const highlightArt = overlay.querySelector('.onboarding-highlight-art');
     const highlightInfo = overlay.querySelector('.onboarding-highlight-info');
     
-    // Show steps sequentially
     function showStep(index) {
-        // Update dots
-        dots.forEach((dot, i) => {
-            dot.classList.toggle('active', i === index);
-        });
-        
-        // Show current step
+        dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
         steps[index]?.classList.add('visible');
         
-        // Show highlights based on step
-        if (index === 2) {
-            // Step 3: Tap image - highlight art area
-            highlightArt.classList.add('visible');
-        }
+        // Show art highlight for step 1 (tap for fullscreen)
+        if (index === 0) highlightArt.classList.add('visible');
         
+        // Show info highlight for step 4 (tap or swipe up)
+        if (index === 3) highlightInfo.classList.add('visible');
+        
+        // Show button after last step
         if (index === 3) {
-            // Step 4: Tap card - highlight info section
-            highlightInfo.classList.add('visible');
-        }
-        
-        // Show skip button after last step
-        if (index === steps.length - 1) {
-            setTimeout(() => {
-                skipBtn.classList.add('visible');
-            }, 400);
+            setTimeout(() => skipBtn.classList.add('visible'), 300);
         }
     }
     
-    // Start showing steps with delays
-    setTimeout(() => showStep(0), 300);   // Swipe right
-    setTimeout(() => showStep(1), 900);   // Swipe left
-    setTimeout(() => showStep(2), 1500);  // Tap image
-    setTimeout(() => showStep(3), 2100);  // Tap card
+    // Sequential timing
+    setTimeout(() => showStep(0), 200);
+    setTimeout(() => showStep(1), 700);
+    setTimeout(() => showStep(2), 1200);
+    setTimeout(() => showStep(3), 1700);
     
-    // Skip button handler
-    skipBtn.addEventListener('click', () => {
+    // ✅ Allow closing after all steps are shown
+    let canClose = false;
+    setTimeout(() => { canClose = true; }, 2000);
+    
+    // Got it button closes
+    skipBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         closeOnboarding(overlay);
     });
     
-    // Also close on tap anywhere after all steps shown
-    let canClose = false;
-    setTimeout(() => {
-        canClose = true;
-    }, 2800);
-    
-    overlay.addEventListener('click', (e) => {
-        if (canClose && (e.target === overlay || e.target.classList.contains('onboarding-highlight-art') || e.target.classList.contains('onboarding-highlight-info'))) {
+    // ✅ Tap anywhere to close (after steps are shown)
+    overlay.addEventListener('click', () => {
+        if (canClose) {
             closeOnboarding(overlay);
         }
     });
 }
 
-// Close onboarding
 function closeOnboarding(overlay) {
-    // Mark as seen
     localStorage.setItem(ONBOARDING_KEY, 'true');
-    
-    // Fade out
     overlay.classList.remove('active');
-    
-    // Remove from DOM
-    setTimeout(() => {
-        overlay.remove();
-    }, 400);
+    setTimeout(() => overlay.remove(), 400);
 }
 
-// Initialize onboarding
+// Public API
 export function initOnboarding() {
     if (shouldShowOnboarding()) {
-        // Show after app is loaded
-        setTimeout(() => {
-            showOnboarding();
-        }, 800);
+        setTimeout(showOnboarding, 800);
     }
 }
 
-// Force show onboarding (for testing)
 export function forceShowOnboarding() {
     showOnboarding();
 }
 
-// Reset onboarding (for testing)
 export function resetOnboarding() {
     localStorage.removeItem(ONBOARDING_KEY);
     console.log('Onboarding reset. Refresh to see again.');
 }
 
-// Expose functions globally for testing
 window.resetOnboarding = resetOnboarding;
 window.forceShowOnboarding = forceShowOnboarding;
