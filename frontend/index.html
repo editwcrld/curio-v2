@@ -68,13 +68,18 @@
                         <section class="info-section">
                             <div class="info-header">
                                 <div class="drag-handle"></div>
+                                <!-- Language Toggle LEFT -->
+                                <div class="lang-toggle">
+                                    <button class="lang-btn active" data-lang="de">DE</button>
+                                    <button class="lang-btn" data-lang="en">EN</button>
+                                </div>
+                                <!-- Favorite Button RIGHT -->
                                 <button class="fav-btn" aria-label="Add to favorites">
                                     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                                     </svg>
                                 </button>
                                 <h2 class="info-title">Loading...</h2>
-                                <p class="info-meta">...</p>
                             </div>
                             <div class="info-content">
                                 <p></p>
@@ -110,13 +115,18 @@
                         <section class="info-section">
                             <div class="info-header">
                                 <div class="drag-handle"></div>
+                                <!-- Language Toggle LEFT -->
+                                <div class="lang-toggle">
+                                    <button class="lang-btn active" data-lang="de">DE</button>
+                                    <button class="lang-btn" data-lang="en">EN</button>
+                                </div>
+                                <!-- Favorite Button RIGHT -->
                                 <button class="fav-btn" aria-label="Add to favorites">
                                     <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
                                     </svg>
                                 </button>
                                 <h2 class="info-title">...</h2>
-                                <p class="info-meta">...</p>
                             </div>
                             <div class="info-content">
                                 <p></p>
@@ -126,16 +136,14 @@
                 </div>
             </div>
 
-            <!-- FAVORITES VIEW - KOMPLETT NEU -->
+            <!-- FAVORITES VIEW -->
             <div id="view-favorites" class="view hidden">
                 <div class="fav-header">
-                    <!-- Title Section -->
                     <div class="fav-title-section">
                         <h1 class="fav-title">Library</h1>
                         <p class="fav-count">0 Favoriten</p>
                     </div>
                     
-                    <!-- Search -->
                     <div class="fav-search-container">
                         <svg class="fav-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"/>
@@ -156,7 +164,6 @@
                         </button>
                     </div>
                     
-                    <!-- Filters -->
                     <div class="fav-filters">
                         <button class="fav-filter-pill active" data-filter="all">All</button>
                         <button class="fav-filter-pill" data-filter="art">Art</button>
@@ -164,7 +171,6 @@
                     </div>
                 </div>
                 
-                <!-- Content -->
                 <div class="fav-content">
                     <div id="fav-list" class="fav-grid"></div>
                 </div>
@@ -201,7 +207,6 @@
     <!-- Auth Modal -->
     <div id="auth-overlay" class="auth-overlay">
         <div class="auth-modal">
-            <!-- Close Button -->
             <button id="auth-close" class="auth-close" aria-label="Close">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -216,7 +221,6 @@
                     <p class="auth-subtitle">Melde dich an um fortzufahren</p>
                 </div>
                 
-                <!-- Error/Info Message -->
                 <div id="login-message" class="auth-message">
                     <span class="auth-message-text"></span>
                 </div>
@@ -268,7 +272,6 @@
                     <p class="auth-subtitle">Registriere dich kostenlos</p>
                 </div>
                 
-                <!-- Error/Info Message -->
                 <div id="signup-message" class="auth-message">
                     <span class="auth-message-text"></span>
                 </div>

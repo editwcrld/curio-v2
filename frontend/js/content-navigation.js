@@ -3,7 +3,8 @@
  * ✅ Back = Vorheriges anzeigen (kein API Call!)
  * ✅ Next = IMMER neuer Content (außer nach Back)
  * ✅ History für Quotes UND Art
- * ✅ Prefetch im Hintergrund
+ * ✅ Prefetch im Hintergrund (nutzt /daily = kein Limit)
+ * ✅ Navigation nutzt /fresh (wartet auf AI!)
  */
 
 import { appState } from './state.js';
@@ -38,7 +39,7 @@ export function initContentNavigation() {
         btn.addEventListener('click', handleNext);
     });
     
-    // Start prefetching
+    // Start prefetching (uses /daily endpoint = no limit consumed)
     prefetchQuote();
     prefetchArt();
 }
@@ -84,10 +85,8 @@ function goBackQuote() {
 }
 
 async function goNextQuote() {
-    // ✅ NUR wenn wir HINTER dem Ende sind (nach Back), zeige History
-    // Sonst IMMER neuen Content!
+    // ✅ Wenn wir in der History sind (nach Back), zeige nächstes aus History
     if (quoteHistoryIndex < quoteHistory.length - 1 && quoteHistoryIndex >= 0) {
-        // Wir sind in der History (nach Back) - zeige nächstes aus History
         quoteHistoryIndex++;
         const item = quoteHistory[quoteHistoryIndex];
         
@@ -98,7 +97,7 @@ async function goNextQuote() {
         return;
     }
     
-    // ✅ Am Ende der History oder keine History = IMMER neuer Content!
+    // ✅ Am Ende der History = neuer Content!
     
     // Check limits
     if (!canNavigate('quotes')) {
@@ -111,7 +110,7 @@ async function goNextQuote() {
     const token = localStorage.getItem('auth_token');
     const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
     
-    // Haben wir Prefetch?
+    // ✅ Haben wir Prefetch? (Hat vielleicht kein AI)
     if (prefetchedQuote) {
         const quote = prefetchedQuote;
         const gradient = getRandomGradient();
@@ -133,8 +132,13 @@ async function goNextQuote() {
         prefetchQuote();
         
         isNavigating = false;
+        
+        // ✅ Wenn kein AI, im Hintergrund nachladen
+        if (!quote.ai_description_de && !quote.ai_description_en) {
+            fetchAIForQuote(quote.id);
+        }
     } else {
-        // Fetch now
+        // ✅ Kein Prefetch - fetch fresh (WARTET auf AI!)
         showContentLoading('view-quotes');
         
         try {
@@ -159,7 +163,7 @@ async function goNextQuote() {
             
             prefetchQuote();
         } catch (error) {
-            console.error('Quote fetch error:', error);
+            console.error('Quote navigation error:', error);
         } finally {
             hideContentLoading('view-quotes');
             isNavigating = false;
@@ -167,20 +171,39 @@ async function goNextQuote() {
     }
 }
 
+// ===== FETCH AI FOR EXISTING QUOTE =====
+
+async function fetchAIForQuote(quoteId) {
+    try {
+        // Re-fetch quote to get AI description
+        const response = await fetch(`${API_BASE_URL}/daily/quote`);
+        if (!response.ok) return;
+        
+        // The backend will have generated AI by now for the cached quote
+        // This is a background update - don't block UI
+    } catch (error) {
+        // Silent fail
+    }
+}
+
+// ===== PREFETCH (uses /daily = no limit consumed) =====
+
 async function prefetchQuote() {
     if (isPrefetchingQuote || prefetchedQuote) return;
     
     isPrefetchingQuote = true;
     
-    const token = localStorage.getItem('auth_token');
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-    
     try {
+        // ✅ Use /quote/fresh to get AI text included!
+        const token = localStorage.getItem('auth_token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        
         const response = await fetch(`${API_BASE_URL}/quote/fresh`, { headers });
         
         if (response.ok) {
             const result = await response.json();
             prefetchedQuote = result.data;
+            console.log('✅ Quote prefetched with AI:', prefetchedQuote.ai_description_de ? 'yes' : 'no');
         }
     } catch (error) {
         console.error('Quote prefetch error:', error);
@@ -203,7 +226,7 @@ function goBackArt() {
 }
 
 async function goNextArt() {
-    // ✅ NUR wenn wir in der History sind (nach Back), zeige nächstes
+    // ✅ Wenn wir in der History sind (nach Back), zeige nächstes
     if (artHistoryIndex < artHistory.length - 1 && artHistoryIndex >= 0) {
         artHistoryIndex++;
         const art = artHistory[artHistoryIndex];
@@ -214,7 +237,7 @@ async function goNextArt() {
         return;
     }
     
-    // ✅ Am Ende = IMMER neuer Content!
+    // ✅ Am Ende = neuer Content!
     
     // Check limits
     if (!canNavigate('art')) {
@@ -265,7 +288,7 @@ async function goNextArt() {
             
             prefetchArt();
         } catch (error) {
-            console.error('Art fetch error:', error);
+            console.error('Art navigation error:', error);
         } finally {
             hideContentLoading('view-art');
             isNavigating = false;

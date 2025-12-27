@@ -1,12 +1,14 @@
 /**
  * Quote Engine Module
  * ✅ Loads from Backend
- * ✅ Adds initial quote to history
+ * ✅ Language Support (DE/EN)
  */
 
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import { appState } from './state.js';
-import { addToQuoteHistory } from './content-navigation.js';
+
+// Diese werden dynamisch importiert wenn verfügbar
+let addToQuoteHistoryFn = null;
 
 export async function loadDailyQuote() {
     try {
@@ -24,8 +26,10 @@ export async function loadDailyQuote() {
         appState.setQuoteData(data);
         appState.setGradient(gradient);
         
-        // ✅ Add to history!
-        addToQuoteHistory(data, gradient);
+        // Add to history (if available)
+        if (addToQuoteHistoryFn) {
+            addToQuoteHistoryFn(data, gradient);
+        }
         
         return data;
     } catch (error) {
@@ -60,13 +64,39 @@ export function displayQuote(data, gradient) {
     if (textEl) textEl.textContent = data.text;
     if (authorEl) authorEl.textContent = data.author;
     if (titleEl) titleEl.textContent = data.author;
-    if (contentEl) contentEl.textContent = data.backgroundInfo || '';
+    
+    // Show description - check language preference
+    if (contentEl) {
+        const lang = localStorage.getItem('curio_language') || 'de';
+        let description;
+        
+        if (lang === 'en') {
+            description = data.ai_description_en || data.ai_description_de || data.backgroundInfo || '';
+        } else {
+            description = data.ai_description_de || data.ai_description_en || data.backgroundInfo || '';
+        }
+        
+        contentEl.textContent = description;
+    }
 }
 
 export function initQuoteView() {
+    // Subscribe to state changes
     appState.subscribe((state) => {
         if (state.currentQuoteData) {
             displayQuote(state.currentQuoteData, state.currentGradient);
         }
     });
+    
+    // Listen for language changes
+    window.addEventListener('languageChanged', () => {
+        if (appState.currentQuoteData) {
+            displayQuote(appState.currentQuoteData, appState.currentGradient);
+        }
+    });
+}
+
+// Set history function (called from content-navigation)
+export function setAddToHistoryFn(fn) {
+    addToQuoteHistoryFn = fn;
 }

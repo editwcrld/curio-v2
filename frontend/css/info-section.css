@@ -1,3 +1,7 @@
+/* =====================================================
+   INFO SECTION - Glass Card Overlay
+   ===================================================== */
+
 .info-wrapper {
     position: absolute; 
     left: 50%; 
@@ -28,32 +32,88 @@
     height: 60vh; 
 }
 
+/* =====================================================
+   INFO HEADER - Icons on same row as Drag Handle
+   ===================================================== */
+
 .info-header { 
-    padding: 20px 24px 8px 24px; 
+    padding: 14px 20px 8px 20px; 
     text-align: center; 
     position: relative; 
     flex-shrink: 0; 
 }
 
+/* Drag Handle - CENTERED */
 .drag-handle { 
     width: 35px; 
     height: 4px; 
     background: rgba(0,0,0,0.1); 
     border-radius: 2px; 
-    margin: 0 auto 10px; 
+    margin: 0 auto 14px auto;
 }
 
-/* HERZ ICON */
+/* =====================================================
+   ICONS - Same row as Drag Handle (top of card)
+   ===================================================== */
+
+/* Language Toggle - TOP LEFT */
+.lang-toggle {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    display: inline-flex;
+    gap: 2px;
+    background: rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    padding: 3px;
+    z-index: 10;
+}
+
+.lang-btn {
+    background: transparent;
+    border: none;
+    color: rgba(0, 0, 0, 0.35);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.lang-btn:hover {
+    color: rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.lang-btn.active {
+    background: rgba(0, 0, 0, 0.08);
+    color: #000;
+}
+
+/* Favorite Button - TOP RIGHT (same height as toggle) */
 .fav-btn { 
     position: absolute; 
-    top: 22px; 
-    right: 22px; 
+    top: 12px;
+    right: 18px; 
     background: none; 
     border: none; 
     cursor: pointer; 
-    color: rgba(0,0,0,0.3); 
-    transition: 0.3s; 
+    color: rgba(0,0,0,0.25); 
+    transition: all 0.3s ease; 
     z-index: 10;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.fav-btn:hover {
+    color: rgba(0,0,0,0.4);
+    background: rgba(0,0,0,0.05);
 }
 
 .fav-btn.active { 
@@ -65,28 +125,48 @@
     stroke: #ff4757; 
 }
 
+/* =====================================================
+   HIDE ICONS DURING LOADING
+   ===================================================== */
+
+.info-section.loading .lang-toggle,
+.info-section.loading .fav-btn {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* =====================================================
+   TITLE - Below icons with enough space
+   ===================================================== */
+
 .info-title { 
     font-size: 19px; 
     font-weight: 800; 
     color: #000 !important; 
-    padding-right: 30px; 
+    margin: 0;
+    padding: 0 45px; /* Space for icons on both sides */
+    line-height: 1.3;
 }
 
-.info-meta { 
-    font-size: 13px; 
-    color: #444 !important; 
-    margin-top: 2px; 
-}
+/* =====================================================
+   INFO CONTENT
+   ===================================================== */
 
 .info-content { 
-    padding: 0 24px 30px 24px; 
+    padding: 8px 24px 24px 24px; 
     font-size: 15px; 
-    line-height: 1.5; 
+    line-height: 1.55; 
     color: #1a1a1a !important; 
-    overflow: hidden; 
+    overflow: hidden;
+    flex: 1;
 }
 
-/* Vorschau-Logik */
+.info-content p {
+    margin: 0;
+    color: #1a1a1a !important;
+}
+
+/* Preview Mode - Clamp to 2 lines */
 .info-section:not(.expanded) .info-content p {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -96,6 +176,7 @@
     text-overflow: ellipsis;
 }
 
+/* Expanded Mode */
 .info-section.expanded .info-content { 
     overflow-y: auto; 
     scrollbar-width: none; 

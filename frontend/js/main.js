@@ -1,6 +1,5 @@
 /**
  * Main Application Entry Point
- * Orchestrates all modules and initializes the app
  */
 
 import { appState } from './state.js';
@@ -20,16 +19,18 @@ import './toast.js';
 // Initialize the app when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Show app loading screen
         showAppLoading();
         
-        // Initialize limits system (check 24h reset)
+        // Initialize limits system
         initLimits();
         
         // Initialize UI components
         initNavigation();
         initInfoPanels();
         initFavoriteButtons();
+        
+        // Initialize language toggle (if exists in HTML)
+        initLanguageToggleIfExists();
         
         // Initialize view-specific logic
         initArtView();
@@ -43,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize lightbox
         initLightbox();
         
-        // Initialize content navigation (back/next buttons)
+        // Initialize content navigation
         initContentNavigation();
         
         // Initialize swipe gestures
@@ -58,16 +59,40 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadDailyQuote()
         ]);
         
-        // Update favorite button states after loading
+        // Update favorite button states
         updateAllFavoriteButtons();
         
-        // Hide loading screen
         hideAppLoading();
         
         console.log('✅ App initialized successfully');
     } catch (error) {
         console.error('❌ Error initializing app:', error);
         hideAppLoading();
-        alert('Failed to load content. Please refresh the page.');
     }
 });
+
+// Simple language toggle init without separate module
+function initLanguageToggleIfExists() {
+    const currentLang = localStorage.getItem('curio_language') || 'de';
+    
+    document.querySelectorAll('.lang-toggle .lang-btn').forEach(btn => {
+        // Set initial active state
+        btn.classList.toggle('active', btn.dataset.lang === currentLang);
+        
+        // Add click handler
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            const lang = btn.dataset.lang;
+            localStorage.setItem('curio_language', lang);
+            
+            // Update all buttons
+            document.querySelectorAll('.lang-toggle .lang-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.lang === lang);
+            });
+            
+            // Trigger update
+            window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
+        });
+    });
+}
