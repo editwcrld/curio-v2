@@ -80,7 +80,10 @@ function handleDragStart(e, infoSection) {
 function handleDragMove(e, infoSection) {
     if (!DragState.isDragging) return;
     
-    e.preventDefault();
+    // Only preventDefault if event is cancelable (fixes browser warning)
+    if (e.cancelable) {
+        e.preventDefault();
+    }
     e.stopPropagation();
     
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
