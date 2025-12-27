@@ -100,7 +100,7 @@ async function incrementLimit(userId, type) {
         const today = new Date().toISOString().split('T')[0];
         const column = type === 'art' ? 'art_count' : 'quote_count';
         
-        // Try to increment existing row
+        // Try to get existing row
         const { data: existing } = await supabase
             .from('user_limits')
             .select('id, art_count, quote_count')
@@ -109,7 +109,7 @@ async function incrementLimit(userId, type) {
             .maybeSingle();
         
         if (existing) {
-            // Update existing row
+            // Update existing row - only increment the specific column
             const { error } = await supabase
                 .from('user_limits')
                 .update({ 
@@ -121,15 +121,42 @@ async function incrementLimit(userId, type) {
             if (error) throw error;
         } else {
             // Insert new row
+            const insertData = {
+                user_id: userId,
+                date: today,
+                art_count: type === 'art' ? 1 : 0,
+                quote_count: type === 'quotes' ? 1 : 0
+            };
+            
             const { error } = await supabase
                 .from('user_limits')
-                .insert({
-                    user_id: userId,
-                    date: today,
-                    [column]: 1
-                });
+                .insert(insertData);
             
-            if (error) throw error;
+            // If insert failed due to race condition (duplicate key), fetch and update
+            if (error && error.code === '23505') {
+                console.log('⚠️ Race condition detected, retrying with update...');
+                
+                const { data: retry } = await supabase
+                    .from('user_limits')
+                    .select('id, art_count, quote_count')
+                    .eq('user_id', userId)
+                    .eq('date', today)
+                    .single();
+                
+                if (retry) {
+                    const { error: updateError } = await supabase
+                        .from('user_limits')
+                        .update({ 
+                            [column]: retry[column] + 1,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', retry.id);
+                    
+                    if (updateError) throw updateError;
+                }
+            } else if (error) {
+                throw error;
+            }
         }
         
         return true;

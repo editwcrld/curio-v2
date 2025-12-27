@@ -202,6 +202,13 @@ async function prefetchQuote() {
             headers: getAuthHeaders() 
         });
         
+        if (response.status === 429) {
+            // Limit reached - sync and stop prefetching
+            syncLimitToMax('quotes');
+            quotePrefetchRetries = MAX_PREFETCH_RETRIES; // Stop further attempts
+            return;
+        }
+        
         if (response.ok) {
             const result = await response.json();
             const quote = result.data;
@@ -337,6 +344,13 @@ async function prefetchArt() {
         const response = await fetch(`${API_BASE_URL}/art/fresh`, { 
             headers: getAuthHeaders() 
         });
+        
+        if (response.status === 429) {
+            // Limit reached - sync and stop prefetching
+            syncLimitToMax('art');
+            artPrefetchRetries = MAX_PREFETCH_RETRIES; // Stop further attempts
+            return;
+        }
         
         if (response.ok) {
             const result = await response.json();
