@@ -230,6 +230,8 @@ router.get('/daily/quote', optionalAuth, async (req, res, next) => {
 
 /**
  * GET /api/quote/fresh - Fresh + AI (WITH LIMITS)
+ * ✅ Speichert neue Quotes in DB
+ * ✅ Fallback auf Cache wenn API down
  */
 router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
     try {
@@ -245,38 +247,51 @@ router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
         }
         
         console.log('📥 Fetching fresh quote...');
-        const freshQuote = await fetchRandomQuote();
-        const cachedQuote = await cacheQuote(freshQuote);
         
+        let cachedQuote = null;
+        
+        // Try to fetch fresh from API
+        try {
+            const freshQuote = await fetchRandomQuote();
+            cachedQuote = await cacheQuote(freshQuote);  // ✅ Speichert in DB!
+        } catch (apiError) {
+            console.warn('⚠️ Quote API failed, using fallback:', apiError.message);
+        }
+        
+        // Success: Got fresh quote
         if (cachedQuote) {
             const ai = await ensureQuoteAI(cachedQuote.id, { 
                 text: cachedQuote.text, 
                 author: cachedQuote.author 
             });
             
-            res.json({
+            return res.json({
                 success: true,
                 data: formatQuoteResponse(cachedQuote, ai),
                 cached: false,
                 source: 'fresh'
             });
-        } else {
-            const existingQuote = await getRandomCachedQuote();
-            if (existingQuote) {
-                const ai = await ensureQuoteAI(existingQuote.id, { 
-                    text: existingQuote.text, 
-                    author: existingQuote.author 
-                });
-                res.json({
-                    success: true,
-                    data: formatQuoteResponse(existingQuote, ai),
-                    cached: true,
-                    source: 'fallback'
-                });
-            } else {
-                throw new Error('No quotes available');
-            }
         }
+        
+        // ✅ FALLBACK: API failed, use cached quote from DB
+        console.log('🔄 Using fallback from database...');
+        const existingQuote = await getRandomCachedQuote();
+        
+        if (existingQuote) {
+            const ai = await ensureQuoteAI(existingQuote.id, { 
+                text: existingQuote.text, 
+                author: existingQuote.author 
+            });
+            return res.json({
+                success: true,
+                data: formatQuoteResponse(existingQuote, ai),
+                cached: true,
+                source: 'fallback'
+            });
+        }
+        
+        // No cached quotes available at all
+        throw new Error('No quotes available');
     } catch (error) {
         next(error);
     }
@@ -325,6 +340,8 @@ router.get('/daily/art', optionalAuth, async (req, res, next) => {
 
 /**
  * GET /api/art/fresh - Fresh + AI (WITH LIMITS)
+ * ✅ Speichert neue Artworks in DB
+ * ✅ Fallback auf Cache wenn API down
  */
 router.get('/art/fresh', optionalAuth, async (req, res, next) => {
     try {
@@ -340,9 +357,18 @@ router.get('/art/fresh', optionalAuth, async (req, res, next) => {
         }
         
         console.log('🎨 Fetching fresh artwork...');
-        const freshArt = await fetchRandomArtwork();
-        const cachedArt = await cacheArt(freshArt);
         
+        let cachedArt = null;
+        
+        // Try to fetch fresh from API
+        try {
+            const freshArt = await fetchRandomArtwork();
+            cachedArt = await cacheArt(freshArt);  // ✅ Speichert in DB!
+        } catch (apiError) {
+            console.warn('⚠️ Art API failed, using fallback:', apiError.message);
+        }
+        
+        // Success: Got fresh art
         if (cachedArt) {
             const ai = await ensureArtAI(cachedArt.id, { 
                 title: cachedArt.title, 
@@ -350,30 +376,34 @@ router.get('/art/fresh', optionalAuth, async (req, res, next) => {
                 year: cachedArt.year 
             });
             
-            res.json({
+            return res.json({
                 success: true,
                 data: formatArtResponse(cachedArt, ai),
                 cached: false,
                 source: 'fresh'
             });
-        } else {
-            const existingArt = await getRandomCachedArt();
-            if (existingArt) {
-                const ai = await ensureArtAI(existingArt.id, { 
-                    title: existingArt.title, 
-                    artist: existingArt.artist, 
-                    year: existingArt.year 
-                });
-                res.json({
-                    success: true,
-                    data: formatArtResponse(existingArt, ai),
-                    cached: true,
-                    source: 'fallback'
-                });
-            } else {
-                throw new Error('No artworks available');
-            }
         }
+        
+        // ✅ FALLBACK: API failed, use cached art from DB
+        console.log('🔄 Using fallback from database...');
+        const existingArt = await getRandomCachedArt();
+        
+        if (existingArt) {
+            const ai = await ensureArtAI(existingArt.id, { 
+                title: existingArt.title, 
+                artist: existingArt.artist, 
+                year: existingArt.year 
+            });
+            return res.json({
+                success: true,
+                data: formatArtResponse(existingArt, ai),
+                cached: true,
+                source: 'fallback'
+            });
+        }
+        
+        // No cached art available at all
+        throw new Error('No artworks available');
     } catch (error) {
         next(error);
     }

@@ -1,0 +1,323 @@
+/**
+ * User Menu Styles
+ * ✅ Glass-Morphism Design
+ * ✅ Mobile-optimiert (Bottom Sheet)
+ * ✅ Desktop: Dropdown
+ * ✅ Smooth Animations
+ */
+
+/* =====================================================
+   USER MENU CONTAINER
+   ===================================================== */
+
+.user-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.user-menu.active {
+    pointer-events: auto;
+    opacity: 1;
+    visibility: visible;
+}
+
+/* =====================================================
+   BACKDROP - in mobile version definiert
+   ===================================================== */
+
+/* =====================================================
+   MENU CONTENT - MOBILE (Bottom Sheet über Bottom Nav!)
+   ===================================================== */
+
+.user-menu-content {
+    position: absolute;
+    bottom: 90px; /* ✅ Höher über der Bottom Nav */
+    left: 12px;
+    right: 12px;
+    background: linear-gradient(
+        135deg,
+        rgba(30, 30, 40, 0.98) 0%,
+        rgba(20, 20, 30, 0.99) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 16px 20px 20px;
+    transform: translateY(20px);
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    box-shadow: 
+        0 -10px 40px rgba(0, 0, 0, 0.5),
+        0 0 0 1px rgba(255, 255, 255, 0.1);
+    max-height: calc(80vh - 100px);
+    overflow-y: auto;
+}
+
+.user-menu.active .user-menu-content {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.user-menu.active .user-menu-content {
+    transform: translateY(0);
+}
+
+/* Kein Drag handle mehr - wir haben X-Button */
+
+/* =====================================================
+   CLOSE BUTTON
+   ===================================================== */
+
+.user-menu-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.user-menu-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.user-menu-close:active {
+    transform: scale(0.95);
+}
+
+.user-menu-close svg {
+    width: 18px;
+    height: 18px;
+    stroke: rgba(255, 255, 255, 0.7);
+}
+
+/* =====================================================
+   MENU HEADER
+   ===================================================== */
+
+.user-menu-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 0;
+}
+
+.user-menu-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.user-menu-avatar svg {
+    width: 24px;
+    height: 24px;
+    stroke: white;
+}
+
+.user-menu-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.user-menu-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.user-menu-email {
+    font-size: 15px;
+    color: white;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* =====================================================
+   DIVIDER
+   ===================================================== */
+
+.user-menu-divider {
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        transparent 100%
+    );
+    margin: 8px 0;
+}
+
+/* =====================================================
+   MENU OPTIONS
+   ===================================================== */
+
+.user-menu-options {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 0;
+}
+
+.user-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: all 0.2s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.user-menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.user-menu-item:active {
+    background: rgba(255, 255, 255, 0.12);
+    transform: scale(0.98);
+}
+
+.user-menu-item svg {
+    width: 22px;
+    height: 22px;
+    stroke: rgba(255, 255, 255, 0.7);
+    flex-shrink: 0;
+}
+
+.user-menu-item span:first-of-type:not(.user-menu-badge) {
+    flex: 1;
+}
+
+/* Badge for "Coming Soon" */
+.user-menu-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Logout Button - Red accent */
+.user-menu-logout {
+    margin-top: 8px;
+}
+
+.user-menu-logout:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.user-menu-logout svg {
+    stroke: #ef4444;
+}
+
+.user-menu-logout span:not(.user-menu-badge) {
+    color: #ef4444;
+}
+
+/* =====================================================
+   DESKTOP STYLES (min-width: 768px)
+   ===================================================== */
+
+@media (min-width: 768px) {
+    .user-menu-content {
+        position: absolute;
+        top: 60px;
+        right: 16px;
+        bottom: auto;
+        left: auto;
+        width: 280px;
+        border-radius: 16px;
+        padding: 16px;
+    }
+    
+    .user-menu-header {
+        padding: 8px 0;
+    }
+    
+    .user-menu-avatar {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .user-menu-avatar svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .user-menu-item {
+        padding: 12px 14px;
+    }
+    
+    .user-menu-close {
+        top: 10px;
+        right: 10px;
+        width: 28px;
+        height: 28px;
+    }
+    
+    .user-menu-close svg {
+        width: 16px;
+        height: 16px;
+    }
+}
+
+/* =====================================================
+   SAFE AREA (iPhone Notch) - nicht mehr nötig da über Nav
+   ===================================================== */
+
+
+/* =====================================================
+   BACKDROP - Voller Screen für Outside-Click
+   ===================================================== */
+
+.user-menu-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0; /* ✅ Voller Screen für Klick-Detection */
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.user-menu.active .user-menu-backdrop {
+    opacity: 1;
+}

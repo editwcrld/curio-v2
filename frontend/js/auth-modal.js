@@ -1,6 +1,8 @@
 /**
- * Auth Modal Module - FIXED VERSION
- * Handles login and sign-up with REAL Backend
+ * Auth Modal Module
+ * ✅ Login and Sign-up modal
+ * ✅ Toast notifications
+ * ✅ User-Icon wird von user-menu.js gehandelt
  */
 
 import { showSuccess, showError, showWarning, showInfo } from './toast.js';
@@ -10,24 +12,12 @@ let currentView = 'login';
 
 /**
  * Initialize auth modal
+ * NOTE: User icon click is handled by user-menu.js now!
  */
 export function initAuthModal() {
-    const userIcon = document.getElementById('user-icon');
     const overlay = document.getElementById('auth-overlay');
     const closeBtn = document.getElementById('auth-close');
     const toggleLinks = document.querySelectorAll('.auth-toggle-link');
-    
-    if (userIcon) {
-        userIcon.addEventListener('click', () => {
-            const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
-            
-            if (isLoggedIn) {
-                showLogoutConfirmation();
-            } else {
-                openAuthModal('login');
-            }
-        });
-    }
     
     if (overlay) {
         overlay.addEventListener('click', (e) => {
@@ -85,11 +75,11 @@ function switchView(view) {
     const signupView = document.getElementById('auth-signup-view');
     
     if (view === 'login') {
-        loginView.classList.remove('hidden');
-        signupView.classList.add('hidden');
+        loginView?.classList.remove('hidden');
+        signupView?.classList.add('hidden');
     } else {
-        loginView.classList.add('hidden');
-        signupView.classList.remove('hidden');
+        loginView?.classList.add('hidden');
+        signupView?.classList.remove('hidden');
     }
     
     clearInputErrors();
@@ -108,9 +98,6 @@ function initForms() {
     }
 }
 
-/**
- * FIXED: Real Backend Login
- */
 async function handleLogin(e) {
     e.preventDefault();
     
@@ -133,25 +120,51 @@ async function handleLogin(e) {
     submitBtn.disabled = true;
     
     try {
-        // REAL Backend Call!
         const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
         
         const data = await response.json();
         
         if (response.ok && data.success) {
+            // Debug: Log full response
+            console.log('🔍 Login response:', JSON.stringify(data, null, 2));
+            
+            // ✅ Token ist unter data.data.session.access_token (Backend Response Format)
+            const token = data.data?.session?.access_token || 
+                          data.session?.access_token || 
+                          data.token ||
+                          data.access_token;
+            
+            console.log('🔑 Extracted token:', token ? token.substring(0, 50) + '...' : 'NULL');
+            
+            if (!token) {
+                console.error('❌ No token in response:', data);
+                showError('Login fehlgeschlagen - kein Token erhalten');
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            // Validate token format (JWT has 3 parts separated by dots)
+            const tokenParts = token.split('.');
+            if (tokenParts.length !== 3) {
+                console.error('❌ Invalid token format, parts:', tokenParts.length);
+                showError('Login fehlgeschlagen - ungültiges Token-Format');
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+                return;
+            }
+            
             // Save auth data
-            localStorage.setItem('auth_token', data.data.session.access_token);
+            localStorage.setItem('auth_token', token);
             localStorage.setItem('user_logged_in', 'true');
             localStorage.setItem('user_email', email);
-            localStorage.setItem('user_premium', data.data.isPremium);  // ← CRITICAL!
             
-            // Update UI
+            console.log('✅ Login successful, token saved (length:', token.length, ')');
+            
             updateUserIconState(true, email);
             
             // Refresh favorites
@@ -159,34 +172,25 @@ async function handleLogin(e) {
                 module.refreshFavoritesView();
             });
             
-            // Show success message
-            if (data.data.isPremium) {
-                showSuccess('🎉 Premium Login erfolgreich!');
-            } else {
-                showSuccess('Erfolgreich angemeldet!');
-            }
+            showSuccess('Erfolgreich angemeldet!');
             
             setTimeout(() => {
                 closeAuthModal();
             }, 1000);
         } else {
-            // Login failed
             emailInput.classList.add('error');
             passwordInput.classList.add('error');
-            showError(data.message || 'Falsches Passwort oder Email');
+            showError(data.error || 'Falsches Passwort oder Email');
         }
     } catch (error) {
         console.error('Login error:', error);
-        showError('Verbindungsfehler. Bitte versuche es später erneut.');
+        showError('Verbindungsfehler. Bitte versuche es erneut.');
     } finally {
         submitBtn.classList.remove('loading');
         submitBtn.disabled = false;
     }
 }
 
-/**
- * FIXED: Real Backend Signup
- */
 async function handleSignup(e) {
     e.preventDefault();
     
@@ -215,33 +219,29 @@ async function handleSignup(e) {
     submitBtn.disabled = true;
     
     try {
-        // REAL Backend Call!
         const response = await fetch(`${API_BASE_URL}/auth/signup`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
         });
         
         const data = await response.json();
         
         if (response.ok && data.success) {
-            showSuccess('Account erfolgreich erstellt! 🎉');
+            showSuccess('Account erfolgreich erstellt!');
             
             setTimeout(() => {
                 switchView('login');
                 document.getElementById('login-email').value = email;
-                document.getElementById('login-password').value = password;
                 showInfo('Du kannst dich jetzt einloggen');
             }, 1500);
         } else {
             emailInput.classList.add('error');
-            showError(data.message || 'Registrierung fehlgeschlagen');
+            showError(data.error || 'Registrierung fehlgeschlagen');
         }
     } catch (error) {
         console.error('Signup error:', error);
-        showError('Verbindungsfehler. Bitte versuche es später erneut.');
+        showError('Verbindungsfehler. Bitte versuche es erneut.');
     } finally {
         submitBtn.classList.remove('loading');
         submitBtn.disabled = false;
@@ -268,10 +268,6 @@ function updateUserIconState(loggedIn, email = '') {
     } else {
         userIcon.classList.add('guest');
         userIcon.classList.remove('logged-in');
-        localStorage.removeItem('user_logged_in');
-        localStorage.removeItem('user_email');
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user_premium');
     }
 }
 
@@ -285,15 +281,16 @@ export function checkAuthState() {
 }
 
 export function logout() {
+    // Clear all auth data
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user_logged_in');
+    localStorage.removeItem('user_email');
+    
     updateUserIconState(false);
     showSuccess('Erfolgreich ausgeloggt');
     
-    // Reload page to reset limits
-    setTimeout(() => {
-        window.location.reload();
-    }, 1000);
-}
-
-function showLogoutConfirmation() {
-    logout();
+    // Refresh favorites view
+    import('./fav-engine.js').then(module => {
+        module.refreshFavoritesView();
+    });
 }

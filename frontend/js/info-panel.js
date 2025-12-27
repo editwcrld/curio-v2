@@ -1,10 +1,10 @@
 /**
  * Info Panel Module
  * ✅ Language Toggle OHNE Expand-Konflikt
- * ✅ Optimierte Reaktion
+ * ✅ Guest Favorite → öffnet Auth Modal
  */
 
-import { toggleFavorite, updateFavoriteButtonState as updateFavButtonState } from './fav-engine.js';
+import { toggleFavorite } from './fav-engine.js';
 import { appState } from './state.js';
 
 export function initInfoPanels() {
@@ -12,21 +12,16 @@ export function initInfoPanels() {
     
     infoSections.forEach(section => {
         section.addEventListener('click', (e) => {
-            // ✅ Don't expand when clicking favorite button
+            // Don't expand when clicking interactive elements
             if (e.target.closest('.fav-btn')) return;
-            
-            // ✅ Don't expand when clicking language toggle
             if (e.target.closest('.lang-toggle')) return;
             if (e.target.closest('.lang-btn')) return;
-            
-            // ✅ Don't expand when clicking inside info-header buttons
-            if (e.target.closest('.info-header button')) return;
+            if (e.target.closest('button')) return;
             
             section.classList.toggle('expanded');
         });
     });
     
-    // ✅ Initialize language toggles
     initLanguageToggles();
 }
 
@@ -61,7 +56,7 @@ function initLanguageToggles() {
                     });
                 });
                 
-                // Dispatch event for engines to update content
+                // Dispatch event
                 window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
                 
                 console.log(`🌐 Language changed to: ${lang}`);
@@ -69,7 +64,7 @@ function initLanguageToggles() {
         });
     });
     
-    // Set initial state from localStorage
+    // Set initial state
     const currentLang = localStorage.getItem('curio_language') || 'de';
     document.querySelectorAll('.lang-toggle').forEach(toggle => {
         toggle.querySelectorAll('.lang-btn').forEach(btn => {
@@ -82,27 +77,25 @@ export function initFavoriteButtons() {
     const favButtons = document.querySelectorAll('.fav-btn');
     
     favButtons.forEach(btn => {
-        // Remove any existing listeners
+        // Remove existing listeners
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         
-        // Add optimized click handler
         newBtn.addEventListener('click', handleFavoriteClick, { passive: false });
     });
 }
 
 /**
- * Optimized favorite click handler
+ * Handle favorite button click
  */
 function handleFavoriteClick(e) {
     e.preventDefault();
     e.stopPropagation();
     
-    // Check if user is logged in
     const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
     
+    // ✅ Guest klickt auf Herz → Auth Modal öffnen
     if (!isLoggedIn) {
-        // ✅ Open auth modal instead of just showing message
         import('./auth-modal.js').then(module => {
             module.openAuthModal('login');
         });
@@ -134,17 +127,8 @@ function handleFavoriteClick(e) {
         btn.style.transform = 'scale(1)';
     }, 150);
     
-    // Then update storage (async, doesn't block UI)
+    // Update storage async
     requestAnimationFrame(() => {
         toggleFavorite(data, viewType);
-    });
-}
-
-/**
- * Show login required message (legacy, now opens modal)
- */
-function showLoginRequiredMessage() {
-    import('./auth-modal.js').then(module => {
-        module.openAuthModal('login');
     });
 }

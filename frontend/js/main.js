@@ -1,8 +1,8 @@
 /**
  * Main Application Entry Point
- * ✅ Lädt NUR die aktuelle View bei Reload (nicht beides!)
+ * ✅ Lädt NUR die aktuelle View bei Reload
  * ✅ View Persistence nach Reload
- * ✅ Refresh bleibt in aktueller View
+ * ✅ User Menu Integration
  */
 
 import { appState } from './state.js';
@@ -14,6 +14,7 @@ import { initFavoritesView, updateAllFavoriteButtons } from './fav-engine.js';
 import { initContentNavigation, addToArtHistory, addToQuoteHistory } from './content-navigation.js';
 import { initSwipeHandler } from './swipe-handler.js';
 import { initAuthModal, checkAuthState } from './auth-modal.js';
+import { initUserMenu } from './user-menu.js';
 import { initLightbox } from './lightbox.js';
 import { showAppLoading, hideAppLoading } from './loading.js';
 import { initLimits } from './limits.js';
@@ -41,23 +42,20 @@ async function loadContentForView(viewName) {
     
     try {
         if (viewName === 'art' || viewName === 'favorites') {
-            // Load art
             await loadDailyArt();
         }
         
         if (viewName === 'quotes' || viewName === 'favorites') {
-            // Load quote
             await loadDailyQuote();
         }
         
-        // If on art view, also preload quote in background (ohne zu warten)
+        // Preload other content in background
         if (viewName === 'art') {
-            loadDailyQuote().catch(e => console.warn('Background quote load failed:', e));
+            loadDailyQuote().catch(e => console.warn('Background quote load:', e.message));
         }
         
-        // If on quotes view, also preload art in background (ohne zu warten)
         if (viewName === 'quotes') {
-            loadDailyArt().catch(e => console.warn('Background art load failed:', e));
+            loadDailyArt().catch(e => console.warn('Background art load:', e.message));
         }
         
     } catch (error) {
@@ -71,34 +69,23 @@ async function loadContentForView(viewName) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
-        // Show app loading screen
         showAppLoading();
         
-        // Get last view FIRST
         const lastView = getLastView();
         console.log(`🔄 Starting with view: ${lastView}`);
         
-        // Initialize limits system (check 24h reset)
+        // Initialize all modules
         initLimits();
-        
-        // Initialize UI components
         initNavigation();
         initInfoPanels();
         initFavoriteButtons();
-        
-        // Initialize view-specific logic
         initArtView();
         initQuoteView();
         initFavoritesView();
-        
-        // Initialize auth modal
         initAuthModal();
+        initUserMenu();  // ✅ User Menu initialisieren
         checkAuthState();
-        
-        // Initialize lightbox
         initLightbox();
-        
-        // Initialize content navigation (back/next buttons)
         initContentNavigation();
         
         // Initialize swipe gestures
@@ -107,16 +94,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             () => import('./content-navigation.js').then(m => m.handlePrevious())
         );
         
-        // ✅ Switch to last view BEFORE loading content
+        // Switch to last view BEFORE loading content
         switchView(lastView);
         
-        // ✅ Load content for current view (lädt nur was nötig ist!)
+        // Load content for current view
         await loadContentForView(lastView);
         
-        // Update favorite button states after loading
         updateAllFavoriteButtons();
-        
-        // Hide loading screen
         hideAppLoading();
         
         console.log('✅ App initialized successfully');
@@ -124,7 +108,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('❌ Error initializing app:', error);
         hideAppLoading();
         
-        // Show error toast
         if (window.showToast) {
             window.showToast('Fehler beim Laden. Bitte neu laden.', 'error');
         }
@@ -132,7 +115,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // =====================================================
-// REFRESH FUNCTIONALITY (bleibt in aktueller View!)
+// REFRESH FUNCTIONALITY
 // =====================================================
 
 window.refreshCurrentView = async function() {
