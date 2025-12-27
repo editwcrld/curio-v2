@@ -10,6 +10,7 @@ import { displayQuote } from './quote-engine.js';
 import { updateAllFavoriteButtons, getFavoriteIds } from './fav-engine.js';
 import { showContentLoading, hideContentLoading } from './loading.js';
 import { canNavigate, handleLimitReached, incrementUsage, syncLimitToMax } from './limits.js';
+import { collapseAllInfoSections } from './info-drag-handler.js';
 
 // ===== HISTORY =====
 const quoteHistory = [];
@@ -66,6 +67,10 @@ function getAuthHeaders() {
 
 export function handlePrevious() {
     if (isNavigating) return;
+    
+    // ✅ Collapse expanded info section on navigation
+    collapseAllInfoSections();
+    
     const view = appState.currentView;
     if (view === 'art') goBackArt();
     else if (view === 'quotes') goBackQuote();
@@ -73,6 +78,10 @@ export function handlePrevious() {
 
 export function handleNext() {
     if (isNavigating) return;
+    
+    // ✅ Collapse expanded info section on navigation
+    collapseAllInfoSections();
+    
     const view = appState.currentView;
     if (view === 'art') goNextArt();
     else if (view === 'quotes') goNextQuote();

@@ -34,6 +34,18 @@ export function initScrollExpand() {
     });
 }
 
+/**
+ * ✅ Collapse all info sections - call this on navigation
+ */
+export function collapseAllInfoSections() {
+    document.querySelectorAll('.info-section').forEach(section => {
+        section.classList.remove('expanded');
+        section.classList.remove('dragging');
+        section.style.height = '';
+        section.style.transition = '';
+    });
+}
+
 function initDragHandle(viewType) {
     const infoSection = document.querySelector(`#view-${viewType} .info-section`);
     const infoHeader = infoSection?.querySelector('.info-header');
