@@ -1,8 +1,8 @@
 /**
  * CURIO BACKEND - Content Routes
- * ✅ AI wird IMMER generiert (auch bei /daily)
- * ✅ /daily verbraucht KEINE Limits
- * ✅ /fresh verbraucht Limits
+ * ✅ /daily/today = Tages-Content (ALLE User sehen dasselbe!)
+ * ✅ /daily/art, /daily/quote = Random aus Cache
+ * ✅ /art/fresh, /quote/fresh = Frisch + Limits
  */
 
 const express = require('express');
@@ -13,13 +13,12 @@ const { incrementLimit, getUserLimits } = require('../config/supabase');
 const { supabase } = require('../config/db');
 const { LIMITS } = require('../config/constants');
 
-// Quote Services
+// Services
 const { getQuote, cacheQuote, getRandomCachedQuote } = require('../services/quote-cache');
 const { fetchRandomQuote } = require('../services/api-aggregator');
-
-// Art Services
 const { getArt, cacheArt, getRandomCachedArt } = require('../services/art-cache');
 const { fetchRandomArtwork } = require('../services/art-api');
+const { getDailyContent } = require('../services/daily-content');
 
 // AI Service
 let generateQuoteDescription = null;
@@ -62,11 +61,10 @@ async function checkAndIncrementLimit(req, type) {
 }
 
 // =====================================================
-// HELPER: Ensure AI Description (QUOTE)
+// HELPER: Ensure AI Description
 // =====================================================
 
 async function ensureQuoteAI(quoteId, quoteData) {
-    // Check if already exists
     const { data: existing } = await supabase
         .from('quotes')
         .select('ai_description_de, ai_description_en')
@@ -74,12 +72,10 @@ async function ensureQuoteAI(quoteId, quoteData) {
         .single();
     
     if (existing?.ai_description_de && existing?.ai_description_en) {
-        console.log(`✅ AI already exists for quote ${quoteId}`);
         return existing;
     }
     
     if (!generateQuoteDescription || !process.env.MISTRAL_API_KEY) {
-        console.log('⚠️ Mistral not available, skipping AI');
         return { ai_description_de: null, ai_description_en: null };
     }
     
@@ -104,12 +100,7 @@ async function ensureQuoteAI(quoteId, quoteData) {
     }
 }
 
-// =====================================================
-// HELPER: Ensure AI Description (ART)
-// =====================================================
-
 async function ensureArtAI(artId, artData) {
-    // Check if already exists
     const { data: existing } = await supabase
         .from('artworks')
         .select('ai_description_de, ai_description_en')
@@ -117,12 +108,10 @@ async function ensureArtAI(artId, artData) {
         .single();
     
     if (existing?.ai_description_de && existing?.ai_description_en) {
-        console.log(`✅ AI already exists for artwork ${artId}`);
         return existing;
     }
     
     if (!generateArtDescription || !process.env.MISTRAL_API_KEY) {
-        console.log('⚠️ Mistral not available, skipping AI');
         return { ai_description_de: null, ai_description_en: null };
     }
     
@@ -151,7 +140,7 @@ async function ensureArtAI(artId, artData) {
 // FORMAT RESPONSE HELPERS
 // =====================================================
 
-function formatQuoteResponse(quote, ai) {
+function formatQuoteResponse(quote, ai = {}) {
     return {
         id: quote.id,
         text: quote.text,
@@ -164,13 +153,13 @@ function formatQuoteResponse(quote, ai) {
     };
 }
 
-function formatArtResponse(art, ai) {
+function formatArtResponse(art, ai = {}) {
     return {
         id: art.id,
         title: art.title,
         artist: art.artist,
         year: art.year,
-        imageUrl: art.image_url,
+        imageUrl: art.image_url || art.imageUrl,
         ai_description_de: ai.ai_description_de || art.ai_description_de || null,
         ai_description_en: ai.ai_description_en || art.ai_description_en || null,
         backgroundInfo: ai.ai_description_de || ai.ai_description_en || art.ai_description_de || null,
@@ -179,17 +168,45 @@ function formatArtResponse(art, ai) {
 }
 
 // =====================================================
+// DAILY TODAY - ALLE User sehen dasselbe!
+// =====================================================
+
+/**
+ * GET /api/daily/today - Tages-Content für ALLE
+ * Gibt das fixierte Art + Quote für heute zurück
+ */
+router.get('/daily/today', optionalAuth, async (req, res, next) => {
+    try {
+        console.log('📅 Loading daily content for today...');
+        
+        const dailyContent = await getDailyContent();
+        
+        res.json({
+            success: true,
+            data: {
+                date: dailyContent.date,
+                art: formatArtResponse(dailyContent.art),
+                quote: formatQuoteResponse(dailyContent.quote)
+            },
+            source: 'daily'
+        });
+    } catch (error) {
+        console.error('❌ Failed to get daily content:', error);
+        next(error);
+    }
+});
+
+// =====================================================
 // QUOTE ROUTES
 // =====================================================
 
 /**
- * GET /api/daily/quote - Random from cache + AI (NO LIMITS!)
+ * GET /api/daily/quote - Random aus Cache + AI (NO LIMITS)
  */
 router.get('/daily/quote', optionalAuth, async (req, res, next) => {
     try {
         console.log('📥 Loading daily quote...');
         
-        // Get from cache or fetch fresh
         let quote = await getRandomCachedQuote();
         
         if (!quote) {
@@ -198,7 +215,6 @@ router.get('/daily/quote', optionalAuth, async (req, res, next) => {
             quote = await cacheQuote(freshQuote);
         }
         
-        // ✅ IMMER AI sicherstellen!
         const ai = await ensureQuoteAI(quote.id, { text: quote.text, author: quote.author });
         
         res.json({
@@ -213,11 +229,10 @@ router.get('/daily/quote', optionalAuth, async (req, res, next) => {
 });
 
 /**
- * GET /api/quote/fresh - Fresh + AI (USES LIMITS!)
+ * GET /api/quote/fresh - Fresh + AI (WITH LIMITS)
  */
 router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
     try {
-        // ✅ Check limits
         if (req.user) {
             const limitCheck = await checkAndIncrementLimit(req, 'quotes');
             if (!limitCheck.canAccess) {
@@ -246,7 +261,6 @@ router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
                 source: 'fresh'
             });
         } else {
-            // Fallback to cache
             const existingQuote = await getRandomCachedQuote();
             if (existingQuote) {
                 const ai = await ensureQuoteAI(existingQuote.id, { 
@@ -278,13 +292,12 @@ router.get('/quote/next', optionalAuth, (req, res, next) => {
 // =====================================================
 
 /**
- * GET /api/daily/art - Random from cache + AI (NO LIMITS!)
+ * GET /api/daily/art - Random aus Cache + AI (NO LIMITS)
  */
 router.get('/daily/art', optionalAuth, async (req, res, next) => {
     try {
         console.log('🎨 Loading daily art...');
         
-        // Get from cache or fetch fresh
         let art = await getRandomCachedArt();
         
         if (!art) {
@@ -293,7 +306,6 @@ router.get('/daily/art', optionalAuth, async (req, res, next) => {
             art = await cacheArt(freshArt);
         }
         
-        // ✅ IMMER AI sicherstellen!
         const ai = await ensureArtAI(art.id, { 
             title: art.title, 
             artist: art.artist, 
@@ -312,11 +324,10 @@ router.get('/daily/art', optionalAuth, async (req, res, next) => {
 });
 
 /**
- * GET /api/art/fresh - Fresh + AI (USES LIMITS!)
+ * GET /api/art/fresh - Fresh + AI (WITH LIMITS)
  */
 router.get('/art/fresh', optionalAuth, async (req, res, next) => {
     try {
-        // ✅ Check limits
         if (req.user) {
             const limitCheck = await checkAndIncrementLimit(req, 'art');
             if (!limitCheck.canAccess) {
@@ -346,7 +357,6 @@ router.get('/art/fresh', optionalAuth, async (req, res, next) => {
                 source: 'fresh'
             });
         } else {
-            // Fallback to cache
             const existingArt = await getRandomCachedArt();
             if (existingArt) {
                 const ai = await ensureArtAI(existingArt.id, { 
@@ -372,6 +382,30 @@ router.get('/art/fresh', optionalAuth, async (req, res, next) => {
 router.get('/art/next', optionalAuth, (req, res, next) => {
     req.url = '/art/fresh';
     router.handle(req, res, next);
+});
+
+// =====================================================
+// ADMIN: Manual trigger for daily tasks
+// =====================================================
+
+router.post('/admin/trigger-daily', async (req, res, next) => {
+    try {
+        // Simple auth check (could be improved)
+        const adminKey = req.headers['x-admin-key'];
+        if (adminKey !== process.env.ADMIN_KEY && process.env.NODE_ENV === 'production') {
+            return res.status(401).json({ success: false, error: 'Unauthorized' });
+        }
+        
+        const { triggerDailyTasks } = require('../services/scheduler');
+        const result = await triggerDailyTasks();
+        
+        res.json({
+            success: result,
+            message: result ? 'Daily tasks completed' : 'Daily tasks failed'
+        });
+    } catch (error) {
+        next(error);
+    }
 });
 
 module.exports = router;
