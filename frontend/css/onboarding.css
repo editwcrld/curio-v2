@@ -21,30 +21,31 @@
 }
 
 /* =====================================================
-   HIGHLIGHT AREA - Art/Image Focus
+   HIGHLIGHT AREAS - Smooth brightness animation to 70%
    ===================================================== */
 
+/* ✅ Art/Image highlight - Full area from header to swipe buttons */
 .onboarding-highlight-art {
     position: fixed;
-    top: 75px;
+    top: 85px;
     left: 50%;
     transform: translateX(-50%);
-    width: 88%;
-    max-width: 380px;
-    bottom: 340px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    width: 90%;
+    max-width: 400px;
+    bottom: 320px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0);
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.6s ease;
+    transition: opacity 0.5s ease;
 }
 
 .onboarding-highlight-art.visible {
     opacity: 1;
+    animation: brightenArea 0.8s ease-out forwards;
 }
 
-/* Info section highlight */
+/* ✅ Info section highlight */
 .onboarding-highlight-info {
     position: fixed;
     bottom: 115px;
@@ -54,21 +55,36 @@
     max-width: var(--ui-max-width, 420px);
     height: 165px;
     border-radius: var(--radius-l, 20px);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0);
     pointer-events: none;
     opacity: 0;
-    transition: opacity 0.6s ease;
+    transition: opacity 0.5s ease;
 }
 
 .onboarding-highlight-info.visible {
     opacity: 1;
+    animation: brightenArea 0.8s ease-out forwards;
+}
+
+/* ✅ Smooth brightness animation - almost fully transparent */
+@keyframes brightenArea {
+    0% {
+        background: rgba(255, 255, 255, 0);
+        backdrop-filter: brightness(1);
+        -webkit-backdrop-filter: brightness(1);
+    }
+    100% {
+        background: rgba(255, 255, 255, 0.12);
+        backdrop-filter: brightness(4) saturate(1.2);
+        -webkit-backdrop-filter: brightness(4) saturate(1.2);
+    }
 }
 
 @media (max-width: 480px) {
     .onboarding-highlight-art {
-        top: 70px;
-        bottom: 330px;
+        top: 80px;
+        bottom: 310px;
+        width: 88%;
     }
     
     .onboarding-highlight-info {
@@ -102,9 +118,9 @@
     transform: scale(1);
 }
 
-/* Step 1: Tap for fullscreen - TOP position (green circle area) */
+/* Step 1: Tap for fullscreen - TOP position */
 .onboarding-step-1 {
-    top: 55px;
+    top: 90px;
     left: 50%;
     transform: translateX(-50%) scale(0.9);
 }
@@ -113,31 +129,31 @@
     transform: translateX(-50%) scale(1);
 }
 
-/* Step 2: Swipe right/next - RIGHT side */
+/* Step 2: Swipe left/next - RIGHT side, middle of art area */
 .onboarding-step-2 {
-    top: 50%;
+    top: 55%;
     right: 16px;
-    transform: translateY(-50%) scale(0.9);
+    transform: translateY(-80%) scale(0.9);
 }
 
 .onboarding-step-2.visible {
-    transform: translateY(-50%) scale(1);
+    transform: translateY(-80%) scale(1);
 }
 
-/* Step 3: Swipe left/back - LEFT side */
+/* Step 3: Swipe right/back - LEFT side, middle of art area */
 .onboarding-step-3 {
-    top: 50%;
+    top: 55%;
     left: 16px;
-    transform: translateY(-50%) scale(0.9);
+    transform: translateY(-80%) scale(0.9);
 }
 
 .onboarding-step-3.visible {
-    transform: translateY(-50%) scale(1);
+    transform: translateY(-80%) scale(1);
 }
 
-/* Step 4: Tap or swipe up - INSIDE info section (green circle area) */
+/* ✅ Step 4: Tap or swipe up - At the BOTTOM of info section (green area) */
 .onboarding-step-4 {
-    bottom: 160px;
+    bottom: 125px;
     left: 50%;
     transform: translateX(-50%) scale(0.9);
 }
@@ -153,11 +169,27 @@
     }
     
     .onboarding-step-1 {
-        top: 50px;
+        top: 60px;
+    }
+    
+    .onboarding-step-2,
+    .onboarding-step-3 {
+        transform: translateY(-70%) scale(0.9);
+    }
+    
+    .onboarding-step-2.visible,
+    .onboarding-step-3.visible {
+        transform: translateY(-70%) scale(1);
     }
     
     .onboarding-step-4 {
-        bottom: 155px;
+        bottom: 120px;
+    }
+}
+
+@media (max-height: 700px) {
+    .onboarding-step-4 {
+        bottom: 115px;
     }
 }
 
