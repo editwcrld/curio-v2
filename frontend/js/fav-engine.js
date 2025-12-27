@@ -1,9 +1,8 @@
 /**
- * Favorites Engine
+ * Favorites Engine - CLEAN REWRITE
  * ✅ Supabase Backend
- * ✅ Gradient wird an Backend gesendet!
  * ✅ Instant UI
- * ✅ getFavoriteIds für Ausschluss-Logik
+ * ✅ Kein Flackern
  */
 
 import { appState } from './state.js';
@@ -14,19 +13,6 @@ let favorites = [];
 let isLoaded = false;
 let currentFilter = 'all';
 let currentSearch = '';
-
-// ===== GET FAVORITE IDS (for exclusion logic) =====
-
-/**
- * Get array of favorite IDs by type
- * @param {string} type - 'art' or 'quotes'
- * @returns {string[]} Array of item IDs
- */
-export function getFavoriteIds(type) {
-    return favorites
-        .filter(f => f.type === type)
-        .map(f => f.id);
-}
 
 // ===== BACKEND API =====
 
@@ -49,28 +35,18 @@ async function fetchFavoritesFromBackend() {
     }
 }
 
-/**
- * Add favorite to backend WITH GRADIENT!
- */
-async function addFavoriteToBackend(type, itemId, gradient = null) {
+async function addFavoriteToBackend(type, itemId) {
     const token = localStorage.getItem('auth_token');
     if (!token) return null;
     
     try {
-        const body = { type, itemId };
-        
-        // ✅ Include gradient if available!
-        if (gradient) {
-            body.gradient = gradient;
-        }
-        
         const response = await fetch(`${API_BASE_URL}/favorites`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify({ type, itemId })
         });
         
         if (!response.ok) return null;
@@ -105,6 +81,13 @@ export function isFavorite(itemId) {
     return favorites.some(f => f.id === itemId);
 }
 
+export function getFavoriteIds(type = null) {
+    if (type) {
+        return favorites.filter(f => f.type === type).map(f => f.id);
+    }
+    return favorites.map(f => f.id);
+}
+
 export function toggleFavorite(item, type) {
     if (!item?.id) return false;
     
@@ -122,20 +105,18 @@ export function toggleFavorite(item, type) {
         return false;
     } else {
         // ADD
-        const currentGradient = appState.currentGradient || null;
-        
         const newFav = {
             ...item,
             type,
             favoriteId: null,
             savedAt: Date.now(),
-            savedGradient: currentGradient
+            savedGradient: appState.currentGradient || null
         };
         
         favorites.unshift(newFav);
         
-        // ✅ Backend WITH GRADIENT!
-        addFavoriteToBackend(type, item.id, currentGradient).then(favId => {
+        // Backend (background) - update favoriteId when done
+        addFavoriteToBackend(type, item.id).then(favId => {
             if (favId) {
                 const fav = favorites.find(f => f.id === item.id);
                 if (fav) fav.favoriteId = favId;
@@ -323,12 +304,16 @@ function openDetail(item) {
     if (item.type === 'art') {
         appState.setArtData(item);
         switchView('art');
+        // Update favorite button after view switch
+        setTimeout(() => updateFavoriteButtonState('art', item.id), 50);
     } else {
         appState.setQuoteData(item);
         if (item.savedGradient) {
             appState.setGradient(item.savedGradient);
         }
         switchView('quotes');
+        // Update favorite button after view switch
+        setTimeout(() => updateFavoriteButtonState('quotes', item.id), 50);
     }
 }
 
