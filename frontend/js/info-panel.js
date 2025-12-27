@@ -1,19 +1,79 @@
+/**
+ * Info Panel Module
+ * ✅ Language Toggle OHNE Expand-Konflikt
+ * ✅ Optimierte Reaktion
+ */
+
 import { toggleFavorite, updateFavoriteButtonState as updateFavButtonState } from './fav-engine.js';
 import { appState } from './state.js';
-
-/**
- * Info Panel Module - Optimiert für sofortige Reaktion
- */
 
 export function initInfoPanels() {
     const infoSections = document.querySelectorAll('.info-section');
     
     infoSections.forEach(section => {
         section.addEventListener('click', (e) => {
-            // Don't expand when clicking favorite button
-            if (!e.target.closest('.fav-btn')) {
-                section.classList.toggle('expanded');
-            }
+            // ✅ Don't expand when clicking favorite button
+            if (e.target.closest('.fav-btn')) return;
+            
+            // ✅ Don't expand when clicking language toggle
+            if (e.target.closest('.lang-toggle')) return;
+            if (e.target.closest('.lang-btn')) return;
+            
+            // ✅ Don't expand when clicking inside info-header buttons
+            if (e.target.closest('.info-header button')) return;
+            
+            section.classList.toggle('expanded');
+        });
+    });
+    
+    // ✅ Initialize language toggles
+    initLanguageToggles();
+}
+
+/**
+ * Initialize language toggle buttons
+ */
+function initLanguageToggles() {
+    const langToggles = document.querySelectorAll('.lang-toggle');
+    
+    langToggles.forEach(toggle => {
+        const buttons = toggle.querySelectorAll('.lang-btn');
+        
+        buttons.forEach(btn => {
+            // Remove existing listeners
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const lang = newBtn.dataset.lang;
+                if (!lang) return;
+                
+                // Update localStorage
+                localStorage.setItem('curio_language', lang);
+                
+                // Update button states in ALL toggles
+                document.querySelectorAll('.lang-toggle').forEach(t => {
+                    t.querySelectorAll('.lang-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.lang === lang);
+                    });
+                });
+                
+                // Dispatch event for engines to update content
+                window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
+                
+                console.log(`🌐 Language changed to: ${lang}`);
+            });
+        });
+    });
+    
+    // Set initial state from localStorage
+    const currentLang = localStorage.getItem('curio_language') || 'de';
+    document.querySelectorAll('.lang-toggle').forEach(toggle => {
+        toggle.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.lang === currentLang);
         });
     });
 }
@@ -42,8 +102,10 @@ function handleFavoriteClick(e) {
     const isLoggedIn = localStorage.getItem('user_logged_in') === 'true';
     
     if (!isLoggedIn) {
-        // Show login required message
-        showLoginRequiredMessage();
+        // ✅ Open auth modal instead of just showing message
+        import('./auth-modal.js').then(module => {
+            module.openAuthModal('login');
+        });
         return;
     }
     
@@ -79,37 +141,10 @@ function handleFavoriteClick(e) {
 }
 
 /**
- * Show login required message
+ * Show login required message (legacy, now opens modal)
  */
 function showLoginRequiredMessage() {
-    // Create toast message
-    const toast = document.createElement('div');
-    toast.className = 'auth-toast login-required-toast';
-    toast.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px; margin-right: 8px;">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-        </svg>
-        <span>Bitte melde dich an um Favoriten zu speichern</span>
-    `;
-    toast.style.cursor = 'pointer';
-    toast.style.pointerEvents = 'all';
-    toast.style.display = 'flex';
-    toast.style.alignItems = 'center';
-    
-    // Add click to open login
-    toast.addEventListener('click', () => {
-        import('./auth-modal.js').then(module => {
-            module.openAuthModal('login');
-            toast.remove();
-        });
+    import('./auth-modal.js').then(module => {
+        module.openAuthModal('login');
     });
-    
-    document.body.appendChild(toast);
-    
-    setTimeout(() => toast.classList.add('visible'), 10);
-    
-    setTimeout(() => {
-        toast.classList.remove('visible');
-        setTimeout(() => toast.remove(), 300);
-    }, 4000);
 }

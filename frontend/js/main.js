@@ -1,6 +1,7 @@
 /**
  * Main Application Entry Point
- * ✅ Lädt Daily Content (ALLE User sehen dasselbe!)
+ * ✅ Lädt NUR die aktuelle View bei Reload (nicht beides!)
+ * ✅ View Persistence nach Reload
  * ✅ Refresh bleibt in aktueller View
  */
 
@@ -8,7 +9,7 @@ import { appState } from './state.js';
 import { loadDailyArt, displayArt, initArtView } from './art-engine.js';
 import { loadDailyQuote, displayQuote, initQuoteView } from './quote-engine.js';
 import { initInfoPanels, initFavoriteButtons } from './info-panel.js';
-import { initNavigation } from './ui-controller.js';
+import { initNavigation, switchView } from './ui-controller.js';
 import { initFavoritesView, updateAllFavoriteButtons } from './fav-engine.js';
 import { initContentNavigation, addToArtHistory, addToQuoteHistory } from './content-navigation.js';
 import { initSwipeHandler } from './swipe-handler.js';
@@ -20,47 +21,47 @@ import { API_BASE_URL, getRandomGradient } from './config.js';
 import './toast.js';
 
 // =====================================================
-// LOAD DAILY CONTENT (ALLE User sehen dasselbe!)
+// GET LAST VIEW FROM STORAGE
 // =====================================================
 
-async function loadDailyContent() {
+function getLastView() {
+    const lastView = localStorage.getItem('curio_last_view');
+    if (lastView && ['art', 'quotes', 'favorites'].includes(lastView)) {
+        return lastView;
+    }
+    return 'art'; // Default
+}
+
+// =====================================================
+// LOAD CONTENT FOR CURRENT VIEW ONLY
+// =====================================================
+
+async function loadContentForView(viewName) {
+    console.log(`📅 Loading content for view: ${viewName}`);
+    
     try {
-        console.log('📅 Loading daily content...');
-        
-        const response = await fetch(`${API_BASE_URL}/daily/today`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+        if (viewName === 'art' || viewName === 'favorites') {
+            // Load art
+            await loadDailyArt();
         }
         
-        const result = await response.json();
-        const { art, quote, date } = result.data;
+        if (viewName === 'quotes' || viewName === 'favorites') {
+            // Load quote
+            await loadDailyQuote();
+        }
         
-        console.log(`✅ Daily content for ${date} loaded`);
+        // If on art view, also preload quote in background (ohne zu warten)
+        if (viewName === 'art') {
+            loadDailyQuote().catch(e => console.warn('Background quote load failed:', e));
+        }
         
-        // Set Art
-        appState.setArtData(art);
-        addToArtHistory(art);
+        // If on quotes view, also preload art in background (ohne zu warten)
+        if (viewName === 'quotes') {
+            loadDailyArt().catch(e => console.warn('Background art load failed:', e));
+        }
         
-        // Set Quote with gradient
-        const gradient = getRandomGradient();
-        appState.setQuoteData(quote);
-        appState.setGradient(gradient);
-        addToQuoteHistory(quote, gradient);
-        
-        return { art, quote };
     } catch (error) {
-        console.error('❌ Failed to load daily content:', error);
-        
-        // Fallback: Load separately
-        console.log('🔄 Falling back to separate loading...');
-        
-        await Promise.all([
-            loadDailyArt(),
-            loadDailyQuote()
-        ]);
-        
-        return null;
+        console.error('❌ Failed to load content:', error);
     }
 }
 
@@ -72,6 +73,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // Show app loading screen
         showAppLoading();
+        
+        // Get last view FIRST
+        const lastView = getLastView();
+        console.log(`🔄 Starting with view: ${lastView}`);
         
         // Initialize limits system (check 24h reset)
         initLimits();
@@ -102,8 +107,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             () => import('./content-navigation.js').then(m => m.handlePrevious())
         );
         
-        // Load daily content (ALLE User sehen dasselbe!)
-        await loadDailyContent();
+        // ✅ Switch to last view BEFORE loading content
+        switchView(lastView);
+        
+        // ✅ Load content for current view (lädt nur was nötig ist!)
+        await loadContentForView(lastView);
         
         // Update favorite button states after loading
         updateAllFavoriteButtons();
@@ -127,7 +135,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 // REFRESH FUNCTIONALITY (bleibt in aktueller View!)
 // =====================================================
 
-// Expose refresh function globally
 window.refreshCurrentView = async function() {
     const currentView = appState.currentView;
     

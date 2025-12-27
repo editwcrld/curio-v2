@@ -1,6 +1,7 @@
 /**
  * UI Controller Module
  * ✅ Tab Navigation
+ * ✅ View Persistence (speichert letzte View)
  * ✅ Favorites Refresh
  * ✅ Herz-Status Update bei jedem Tab-Wechsel
  */
@@ -22,6 +23,9 @@ export function initNavigation() {
 export function switchView(viewName) {
     // Update state
     appState.setView(viewName);
+    
+    // ✅ Save last view to localStorage for persistence
+    localStorage.setItem('curio_last_view', viewName);
     
     // Update navigation buttons
     const navButtons = document.querySelectorAll('#bottom-nav button');

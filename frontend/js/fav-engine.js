@@ -3,6 +3,7 @@
  * ✅ Supabase Backend
  * ✅ Gradient wird an Backend gesendet!
  * ✅ Instant UI
+ * ✅ getFavoriteIds für Ausschluss-Logik
  */
 
 import { appState } from './state.js';
@@ -13,6 +14,19 @@ let favorites = [];
 let isLoaded = false;
 let currentFilter = 'all';
 let currentSearch = '';
+
+// ===== GET FAVORITE IDS (for exclusion logic) =====
+
+/**
+ * Get array of favorite IDs by type
+ * @param {string} type - 'art' or 'quotes'
+ * @returns {string[]} Array of item IDs
+ */
+export function getFavoriteIds(type) {
+    return favorites
+        .filter(f => f.type === type)
+        .map(f => f.id);
+}
 
 // ===== BACKEND API =====
 
