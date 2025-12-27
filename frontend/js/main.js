@@ -14,6 +14,7 @@ import { initAuthModal, checkAuthState } from './auth-modal.js';
 import { initUserMenu } from './user-menu.js';
 import { initLightbox } from './lightbox.js';
 import { hideAppLoading, showErrorScreen } from './loading.js';
+import { initScrollExpand } from './info-drag-handler.js';
 import { initLimits } from './limits.js';
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import './toast.js';
@@ -63,6 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         checkAuthState();
         initLightbox();
         initContentNavigation();
+        initScrollExpand();
         
         // Swipe gestures
         initSwipeHandler(

@@ -6,6 +6,7 @@
  * - Pinch to zoom
  * - Pan when zoomed
  * - Swipe down to close (only when not zoomed)
+ * - Top swipe area with drag handle
  * - Mouse wheel zoom (desktop)
  * - Fit to screen button
  * - Close button
@@ -349,6 +350,97 @@ function handleMouseUp() {
     }
 }
 
+// ===== TOP SWIPE AREA CLOSE =====
+
+function initTopSwipeAreaClose(swipeArea) {
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+    
+    // Touch events
+    swipeArea.addEventListener('touchstart', (e) => {
+        if (!LightboxState.isOpen) return;
+        isDragging = true;
+        startY = e.touches[0].clientY;
+        currentY = startY;
+    }, { passive: true });
+    
+    swipeArea.addEventListener('touchmove', (e) => {
+        if (!isDragging || !LightboxState.isOpen) return;
+        e.preventDefault();
+        
+        currentY = e.touches[0].clientY;
+        const deltaY = currentY - startY;
+        
+        // Only allow downward movement
+        if (deltaY > 0) {
+            LightboxState.translateY = deltaY;
+            const opacity = Math.max(0.3, 1 - (deltaY / 250));
+            LightboxState.overlay.style.opacity = opacity;
+            LightboxState.overlay.style.transition = 'none';
+            applyTransform(false);
+        }
+    }, { passive: false });
+    
+    swipeArea.addEventListener('touchend', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        const deltaY = currentY - startY;
+        
+        if (deltaY > 80) {
+            // Close
+            closeLightbox();
+        } else {
+            // Snap back
+            LightboxState.translateY = 0;
+            LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+            LightboxState.overlay.style.opacity = '';
+            applyTransform(true);
+        }
+    }, { passive: true });
+    
+    // Mouse events (desktop)
+    swipeArea.addEventListener('mousedown', (e) => {
+        if (!LightboxState.isOpen) return;
+        isDragging = true;
+        startY = e.clientY;
+        currentY = startY;
+        e.preventDefault();
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging || !LightboxState.isOpen) return;
+        
+        currentY = e.clientY;
+        const deltaY = currentY - startY;
+        
+        if (deltaY > 0) {
+            LightboxState.translateY = deltaY;
+            const opacity = Math.max(0.3, 1 - (deltaY / 250));
+            LightboxState.overlay.style.opacity = opacity;
+            LightboxState.overlay.style.transition = 'none';
+            applyTransform(false);
+        }
+    });
+    
+    document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        
+        const deltaY = currentY - startY;
+        
+        if (deltaY > 80) {
+            closeLightbox();
+        } else {
+            LightboxState.translateY = 0;
+            LightboxState.overlay.style.transition = 'opacity 0.3s ease';
+            LightboxState.overlay.style.opacity = '';
+            applyTransform(true);
+        }
+    });
+}
+
 // ===== UTILITIES =====
 
 function getTouchDistance(t1, t2) {
@@ -383,29 +475,35 @@ function showSwipeHint() {
 function createLightboxDOM() {
     const html = `
         <div id="lightbox-overlay" class="lightbox-overlay">
+            <!-- Top Swipe Area (drag handle + zoom indicator zone) -->
+            <div id="lightbox-top-swipe-area" class="lightbox-top-swipe-area">
+                <div class="lightbox-drag-handle-bar"></div>
+                <div id="lightbox-zoom-indicator" class="lightbox-zoom-indicator">100%</div>
+            </div>
+            
             <div id="lightbox-container" class="lightbox-container">
                 <div id="lightbox-loading" class="lightbox-loading"></div>
                 <img id="lightbox-image" class="lightbox-image" alt="Lightbox">
             </div>
             
-            <button id="lightbox-close" class="lightbox-close" aria-label="Close">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-            </button>
-            
-            <button id="lightbox-fit" class="lightbox-fit">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-                </svg>
-                Fit to Screen
-            </button>
-            
-            <div id="lightbox-zoom-indicator" class="lightbox-zoom-indicator">100%</div>
+            <!-- Bottom Controls - Fit and Close together -->
+            <div class="lightbox-controls">
+                <button id="lightbox-fit" class="lightbox-fit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                    </svg>
+                    Fit
+                </button>
+                <button id="lightbox-close" class="lightbox-close" aria-label="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
             
             <div id="lightbox-swipe-indicator" class="lightbox-swipe-indicator">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="lightbox-swipe-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="12" y1="5" x2="12" y2="19"/>
                     <polyline points="19 12 12 19 5 12"/>
                 </svg>
@@ -423,6 +521,10 @@ function createLightboxDOM() {
     // Buttons
     document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
     document.getElementById('lightbox-fit').addEventListener('click', fitToScreen);
+    
+    // Top swipe area - drag down to close
+    const topSwipeArea = document.getElementById('lightbox-top-swipe-area');
+    initTopSwipeAreaClose(topSwipeArea);
     
     // Keyboard
     document.addEventListener('keydown', (e) => {
