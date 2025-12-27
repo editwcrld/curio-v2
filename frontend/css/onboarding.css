@@ -8,12 +8,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
+    background: rgba(0, 0, 0, 0.9);
     z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.4s ease, visibility 0.4s ease;
@@ -25,10 +21,11 @@
 }
 
 /* =====================================================
-   HIGHLIGHT CUTOUT - Shows info section through overlay
+   HIGHLIGHT AREAS - Brighter regions
    ===================================================== */
 
-.onboarding-highlight {
+/* Highlight for info section (bottom card) */
+.onboarding-highlight-info {
     position: absolute;
     bottom: 115px;
     left: 50%;
@@ -37,16 +34,50 @@
     max-width: var(--ui-max-width, 420px);
     height: 165px;
     border-radius: var(--radius-l, 20px);
+    background: rgba(255, 255, 255, 0.08);
     box-shadow: 
-        0 0 0 9999px rgba(0, 0, 0, 0.85),
-        0 0 40px rgba(102, 126, 234, 0.5),
-        inset 0 0 30px rgba(102, 126, 234, 0.2);
+        0 0 60px rgba(102, 126, 234, 0.3),
+        inset 0 0 30px rgba(255, 255, 255, 0.05);
     pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.onboarding-highlight-info.visible {
+    opacity: 1;
+}
+
+/* Highlight for art/image area (upper area) */
+.onboarding-highlight-art {
+    position: absolute;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    max-width: 350px;
+    height: 45%;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 
+        0 0 60px rgba(102, 126, 234, 0.25),
+        inset 0 0 30px rgba(255, 255, 255, 0.03);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.onboarding-highlight-art.visible {
+    opacity: 1;
 }
 
 @media (max-width: 480px) {
-    .onboarding-highlight {
+    .onboarding-highlight-info {
         height: 155px;
+    }
+    
+    .onboarding-highlight-art {
+        top: 70px;
+        height: 40%;
     }
 }
 
@@ -58,9 +89,9 @@
     position: absolute;
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px 24px;
-    background: rgba(255, 255, 255, 0.1);
+    gap: 14px;
+    padding: 14px 20px;
+    background: rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -79,42 +110,70 @@
     transform: translateY(0);
 }
 
-/* Step 1: Swipe Left - positioned on the right side */
+/* Step 1: Swipe Right - positioned on the left side */
 .onboarding-step-1 {
-    top: 35%;
-    right: 20px;
-    transform: translateX(30px);
+    top: 38%;
+    left: 16px;
+    transform: translateX(-30px);
 }
 
 .onboarding-step-1.visible {
     transform: translateX(0);
 }
 
-/* Step 2: Swipe Right - positioned on the left side */
+/* Step 2: Swipe Left - positioned on the right side */
 .onboarding-step-2 {
-    top: 35%;
-    left: 20px;
-    transform: translateX(-30px);
+    top: 38%;
+    right: 16px;
+    transform: translateX(30px);
 }
 
 .onboarding-step-2.visible {
     transform: translateX(0);
 }
 
-/* Step 3: Tap to read - positioned above info section */
+/* Step 3: Tap art - positioned in upper area, pointing down */
 .onboarding-step-3 {
-    bottom: 300px;
+    top: 28%;
     left: 50%;
     transform: translateX(-50%) translateY(20px);
+    flex-direction: column;
+    text-align: center;
+    gap: 8px;
 }
 
 .onboarding-step-3.visible {
     transform: translateX(-50%) translateY(0);
 }
 
+/* Step 4: Tap card - positioned just above info section */
+.onboarding-step-4 {
+    bottom: 295px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+}
+
+.onboarding-step-4.visible {
+    transform: translateX(-50%) translateY(0);
+}
+
 @media (max-width: 480px) {
     .onboarding-step-3 {
-        bottom: 290px;
+        top: 22%;
+    }
+    
+    .onboarding-step-4 {
+        bottom: 285px;
+    }
+}
+
+@media (max-height: 700px) {
+    .onboarding-step-3 {
+        top: 18%;
+    }
+    
+    .onboarding-step-4 {
+        bottom: 275px;
     }
 }
 
@@ -123,8 +182,8 @@
    ===================================================== */
 
 .onboarding-icon {
-    width: 44px;
-    height: 44px;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -135,23 +194,29 @@
 }
 
 .onboarding-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     color: white;
     stroke-width: 2.5;
 }
 
 /* Swipe icons have movement animation */
 .onboarding-step-1 .onboarding-icon svg {
-    animation: swipeLeft 1.5s ease-in-out infinite;
-}
-
-.onboarding-step-2 .onboarding-icon svg {
     animation: swipeRight 1.5s ease-in-out infinite;
 }
 
+.onboarding-step-2 .onboarding-icon svg {
+    animation: swipeLeft 1.5s ease-in-out infinite;
+}
+
+/* Tap art icon - pointing down */
 .onboarding-step-3 .onboarding-icon svg {
-    animation: tapBounce 1.2s ease-in-out infinite;
+    animation: tapDown 1.2s ease-in-out infinite;
+}
+
+/* Tap card icon - pointing down to card */
+.onboarding-step-4 .onboarding-icon svg {
+    animation: tapDown 1.2s ease-in-out infinite;
 }
 
 @keyframes iconPulse {
@@ -159,7 +224,7 @@
         box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.6);
     }
     50% {
-        box-shadow: 0 0 0 12px rgba(102, 126, 234, 0);
+        box-shadow: 0 0 0 10px rgba(102, 126, 234, 0);
     }
 }
 
@@ -169,7 +234,7 @@
         opacity: 1;
     }
     50% {
-        transform: translateX(-6px);
+        transform: translateX(-5px);
         opacity: 0.7;
     }
 }
@@ -180,17 +245,17 @@
         opacity: 1;
     }
     50% {
-        transform: translateX(6px);
+        transform: translateX(5px);
         opacity: 0.7;
     }
 }
 
-@keyframes tapBounce {
+@keyframes tapDown {
     0%, 100% {
-        transform: scale(1);
+        transform: translateY(0);
     }
     50% {
-        transform: scale(0.85);
+        transform: translateY(4px);
     }
 }
 
@@ -205,15 +270,20 @@
 }
 
 .onboarding-text-main {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     color: white;
 }
 
 .onboarding-text-sub {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.6);
+}
+
+/* Center text for vertical layout (step 3) */
+.onboarding-step-3 .onboarding-text {
+    align-items: center;
 }
 
 /* =====================================================
@@ -222,21 +292,21 @@
 
 .onboarding-skip {
     position: absolute;
-    bottom: 50px;
+    bottom: 45px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 14px 40px;
+    padding: 14px 48px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border: none;
     border-radius: 30px;
     color: white;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     opacity: 0;
     transition: opacity 0.5s ease, transform 0.2s ease;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
 }
 
 .onboarding-skip.visible {
@@ -253,7 +323,7 @@
 
 .onboarding-dots {
     position: absolute;
-    bottom: 110px;
+    bottom: 100px;
     left: 50%;
     transform: translateX(-50%);
     display: flex;
@@ -280,14 +350,13 @@
 
 @media (max-width: 380px) {
     .onboarding-step {
-        padding: 12px 16px;
-        gap: 12px;
-        font-size: 13px;
+        padding: 12px 14px;
+        gap: 10px;
     }
     
     .onboarding-icon {
-        width: 38px;
-        height: 38px;
+        width: 36px;
+        height: 36px;
     }
     
     .onboarding-icon svg {
@@ -300,7 +369,15 @@
     }
     
     .onboarding-text-sub {
-        font-size: 11px;
+        font-size: 10px;
+    }
+    
+    .onboarding-step-1 {
+        left: 10px;
+    }
+    
+    .onboarding-step-2 {
+        right: 10px;
     }
 }
 
