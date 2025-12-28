@@ -85,7 +85,7 @@ const SWIPE_VELOCITY_THRESHOLD = 0.5;
 const FRICTION = 0.92;
 const MIN_VELOCITY = 0.5;
 const BOUNCE_RESISTANCE = 0.3;
-const BOUNCE_BACK_DURATION = 300;
+const BOUNCE_BACK_DURATION = 400;
 
 // ===== INIT =====
 
@@ -293,39 +293,37 @@ function setScale(newScale, smooth = true, centerX = null, centerY = null) {
     
     if (oldScale === State.scale) return;
     
-    // Zoom towards point
-    if (centerX !== null && centerY !== null) {
-        const contRect = State.container.getBoundingClientRect();
-        const imgCenterX = contRect.width / 2;
-        const imgCenterY = contRect.height / 2;
-        
-        const offsetX = centerX - imgCenterX;
-        const offsetY = centerY - imgCenterY;
-        
-        const ratio = State.scale / oldScale;
-        State.x = State.x * ratio - offsetX * (ratio - 1);
-        State.y = State.y * ratio - offsetY * (ratio - 1);
-    }
+    const contRect = State.container.getBoundingClientRect();
+    const imgCenterX = contRect.width / 2;
+    const imgCenterY = contRect.height / 2;
+    
+    // Default to center if no point specified
+    const zoomX = centerX ?? imgCenterX;
+    const zoomY = centerY ?? imgCenterY;
+    
+    // Calculate offset from image center
+    const offsetX = zoomX - imgCenterX;
+    const offsetY = zoomY - imgCenterY;
+    
+    // Adjust position to zoom towards point
+    const ratio = State.scale / oldScale;
+    State.x = State.x * ratio - offsetX * (ratio - 1);
+    State.y = State.y * ratio - offsetY * (ratio - 1);
     
     // Reset when fully zoomed out
     if (State.scale === MIN_SCALE) {
         State.x = 0;
         State.y = 0;
-    } else {
-        // Smooth clamp - animate towards valid bounds
+    } else if (State.scale < oldScale) {
+        // Zooming out - smoothly approach bounds
         const bounds = getBounds();
-        
-        // Gradually pull towards bounds during zoom-out
-        if (State.scale < oldScale) {
-            // Zooming out - smoothly approach bounds
-            const t = 0.3; // Interpolation factor
-            const targetX = clamp(State.x, bounds.minX, bounds.maxX);
-            const targetY = clamp(State.y, bounds.minY, bounds.maxY);
-            State.x = State.x + (targetX - State.x) * t;
-            State.y = State.y + (targetY - State.y) * t;
-        }
-        
-        // Final clamp to ensure we're in bounds
+        const t = 0.5;
+        const targetX = clamp(State.x, bounds.minX, bounds.maxX);
+        const targetY = clamp(State.y, bounds.minY, bounds.maxY);
+        State.x = State.x + (targetX - State.x) * t;
+        State.y = State.y + (targetY - State.y) * t;
+        clampToBounds();
+    } else {
         clampToBounds();
     }
     
@@ -794,7 +792,7 @@ function createDOM() {
     // Double click
     State.container.addEventListener('dblclick', e => {
         if (State.scale > MIN_SCALE) {
-            setScale(MIN_SCALE, true);
+            setScale(MIN_SCALE, true, e.clientX, e.clientY);
         } else {
             setScale(DOUBLE_TAP_ZOOM, true, e.clientX, e.clientY);
         }
