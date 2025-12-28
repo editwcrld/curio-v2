@@ -3,6 +3,7 @@
  * ✅ Nutzt /daily/today für fixes Tages-Content
  * ✅ Language Support (DE/EN)
  * ✅ Attribution Display für API Compliance
+ * ✅ NEW: Dynamic quote text sizing based on length
  */
 
 import { API_BASE_URL, getRandomGradient } from './config.js';
@@ -73,6 +74,20 @@ export async function loadDailyQuote() {
     }
 }
 
+/**
+ * Get size class based on quote text length
+ * @param {string} text - Quote text
+ * @returns {string} CSS class name
+ */
+function getQuoteSizeClass(text) {
+    const length = text?.length || 0;
+    
+    if (length <= 80) return 'quote-size-small';      // Short quotes - largest text
+    if (length <= 150) return 'quote-size-medium';    // Medium quotes
+    if (length <= 250) return 'quote-size-large';     // Longer quotes
+    return 'quote-size-xlarge';                       // Very long quotes - smallest text
+}
+
 export function displayQuote(data, gradient) {
     if (!data) return;
     
@@ -87,6 +102,10 @@ export function displayQuote(data, gradient) {
     // Set quote text
     if (quoteTextEl) {
         quoteTextEl.textContent = `"${data.text}"`;
+        
+        // ✅ NEW: Apply dynamic size class
+        quoteTextEl.classList.remove('quote-size-small', 'quote-size-medium', 'quote-size-large', 'quote-size-xlarge');
+        quoteTextEl.classList.add(getQuoteSizeClass(data.text));
     }
     
     // Set author (main display)

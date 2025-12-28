@@ -71,7 +71,7 @@
 }
 
 /* =====================================================
-   TITLE - MIT TRUNCATION
+   TITLE - Artwork Title (1 line, truncated)
    ===================================================== */
 
 .info-title { 
@@ -81,20 +81,21 @@
     padding-right: 30px;
     padding-left: 30px;
     margin: 0;
+    line-height: 1.3;
 }
 
-/* ✅ Title Truncation wenn NICHT expanded */
+/* ✅ Title Truncation - 1 line when NOT expanded */
 .info-section:not(.expanded) .info-title {
     display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-height: 2.6em; /* ~2 Zeilen */
+    max-height: 1.4em;
 }
 
-/* ✅ Voller Title wenn expanded */
+/* ✅ Full Title when expanded */
 .info-section.expanded .info-title {
     display: block;
     -webkit-line-clamp: unset;
@@ -102,6 +103,42 @@
     max-height: none;
     overflow: visible;
 }
+
+/* =====================================================
+   SUBTITLE - Artist + Year (lighter, smaller)
+   ===================================================== */
+
+.info-subtitle {
+    font-size: 14px;
+    font-weight: 400;
+    color: #555 !important;
+    margin: 4px 0 0 0;
+    padding-right: 30px;
+    padding-left: 30px;
+    line-height: 1.3;
+    min-height: 18px;
+}
+
+/* ✅ Subtitle truncation when not expanded */
+.info-section:not(.expanded) .info-subtitle {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.info-section.expanded .info-subtitle {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    overflow: visible;
+}
+
+/* =====================================================
+   INFO-META (for quotes - keep for compatibility)
+   ===================================================== */
 
 .info-meta { 
     font-size: 13px; 
@@ -157,6 +194,48 @@
 
 .info-section.expanded .info-content::-webkit-scrollbar {
     display: none;
+}
+
+/* =====================================================
+   INFO-DETAILS (Dimensions, Medium) - only when expanded
+   ===================================================== */
+
+.info-details {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.info-detail-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.info-detail-row:last-child {
+    margin-bottom: 0;
+}
+
+.detail-label {
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.detail-value {
+    font-weight: 400;
+    color: #444;
+}
+
+/* ✅ Hide details when collapsed */
+.info-section:not(.expanded) .info-details {
+    display: none;
+}
+
+.info-section.expanded .info-details {
+    display: block;
 }
 
 /* =====================================================
@@ -219,6 +298,13 @@
         max-height: 1.3em;
     }
     
+    .info-subtitle {
+        font-size: 13px;
+        padding-right: 28px;
+        padding-left: 28px;
+        min-height: 17px;
+    }
+    
     .info-meta {
         font-size: 12px;
     }
@@ -230,5 +316,14 @@
     
     .info-header {
         padding: 16px 20px 6px 20px;
+    }
+    
+    .info-details {
+        margin-top: 12px;
+        padding-top: 10px;
+    }
+    
+    .info-detail-row {
+        font-size: 12px;
     }
 }

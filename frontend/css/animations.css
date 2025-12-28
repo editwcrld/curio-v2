@@ -70,6 +70,7 @@
 
 /* RULE: Info section must show skeleton loading bars */
 .info-section.loading .info-title,
+.info-section.loading .info-subtitle,
 .info-section.loading .info-meta,
 .info-section.loading .info-content p {
     position: relative;
@@ -79,6 +80,7 @@
 }
 
 .info-section.loading .info-title::before,
+.info-section.loading .info-subtitle::before,
 .info-section.loading .info-meta::before,
 .info-section.loading .info-content p::before {
     content: '';
@@ -110,6 +112,11 @@
 /* Different heights for different text elements */
 .info-section.loading .info-title::before {
     height: 22px;
+}
+
+.info-section.loading .info-subtitle::before {
+    height: 16px;
+    width: 70%; /* Subtitle is shorter */
 }
 
 .info-section.loading .info-meta::before {

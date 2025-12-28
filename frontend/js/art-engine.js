@@ -3,6 +3,7 @@
  * ✅ Nutzt /daily/today für fixes Tages-Content
  * ✅ Language Support (DE/EN)
  * ✅ Attribution Display für API Compliance
+ * ✅ NEW: Title/Subtitle structure, Dimensions/Medium display
  */
 
 import { API_BASE_URL } from './config.js';
@@ -72,6 +73,7 @@ export function displayArt(data) {
 
     const imageEl = artView.querySelector('.main-image');
     const titleEl = artView.querySelector('.info-title');
+    const subtitleEl = artView.querySelector('.info-subtitle');
     const contentEl = artView.querySelector('.info-content p');
 
     // Set image
@@ -80,10 +82,15 @@ export function displayArt(data) {
         imageEl.alt = data.title || 'Artwork';
     }
     
-    // Set title (Artist - Year)
+    // ✅ NEW: Set title (Artwork title only)
     if (titleEl) {
-        const year = data.year ? ` (${data.year})` : '';
-        titleEl.textContent = `${data.artist || 'Unknown'}${year}`;
+        titleEl.textContent = data.title || 'Untitled';
+    }
+    
+    // ✅ NEW: Set subtitle (Artist + Year)
+    if (subtitleEl) {
+        const year = data.year ? `, ${data.year}` : '';
+        subtitleEl.textContent = `${data.artist || 'Unknown Artist'}${year}`;
     }
     
     // Set description in current language
@@ -100,8 +107,78 @@ export function displayArt(data) {
         contentEl.textContent = description;
     }
     
+    // ✅ NEW: Update dimensions display
+    updateDimensionsDisplay(data);
+    
+    // ✅ NEW: Update medium display
+    updateMediumDisplay(data);
+    
     // ✅ Update attribution display
     updateArtAttribution(data);
+}
+
+/**
+ * Update dimensions display - only shows if data exists
+ */
+function updateDimensionsDisplay(data) {
+    const artView = document.getElementById('view-art');
+    if (!artView) return;
+    
+    const dimensionsRow = artView.querySelector('.dimensions-row');
+    if (!dimensionsRow) return;
+    
+    const valueEl = dimensionsRow.querySelector('.detail-value');
+    const labelEl = dimensionsRow.querySelector('.detail-label');
+    const lang = localStorage.getItem('curio_language') || 'de';
+    
+    // Hide if no dimensions
+    if (!data.dimensions) {
+        dimensionsRow.style.display = 'none';
+        return;
+    }
+    
+    // Show and update
+    dimensionsRow.style.display = 'flex';
+    
+    if (labelEl) {
+        labelEl.textContent = lang === 'en' ? 'Dimensions:' : 'Maße:';
+    }
+    
+    if (valueEl) {
+        valueEl.textContent = data.dimensions;
+    }
+}
+
+/**
+ * Update medium display - only shows if data exists
+ */
+function updateMediumDisplay(data) {
+    const artView = document.getElementById('view-art');
+    if (!artView) return;
+    
+    const mediumRow = artView.querySelector('.medium-row');
+    if (!mediumRow) return;
+    
+    const valueEl = mediumRow.querySelector('.detail-value');
+    const labelEl = mediumRow.querySelector('.detail-label');
+    const lang = localStorage.getItem('curio_language') || 'de';
+    
+    // Hide if no medium
+    if (!data.medium) {
+        mediumRow.style.display = 'none';
+        return;
+    }
+    
+    // Show and update
+    mediumRow.style.display = 'flex';
+    
+    if (labelEl) {
+        labelEl.textContent = lang === 'en' ? 'Medium:' : 'Technik:';
+    }
+    
+    if (valueEl) {
+        valueEl.textContent = data.medium;
+    }
 }
 
 export function initArtView() {

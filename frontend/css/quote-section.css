@@ -54,3 +54,47 @@
         margin-bottom: 100px; 
     } 
 }
+
+/* =====================================================
+   DYNAMIC QUOTE TEXT SIZING
+   Based on quote length for optimal readability
+   ===================================================== */
+
+/* Short quotes (≤80 chars) - largest text */
+.quote-text.quote-size-small {
+    font-size: clamp(1.8rem, 9vw, 3.5rem);
+}
+
+/* Medium quotes (81-150 chars) */
+.quote-text.quote-size-medium {
+    font-size: clamp(1.5rem, 7vw, 2.8rem);
+}
+
+/* Longer quotes (151-250 chars) */
+.quote-text.quote-size-large {
+    font-size: clamp(1.3rem, 5.5vw, 2.2rem);
+}
+
+/* Very long quotes (>250 chars) - smallest text */
+.quote-text.quote-size-xlarge {
+    font-size: clamp(1.1rem, 4.5vw, 1.8rem);
+}
+
+/* Mobile adjustments for quote sizes */
+@media (max-width: 480px) {
+    .quote-text.quote-size-small {
+        font-size: clamp(1.5rem, 8vw, 2.2rem);
+    }
+    
+    .quote-text.quote-size-medium {
+        font-size: clamp(1.3rem, 6.5vw, 1.9rem);
+    }
+    
+    .quote-text.quote-size-large {
+        font-size: clamp(1.15rem, 5vw, 1.6rem);
+    }
+    
+    .quote-text.quote-size-xlarge {
+        font-size: clamp(1rem, 4vw, 1.35rem);
+    }
+}
