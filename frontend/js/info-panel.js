@@ -1,6 +1,9 @@
 /**
  * Info Panel Module
- * ✅ Language Toggle OHNE Expand-Konflikt
+ * ✅ Klick/Tap überall in info-section für Expand/Collapse
+ * ✅ Reset scroll position on collapse
+ * ✅ Collapse on navigation (collapseAllInfoSections)
+ * ✅ Language Toggle
  * ✅ Guest Favorite → öffnet Auth Modal
  * ✅ Attribution Display für API Compliance
  */
@@ -8,24 +11,111 @@
 import { toggleFavorite } from './fav-engine.js';
 import { appState } from './state.js';
 
+// ===== STATE =====
+const State = {
+    maxHeight: 0,
+    minHeight: 165
+};
+
+// ===== INITIALIZATION =====
+
 export function initInfoPanels() {
-    const infoSections = document.querySelectorAll('.info-section');
+    State.maxHeight = window.innerHeight * 0.6;
     
-    infoSections.forEach(section => {
-        section.addEventListener('click', (e) => {
-            // Don't expand when clicking interactive elements
-            if (e.target.closest('.fav-btn')) return;
-            if (e.target.closest('.lang-toggle')) return;
-            if (e.target.closest('.lang-btn')) return;
-            if (e.target.closest('.attribution-link')) return;
-            if (e.target.closest('button')) return;
-            if (e.target.closest('a')) return;
-            
-            section.classList.toggle('expanded');
-        });
-    });
+    if (window.innerWidth <= 480) {
+        State.minHeight = 155;
+    }
     
+    initClickToggle('art');
+    initClickToggle('quotes');
     initLanguageToggles();
+    
+    window.addEventListener('resize', () => {
+        State.maxHeight = window.innerHeight * 0.6;
+        State.minHeight = window.innerWidth <= 480 ? 155 : 165;
+    });
+}
+
+/**
+ * ✅ Collapse all info sections - call this on navigation
+ */
+export function collapseAllInfoSections() {
+    document.querySelectorAll('.info-section').forEach(section => {
+        section.classList.remove('expanded');
+        section.style.height = '';
+        section.style.transition = '';
+        
+        // ✅ Reset scroll position
+        resetScrollPosition(section);
+    });
+}
+
+/**
+ * Reset scroll position of info-content
+ */
+function resetScrollPosition(section) {
+    const infoContent = section.querySelector('.info-content');
+    if (infoContent) {
+        infoContent.scrollTop = 0;
+    }
+    
+    const descriptionText = section.querySelector('.description-text');
+    if (descriptionText) {
+        descriptionText.scrollTop = 0;
+    }
+}
+
+/**
+ * Initialize click toggle for expand/collapse
+ */
+function initClickToggle(viewType) {
+    const infoSection = document.querySelector(`#view-${viewType} .info-section`);
+    
+    if (!infoSection) return;
+    
+    // ✅ Click/Tap ANYWHERE in info-section to toggle expand
+    infoSection.addEventListener('click', (e) => {
+        // Don't toggle when clicking interactive elements
+        if (e.target.closest('.fav-btn')) return;
+        if (e.target.closest('.lang-toggle')) return;
+        if (e.target.closest('.lang-btn')) return;
+        if (e.target.closest('.attribution-link')) return;
+        if (e.target.closest('button')) return;
+        if (e.target.closest('a')) return;
+        
+        toggleExpand(infoSection);
+    });
+}
+
+/**
+ * Toggle expand/collapse state
+ */
+function toggleExpand(infoSection) {
+    const isExpanded = infoSection.classList.contains('expanded');
+    
+    // Add smooth transition
+    infoSection.style.transition = 'height 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+    
+    if (isExpanded) {
+        // Collapse
+        infoSection.style.height = '';
+        infoSection.classList.remove('expanded');
+        
+        // ✅ Reset scroll position on collapse
+        resetScrollPosition(infoSection);
+    } else {
+        // Expand
+        infoSection.style.height = `${State.maxHeight}px`;
+        infoSection.classList.add('expanded');
+    }
+    
+    // Clear transition after animation
+    setTimeout(() => {
+        infoSection.style.transition = '';
+        if (isExpanded) {
+            infoSection.style.height = '';
+        }
+    }, 300);
 }
 
 /**
@@ -214,36 +304,6 @@ export function updateQuoteAttribution(quoteData) {
     
     const attributionEl = quoteView.querySelector('.attribution');
     if (!attributionEl) return;
-    
-    // Quotes don't need visible attribution since they're public domain text
-    // But we can show the API source for transparency (optional - currently hidden)
-    // Uncomment below if you want to show quote source
-    
-    /*
-    if (quoteData.source || quoteData.sourceApi) {
-        const lang = localStorage.getItem('curio_language') || 'de';
-        const viaText = lang === 'en' ? 'via' : 'via';
-        
-        const sourceNames = {
-            'ninjas': 'API Ninjas',
-            'favqs': 'FavQs',
-            'api-ninjas': 'API Ninjas'
-        };
-        
-        const sourceName = sourceNames[quoteData.sourceApi] || quoteData.source || '';
-        
-        if (sourceName) {
-            attributionEl.innerHTML = `
-                <span class="attribution-text">${viaText} ${sourceName}</span>
-            `;
-            attributionEl.style.display = 'flex';
-        } else {
-            attributionEl.style.display = 'none';
-        }
-    } else {
-        attributionEl.style.display = 'none';
-    }
-    */
     
     // For now, hide quote attribution (quotes are public domain text)
     attributionEl.style.display = 'none';

@@ -1,4 +1,0 @@
-/* Disable transition during drag */
-.info-section.dragging {
-    transition: none !important;
-}

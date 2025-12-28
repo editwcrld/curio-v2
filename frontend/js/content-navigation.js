@@ -14,7 +14,7 @@ import { displayQuote } from './quote-engine.js';
 import { updateAllFavoriteButtons, getFavoriteIds } from './fav-engine.js';
 import { showContentLoading, hideContentLoading } from './loading.js';
 import { canNavigate, handleLimitReached, incrementUsage, syncLimitToMax } from './limits.js';
-import { collapseAllInfoSections } from './info-drag-handler.js';
+import { collapseAllInfoSections } from './info-panel.js';
 
 // ===== HISTORY =====
 const quoteHistory = [];
