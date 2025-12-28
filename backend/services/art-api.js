@@ -40,6 +40,26 @@ function getRandomItem(array) {
 }
 
 /**
+ * ✅ Validate image URL is accessible (not 403/404)
+ */
+async function validateImageUrl(url) {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(url, { 
+            method: 'HEAD',
+            signal: controller.signal 
+        });
+        
+        clearTimeout(timeoutId);
+        return response.ok;
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Build IIIF URL for Art Institute of Chicago
  */
 function buildArticImageUrl(imageId, size = 843) {
@@ -132,58 +152,74 @@ async function fetchFromArticSearch(excludeIds = []) {
             return null;
         }
         
-        const art = getRandomItem(validArtworks);
+        // ✅ Try multiple artworks in case image is not accessible (403)
+        const shuffledArtworks = shuffle(validArtworks).slice(0, 5);
         
-        // ✅ Fetch clean medium/dimensions from manifest
-        let medium = null;
-        let dimensions = null;
-        
-        try {
-            const manifestUrl = `https://api.artic.edu/api/v1/artworks/${art.id}/manifest.json`;
-            const manifestResponse = await fetch(manifestUrl, { timeout: 5000 });
+        for (const art of shuffledArtworks) {
+            const imageUrl = buildArticImageUrl(art.image_id, 843);
             
-            if (manifestResponse.ok) {
-                const manifest = await manifestResponse.json();
+            // ✅ Validate image is accessible before using
+            const isImageValid = await validateImageUrl(imageUrl);
+            if (!isImageValid) {
+                console.log(`   ⚠️ Image not accessible for "${art.title}", trying next...`);
+                continue;
+            }
+            
+            // ✅ Fetch clean medium/dimensions from manifest
+            let medium = null;
+            let dimensions = null;
+            
+            try {
+                const manifestUrl = `https://api.artic.edu/api/v1/artworks/${art.id}/manifest.json`;
+                const manifestResponse = await fetch(manifestUrl, { timeout: 5000 });
                 
-                // Extract from metadata array
-                if (manifest.metadata && Array.isArray(manifest.metadata)) {
-                    for (const item of manifest.metadata) {
-                        if (item.label === 'Medium' && item.value) {
-                            medium = item.value;
-                        }
-                        if (item.label === 'Dimensions' && item.value) {
-                            dimensions = item.value;
+                if (manifestResponse.ok) {
+                    const manifest = await manifestResponse.json();
+                    
+                    // Extract from metadata array
+                    if (manifest.metadata && Array.isArray(manifest.metadata)) {
+                        for (const item of manifest.metadata) {
+                            if (item.label === 'Medium' && item.value) {
+                                medium = item.value;
+                            }
+                            if (item.label === 'Dimensions' && item.value) {
+                                dimensions = item.value;
+                            }
                         }
                     }
+                    
+                    console.log(`   📋 Manifest: Medium="${medium}", Dimensions="${dimensions}"`);
                 }
-                
-                console.log(`   📋 Manifest: Medium="${medium}", Dimensions="${dimensions}"`);
+            } catch (manifestError) {
+                console.warn(`   ⚠️ Could not fetch manifest:`, manifestError.message);
             }
-        } catch (manifestError) {
-            console.warn(`   ⚠️ Could not fetch manifest:`, manifestError.message);
+            
+            const artwork = {
+                externalId: String(art.id),
+                title: art.title || 'Untitled',
+                artist: art.artist_title || 'Unknown Artist',
+                year: art.date_display || 'Unknown',
+                imageUrl: imageUrl,
+                imageUrlLarge: buildArticImageUrl(art.image_id, 1686),
+                sourceApi: 'artic',
+                isPublicDomain: true,
+                medium: medium,
+                dimensions: dimensions,
+                metadata: {
+                    medium: medium,
+                    dimensions: dimensions
+                }
+            };
+            
+            // Add attribution
+            artwork.attribution = generateAttribution('artic', artwork);
+            
+            return artwork;
         }
         
-        const artwork = {
-            externalId: String(art.id),
-            title: art.title || 'Untitled',
-            artist: art.artist_title || 'Unknown Artist',
-            year: art.date_display || 'Unknown',
-            imageUrl: buildArticImageUrl(art.image_id, 843),
-            imageUrlLarge: buildArticImageUrl(art.image_id, 1686),
-            sourceApi: 'artic',
-            isPublicDomain: true,
-            medium: medium,
-            dimensions: dimensions,
-            metadata: {
-                medium: medium,
-                dimensions: dimensions
-            }
-        };
-        
-        // Add attribution
-        artwork.attribution = generateAttribution('artic', artwork);
-        
-        return artwork;
+        // All tried artworks had inaccessible images
+        console.log('   ⚠️ All tried artworks had inaccessible images');
+        return null;
     } catch (error) {
         if (error.name === 'AbortError') {
             console.warn('   ⚠️ ARTIC search timed out');
