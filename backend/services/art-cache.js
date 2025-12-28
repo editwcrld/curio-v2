@@ -3,6 +3,7 @@
  * ✅ Reduziert: MIN_CACHE_SIZE = 2
  * ✅ Längere Delays: 3 Sekunden
  * ✅ KEINE AI Generation hier!
+ * ✅ excludeIds Support für Favorites-Ausschluss
  */
 
 const { supabase } = require('../config/db');
@@ -108,20 +109,42 @@ async function cacheMultipleArtworks(artworks) {
     return cached;
 }
 
-async function getRandomCachedArt() {
+/**
+ * Get random artwork from cache
+ * @param {string[]} excludeIds - Array of artwork IDs to exclude (e.g., user's favorites)
+ */
+async function getRandomCachedArt(excludeIds = []) {
     try {
-        const count = await getCacheCount();
+        // Build query
+        let query = supabase.from('artworks').select('*');
         
-        if (count === 0) {
-            console.warn('⚠️ Art cache empty!');
+        // ✅ Exclude favorites if provided
+        if (excludeIds && excludeIds.length > 0) {
+            query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+        }
+        
+        // Get count of available artworks
+        const { count, error: countError } = await supabase
+            .from('artworks')
+            .select('*', { count: 'exact', head: true })
+            .not('id', 'in', excludeIds.length > 0 ? `(${excludeIds.join(',')})` : '()');
+        
+        const availableCount = excludeIds.length > 0 ? count : await getCacheCount();
+        
+        if (!availableCount || availableCount === 0) {
+            console.warn('⚠️ Art cache empty or all excluded!');
             return null;
         }
         
-        const randomOffset = Math.floor(Math.random() * count);
+        const randomOffset = Math.floor(Math.random() * availableCount);
         
-        const { data, error } = await supabase
-            .from('artworks')
-            .select('*')
+        // Fetch with exclusions
+        let fetchQuery = supabase.from('artworks').select('*');
+        if (excludeIds && excludeIds.length > 0) {
+            fetchQuery = fetchQuery.not('id', 'in', `(${excludeIds.join(',')})`);
+        }
+        
+        const { data, error } = await fetchQuery
             .range(randomOffset, randomOffset)
             .single();
         
@@ -156,9 +179,9 @@ async function ensureCacheFilled() {
     }
 }
 
-async function getArt() {
+async function getArt(excludeIds = []) {
     try {
-        let art = await getRandomCachedArt();
+        let art = await getRandomCachedArt(excludeIds);
         
         if (art) {
             // Background refill wenn nötig

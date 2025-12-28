@@ -3,10 +3,11 @@
  * ✅ Reduziert: MIN_CACHE_SIZE = 2
  * ✅ Längere Delays: 3 Sekunden
  * ✅ KEINE AI Generation hier!
+ * ✅ excludeIds Support für Favorites-Ausschluss
  */
 
 const { supabase } = require('../config/db');
-const { fetchRandomQuote, fetchMultipleQuotes } = require('./quotes-api');  // ✅ CHANGED
+const { fetchRandomQuote, fetchMultipleQuotes } = require('./quotes-api');
 
 // ✅ REDUZIERT für API Schonung
 const MIN_CACHE_SIZE = 2;
@@ -107,20 +108,37 @@ async function cacheMultipleQuotes(quotes) {
     return cached;
 }
 
-async function getRandomCachedQuote() {
+/**
+ * Get random quote from cache
+ * @param {string[]} excludeIds - Array of quote IDs to exclude (e.g., user's favorites)
+ */
+async function getRandomCachedQuote(excludeIds = []) {
     try {
-        const count = await getCacheCount();
+        // Get count of available quotes (excluding favorites)
+        let countQuery = supabase.from('quotes').select('*', { count: 'exact', head: true });
         
-        if (count === 0) {
-            console.warn('⚠️ Quote cache empty!');
+        if (excludeIds && excludeIds.length > 0) {
+            countQuery = countQuery.not('id', 'in', `(${excludeIds.join(',')})`);
+        }
+        
+        const { count: availableCount, error: countError } = await countQuery;
+        
+        if (countError) throw countError;
+        
+        if (!availableCount || availableCount === 0) {
+            console.warn('⚠️ Quote cache empty or all excluded!');
             return null;
         }
         
-        const randomOffset = Math.floor(Math.random() * count);
+        const randomOffset = Math.floor(Math.random() * availableCount);
         
-        const { data, error } = await supabase
-            .from('quotes')
-            .select('*')
+        // Fetch with exclusions
+        let fetchQuery = supabase.from('quotes').select('*');
+        if (excludeIds && excludeIds.length > 0) {
+            fetchQuery = fetchQuery.not('id', 'in', `(${excludeIds.join(',')})`);
+        }
+        
+        const { data, error } = await fetchQuery
             .range(randomOffset, randomOffset)
             .single();
         
@@ -155,9 +173,9 @@ async function ensureCacheFilled() {
     }
 }
 
-async function getQuote() {
+async function getQuote(excludeIds = []) {
     try {
-        let quote = await getRandomCachedQuote();
+        let quote = await getRandomCachedQuote(excludeIds);
         
         if (quote) {
             // Background refill wenn nötig

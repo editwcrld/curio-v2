@@ -2,7 +2,9 @@
  * CURIO BACKEND - Content Routes
  * ✅ /daily/today = Tages-Content (ALLE User sehen dasselbe!)
  * ✅ /daily/art, /daily/quote = Random aus Cache
- * ✅ /art/fresh, /quote/fresh = Frisch + Limits
+ * ✅ /art/fresh, /quote/fresh = Sofort aus Cache
+ * ✅ /art/fresh?prefetch=true = Frisch von API + AI (für Prefetch)
+ * ✅ Favorites werden ausgeschlossen!
  */
 
 const express = require('express');
@@ -15,7 +17,7 @@ const { LIMITS } = require('../config/constants');
 
 // Services
 const { getQuote, cacheQuote, getRandomCachedQuote } = require('../services/quote-cache');
-const { fetchRandomQuote } = require('../services/quotes-api');  // ✅ CHANGED
+const { fetchRandomQuote } = require('../services/quotes-api');
 const { getArt, cacheArt, getRandomCachedArt } = require('../services/art-cache');
 const { fetchRandomArtwork } = require('../services/art-api');
 const { getDailyContent } = require('../services/daily-content');
@@ -30,6 +32,31 @@ try {
     console.log('✅ Mistral AI available');
 } catch (e) {
     console.warn('⚠️ Mistral AI not available');
+}
+
+// =====================================================
+// HELPER: Get User's Favorite IDs
+// =====================================================
+
+async function getUserFavoriteIds(userId, type) {
+    if (!userId) return [];
+    
+    try {
+        const column = type === 'art' ? 'artwork_id' : 'quote_id';
+        
+        const { data, error } = await supabase
+            .from('favorites')
+            .select(column)
+            .eq('user_id', userId)
+            .not(column, 'is', null);
+        
+        if (error) throw error;
+        
+        return data ? data.map(f => f[column]) : [];
+    } catch (error) {
+        console.error('getUserFavoriteIds error:', error);
+        return [];
+    }
 }
 
 // =====================================================
@@ -207,7 +234,10 @@ router.get('/daily/quote', optionalAuth, async (req, res, next) => {
     try {
         console.log('📥 Loading daily quote...');
         
-        let quote = await getRandomCachedQuote();
+        // Get user's favorite quote IDs to exclude
+        const excludeIds = req.user ? await getUserFavoriteIds(req.user.id, 'quote') : [];
+        
+        let quote = await getRandomCachedQuote(excludeIds);
         
         if (!quote) {
             console.log('⚠️ Cache empty, fetching fresh...');
@@ -229,12 +259,20 @@ router.get('/daily/quote', optionalAuth, async (req, res, next) => {
 });
 
 /**
- * GET /api/quote/fresh - Fresh + AI (WITH LIMITS)
- * ✅ Speichert neue Quotes in DB
- * ✅ Fallback auf Cache wenn API down
+ * GET /api/quote/fresh - Quote Content (WITH LIMITS)
+ * 
+ * Without ?prefetch=true:
+ *   → Instant from DB Cache (for immediate display)
+ * 
+ * With ?prefetch=true:
+ *   → Fresh from API + AI (for prefetching next content)
+ *   → User will see this on NEXT "Next" click
  */
 router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
     try {
+        const isPrefetch = req.query.prefetch === 'true';
+        
+        // Check limits for logged-in users
         if (req.user) {
             const limitCheck = await checkAndIncrementLimit(req, 'quotes');
             if (!limitCheck.canAccess) {
@@ -246,52 +284,108 @@ router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
             }
         }
         
-        console.log('📥 Fetching fresh quote...');
+        // Get user's favorite IDs to exclude
+        const excludeIds = req.user ? await getUserFavoriteIds(req.user.id, 'quote') : [];
         
-        let cachedQuote = null;
-        
-        // Try to fetch fresh from API
-        try {
-            const freshQuote = await fetchRandomQuote();
-            cachedQuote = await cacheQuote(freshQuote);  // ✅ Speichert in DB!
-        } catch (apiError) {
-            console.warn('⚠️ Quote API failed, using fallback:', apiError.message);
+        // =====================================================
+        // PREFETCH MODE: Fetch fresh from API + generate AI
+        // =====================================================
+        if (isPrefetch) {
+            console.log('📥 Quote PREFETCH request (fresh from API)...');
+            
+            try {
+                const freshQuote = await fetchRandomQuote();
+                const cachedQuote = await cacheQuote(freshQuote);
+                
+                if (cachedQuote) {
+                    // Check if it's a favorite (shouldn't happen but safety check)
+                    if (excludeIds.includes(cachedQuote.id)) {
+                        console.log('⚠️ Prefetched quote is favorite, fetching another...');
+                        const anotherQuote = await fetchRandomQuote();
+                        const anotherCached = await cacheQuote(anotherQuote);
+                        
+                        if (anotherCached) {
+                            const ai = await ensureQuoteAI(anotherCached.id, {
+                                text: anotherCached.text,
+                                author: anotherCached.author
+                            });
+                            
+                            return res.json({
+                                success: true,
+                                data: formatQuoteResponse(anotherCached, ai),
+                                cached: false,
+                                source: 'prefetch-fresh'
+                            });
+                        }
+                    }
+                    
+                    // Generate AI for the fresh quote
+                    const ai = await ensureQuoteAI(cachedQuote.id, {
+                        text: cachedQuote.text,
+                        author: cachedQuote.author
+                    });
+                    
+                    return res.json({
+                        success: true,
+                        data: formatQuoteResponse(cachedQuote, ai),
+                        cached: false,
+                        source: 'prefetch-fresh'
+                    });
+                }
+            } catch (apiError) {
+                console.warn('⚠️ Prefetch API failed, falling back to cache:', apiError.message);
+            }
+            
+            // Fallback: Return from cache if API fails
+            const fallbackQuote = await getRandomCachedQuote(excludeIds);
+            if (fallbackQuote) {
+                return res.json({
+                    success: true,
+                    data: formatQuoteResponse(fallbackQuote),
+                    cached: true,
+                    source: 'prefetch-fallback'
+                });
+            }
+            
+            throw new Error('No quotes available');
         }
         
-        // Success: Got fresh quote
-        if (cachedQuote) {
-            const ai = await ensureQuoteAI(cachedQuote.id, { 
-                text: cachedQuote.text, 
-                author: cachedQuote.author 
+        // =====================================================
+        // NORMAL MODE: Instant from DB Cache
+        // =====================================================
+        console.log('📥 Quote fresh request (from cache)...');
+        if (excludeIds.length > 0) {
+            console.log(`   Excluding ${excludeIds.length} favorite quotes`);
+        }
+        
+        const cachedQuote = await getRandomCachedQuote(excludeIds);
+        
+        if (!cachedQuote) {
+            // Edge case: Empty cache - must fetch synchronously
+            console.log('⚠️ Cache empty, fetching synchronously...');
+            const freshQuote = await fetchRandomQuote();
+            const newQuote = await cacheQuote(freshQuote);
+            const ai = await ensureQuoteAI(newQuote.id, { 
+                text: newQuote.text, 
+                author: newQuote.author 
             });
             
             return res.json({
                 success: true,
-                data: formatQuoteResponse(cachedQuote, ai),
+                data: formatQuoteResponse(newQuote, ai),
                 cached: false,
-                source: 'fresh'
+                source: 'fresh-sync'
             });
         }
         
-        // ✅ FALLBACK: API failed, use cached quote from DB
-        console.log('🔄 Using fallback from database...');
-        const existingQuote = await getRandomCachedQuote();
+        // Return cached quote immediately
+        res.json({
+            success: true,
+            data: formatQuoteResponse(cachedQuote),
+            cached: true,
+            source: 'cache-instant'
+        });
         
-        if (existingQuote) {
-            const ai = await ensureQuoteAI(existingQuote.id, { 
-                text: existingQuote.text, 
-                author: existingQuote.author 
-            });
-            return res.json({
-                success: true,
-                data: formatQuoteResponse(existingQuote, ai),
-                cached: true,
-                source: 'fallback'
-            });
-        }
-        
-        // No cached quotes available at all
-        throw new Error('No quotes available');
     } catch (error) {
         next(error);
     }
@@ -313,7 +407,10 @@ router.get('/daily/art', optionalAuth, async (req, res, next) => {
     try {
         console.log('🎨 Loading daily art...');
         
-        let art = await getRandomCachedArt();
+        // Get user's favorite art IDs to exclude
+        const excludeIds = req.user ? await getUserFavoriteIds(req.user.id, 'art') : [];
+        
+        let art = await getRandomCachedArt(excludeIds);
         
         if (!art) {
             console.log('⚠️ Art cache empty, fetching fresh...');
@@ -339,12 +436,20 @@ router.get('/daily/art', optionalAuth, async (req, res, next) => {
 });
 
 /**
- * GET /api/art/fresh - Fresh + AI (WITH LIMITS)
- * ✅ Speichert neue Artworks in DB
- * ✅ Fallback auf Cache wenn API down
+ * GET /api/art/fresh - Art Content (WITH LIMITS)
+ * 
+ * Without ?prefetch=true:
+ *   → Instant from DB Cache (for immediate display)
+ * 
+ * With ?prefetch=true:
+ *   → Fresh from API + AI (for prefetching next content)
+ *   → User will see this on NEXT "Next" click
  */
 router.get('/art/fresh', optionalAuth, async (req, res, next) => {
     try {
+        const isPrefetch = req.query.prefetch === 'true';
+        
+        // Check limits for logged-in users
         if (req.user) {
             const limitCheck = await checkAndIncrementLimit(req, 'art');
             if (!limitCheck.canAccess) {
@@ -356,54 +461,111 @@ router.get('/art/fresh', optionalAuth, async (req, res, next) => {
             }
         }
         
-        console.log('🎨 Fetching fresh artwork...');
+        // Get user's favorite IDs to exclude
+        const excludeIds = req.user ? await getUserFavoriteIds(req.user.id, 'art') : [];
         
-        let cachedArt = null;
-        
-        // Try to fetch fresh from API
-        try {
-            const freshArt = await fetchRandomArtwork();
-            cachedArt = await cacheArt(freshArt);  // ✅ Speichert in DB!
-        } catch (apiError) {
-            console.warn('⚠️ Art API failed, using fallback:', apiError.message);
+        // =====================================================
+        // PREFETCH MODE: Fetch fresh from API + generate AI
+        // =====================================================
+        if (isPrefetch) {
+            console.log('🎨 Art PREFETCH request (fresh from API)...');
+            
+            try {
+                const freshArt = await fetchRandomArtwork();
+                const cachedArt = await cacheArt(freshArt);
+                
+                if (cachedArt) {
+                    // Check if it's a favorite (shouldn't happen but safety check)
+                    if (excludeIds.includes(cachedArt.id)) {
+                        console.log('⚠️ Prefetched art is favorite, fetching another...');
+                        const anotherArt = await fetchRandomArtwork();
+                        const anotherCached = await cacheArt(anotherArt);
+                        
+                        if (anotherCached) {
+                            const ai = await ensureArtAI(anotherCached.id, {
+                                title: anotherCached.title,
+                                artist: anotherCached.artist,
+                                year: anotherCached.year
+                            });
+                            
+                            return res.json({
+                                success: true,
+                                data: formatArtResponse(anotherCached, ai),
+                                cached: false,
+                                source: 'prefetch-fresh'
+                            });
+                        }
+                    }
+                    
+                    // Generate AI for the fresh art
+                    const ai = await ensureArtAI(cachedArt.id, {
+                        title: cachedArt.title,
+                        artist: cachedArt.artist,
+                        year: cachedArt.year
+                    });
+                    
+                    return res.json({
+                        success: true,
+                        data: formatArtResponse(cachedArt, ai),
+                        cached: false,
+                        source: 'prefetch-fresh'
+                    });
+                }
+            } catch (apiError) {
+                console.warn('⚠️ Prefetch API failed, falling back to cache:', apiError.message);
+            }
+            
+            // Fallback: Return from cache if API fails
+            const fallbackArt = await getRandomCachedArt(excludeIds);
+            if (fallbackArt) {
+                return res.json({
+                    success: true,
+                    data: formatArtResponse(fallbackArt),
+                    cached: true,
+                    source: 'prefetch-fallback'
+                });
+            }
+            
+            throw new Error('No artworks available');
         }
         
-        // Success: Got fresh art
-        if (cachedArt) {
-            const ai = await ensureArtAI(cachedArt.id, { 
-                title: cachedArt.title, 
-                artist: cachedArt.artist, 
-                year: cachedArt.year 
+        // =====================================================
+        // NORMAL MODE: Instant from DB Cache
+        // =====================================================
+        console.log('🎨 Art fresh request (from cache)...');
+        if (excludeIds.length > 0) {
+            console.log(`   Excluding ${excludeIds.length} favorite artworks`);
+        }
+        
+        const cachedArt = await getRandomCachedArt(excludeIds);
+        
+        if (!cachedArt) {
+            // Edge case: Empty cache - must fetch synchronously
+            console.log('⚠️ Art cache empty, fetching synchronously...');
+            const freshArt = await fetchRandomArtwork();
+            const newArt = await cacheArt(freshArt);
+            const ai = await ensureArtAI(newArt.id, { 
+                title: newArt.title, 
+                artist: newArt.artist, 
+                year: newArt.year 
             });
             
             return res.json({
                 success: true,
-                data: formatArtResponse(cachedArt, ai),
+                data: formatArtResponse(newArt, ai),
                 cached: false,
-                source: 'fresh'
+                source: 'fresh-sync'
             });
         }
         
-        // ✅ FALLBACK: API failed, use cached art from DB
-        console.log('🔄 Using fallback from database...');
-        const existingArt = await getRandomCachedArt();
+        // Return cached art immediately
+        res.json({
+            success: true,
+            data: formatArtResponse(cachedArt),
+            cached: true,
+            source: 'cache-instant'
+        });
         
-        if (existingArt) {
-            const ai = await ensureArtAI(existingArt.id, { 
-                title: existingArt.title, 
-                artist: existingArt.artist, 
-                year: existingArt.year 
-            });
-            return res.json({
-                success: true,
-                data: formatArtResponse(existingArt, ai),
-                cached: true,
-                source: 'fallback'
-            });
-        }
-        
-        // No cached art available at all
-        throw new Error('No artworks available');
     } catch (error) {
         next(error);
     }

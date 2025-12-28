@@ -1,6 +1,10 @@
 /**
  * Content Navigation
  * Back/Next mit History, Prefetch, Favorites-Ausschluss
+ * 
+ * ✅ Erster Next: Zeigt aus Cache (instant)
+ * ✅ Im Hintergrund: Holt frischen Content mit ?prefetch=true
+ * ✅ Nächster Next: Zeigt prefetched Content (garantiert neu!)
  */
 
 import { appState } from './state.js';
@@ -26,7 +30,7 @@ let isPrefetchingArt = false;
 let isNavigating = false;
 
 // ===== CONFIG =====
-const PREFETCH_DELAY_MS = 3000;
+const PREFETCH_DELAY_MS = 500;  // Start prefetch quickly after display
 const MAX_PREFETCH_RETRIES = 2;
 let quotePrefetchRetries = 0;
 let artPrefetchRetries = 0;
@@ -42,9 +46,8 @@ export function initContentNavigation() {
         btn.addEventListener('click', handleNext);
     });
     
-    // ✅ FIX: No initial prefetch on page load
-    // Prefetch only starts AFTER first manual "Next" click
-    // This saves API calls and limits on page refresh
+    // ✅ No initial prefetch on page load
+    // Prefetch starts AFTER first manual "Next" click
 }
 
 // ===== HELPERS =====
@@ -97,6 +100,7 @@ function goBackQuote() {
 }
 
 async function goNextQuote() {
+    // Check if we can go forward in history
     if (quoteHistoryIndex < quoteHistory.length - 1 && quoteHistoryIndex >= 0) {
         quoteHistoryIndex++;
         const item = quoteHistory[quoteHistoryIndex];
@@ -107,6 +111,7 @@ async function goNextQuote() {
         return;
     }
     
+    // Check limits
     if (!canNavigate('quotes')) {
         handleLimitReached('quotes');
         return;
@@ -114,25 +119,22 @@ async function goNextQuote() {
     
     isNavigating = true;
     
-    // Check prefetch validity
-    if (prefetchedQuote && isLoggedIn()) {
-        const favoriteIds = getFavoriteIds('quotes');
-        if (favoriteIds.includes(prefetchedQuote.id)) {
-            prefetchedQuote = null;
-        }
-    }
-    
-    // Use prefetch if available
-    if (prefetchedQuote && isLoggedIn()) {
+    // =====================================================
+    // OPTION 1: Use prefetched content (instant, guaranteed fresh!)
+    // =====================================================
+    if (prefetchedQuote) {
         const quote = prefetchedQuote;
         const gradient = getRandomGradient();
         
+        // Clear prefetch
         prefetchedQuote = null;
         quotePrefetchRetries = 0;
         
+        // Add to history
         quoteHistory.push({ quote, gradient });
         quoteHistoryIndex = quoteHistory.length - 1;
         
+        // Display immediately
         appState.setQuoteData(quote);
         appState.setGradient(gradient);
         displayQuote(quote, gradient);
@@ -140,16 +142,22 @@ async function goNextQuote() {
         incrementUsage('quotes');
         updateAllFavoriteButtons();
         
-        // ✅ Prefetch next quote (only quotes, not art)
-        setTimeout(() => prefetchQuote(), 500);
         isNavigating = false;
+        
+        // ✅ Start prefetching next fresh content
+        if (isLoggedIn() && canNavigate('quotes')) {
+            setTimeout(() => prefetchQuote(), PREFETCH_DELAY_MS);
+        }
         return;
     }
     
-    // Fetch fresh
+    // =====================================================
+    // OPTION 2: No prefetch available - fetch from cache (instant)
+    // =====================================================
     showContentLoading('view-quotes');
     
     try {
+        // Fetch from cache (instant response)
         const response = await fetch(`${API_BASE_URL}/quote/fresh`, { 
             headers: getAuthHeaders() 
         });
@@ -158,7 +166,6 @@ async function goNextQuote() {
         if (response.status === 429) {
             hideContentLoading('view-quotes');
             isNavigating = false;
-            // Sync frontend limit to max (backend says limit reached)
             syncLimitToMax('quotes');
             handleLimitReached('quotes');
             return;
@@ -170,9 +177,11 @@ async function goNextQuote() {
         const quote = result.data;
         const gradient = getRandomGradient();
         
+        // Add to history
         quoteHistory.push({ quote, gradient });
         quoteHistoryIndex = quoteHistory.length - 1;
         
+        // Display
         appState.setQuoteData(quote);
         appState.setGradient(gradient);
         displayQuote(quote, gradient);
@@ -180,14 +189,15 @@ async function goNextQuote() {
         incrementUsage('quotes');
         updateAllFavoriteButtons();
         
-        // ✅ WICHTIG: Loading verstecken und Navigation beenden BEVOR Prefetch
+        // Hide loading and end navigation
         hideContentLoading('view-quotes');
         isNavigating = false;
         
-        // ✅ Prefetch next quote im Hintergrund (non-blocking)
+        // ✅ Start prefetching fresh content for next click
         if (isLoggedIn() && canNavigate('quotes')) {
             setTimeout(() => prefetchQuote(), PREFETCH_DELAY_MS);
         }
+        
     } catch (error) {
         if (window.showToast) {
             window.showToast('Quote konnte nicht geladen werden', 'error');
@@ -197,25 +207,25 @@ async function goNextQuote() {
     }
 }
 
-// ===== PREFETCH QUOTE =====
+// ===== PREFETCH QUOTE (with ?prefetch=true for fresh content) =====
 
 async function prefetchQuote() {
     if (!isLoggedIn() || isPrefetchingQuote || prefetchedQuote) return;
     if (quotePrefetchRetries >= MAX_PREFETCH_RETRIES) return;
-    // Don't prefetch if limit already reached
     if (!canNavigate('quotes')) return;
     
     isPrefetchingQuote = true;
+    console.log('🔄 Prefetching fresh quote...');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/quote/fresh`, { 
+        // ✅ Use ?prefetch=true to get FRESH content from API
+        const response = await fetch(`${API_BASE_URL}/quote/fresh?prefetch=true`, { 
             headers: getAuthHeaders() 
         });
         
         if (response.status === 429) {
-            // Limit reached - sync and stop prefetching
             syncLimitToMax('quotes');
-            quotePrefetchRetries = MAX_PREFETCH_RETRIES; // Stop further attempts
+            quotePrefetchRetries = MAX_PREFETCH_RETRIES;
             return;
         }
         
@@ -224,14 +234,20 @@ async function prefetchQuote() {
             const quote = result.data;
             const favoriteIds = getFavoriteIds('quotes');
             
+            // Double-check it's not a favorite
             if (!favoriteIds.includes(quote.id)) {
                 prefetchedQuote = quote;
                 quotePrefetchRetries = 0;
+                console.log('✅ Quote prefetched:', quote.text.substring(0, 30) + '...');
             } else {
+                console.log('⚠️ Prefetched quote is favorite, discarding');
                 quotePrefetchRetries++;
             }
+        } else {
+            quotePrefetchRetries++;
         }
     } catch (error) {
+        console.error('❌ Quote prefetch failed:', error.message);
         quotePrefetchRetries++;
     } finally {
         isPrefetchingQuote = false;
@@ -251,6 +267,7 @@ function goBackArt() {
 }
 
 async function goNextArt() {
+    // Check if we can go forward in history
     if (artHistoryIndex < artHistory.length - 1 && artHistoryIndex >= 0) {
         artHistoryIndex++;
         const art = artHistory[artHistoryIndex];
@@ -260,6 +277,7 @@ async function goNextArt() {
         return;
     }
     
+    // Check limits
     if (!canNavigate('art')) {
         handleLimitReached('art');
         return;
@@ -267,39 +285,43 @@ async function goNextArt() {
     
     isNavigating = true;
     
-    // Check prefetch validity
-    if (prefetchedArt && isLoggedIn()) {
-        const favoriteIds = getFavoriteIds('art');
-        if (favoriteIds.includes(prefetchedArt.id)) {
-            prefetchedArt = null;
-        }
-    }
-    
-    // Use prefetch if available
-    if (prefetchedArt && isLoggedIn()) {
+    // =====================================================
+    // OPTION 1: Use prefetched content (instant, guaranteed fresh!)
+    // =====================================================
+    if (prefetchedArt) {
         const art = prefetchedArt;
+        
+        // Clear prefetch
         prefetchedArt = null;
         artPrefetchRetries = 0;
         
+        // Add to history
         artHistory.push(art);
         artHistoryIndex = artHistory.length - 1;
         
+        // Display immediately
         appState.setArtData(art);
         displayArt(art);
         
         incrementUsage('art');
         updateAllFavoriteButtons();
         
-        // ✅ Prefetch next art (only art, not quotes)
-        setTimeout(() => prefetchArt(), 500);
         isNavigating = false;
+        
+        // ✅ Start prefetching next fresh content
+        if (isLoggedIn() && canNavigate('art')) {
+            setTimeout(() => prefetchArt(), PREFETCH_DELAY_MS);
+        }
         return;
     }
     
-    // Fetch fresh
+    // =====================================================
+    // OPTION 2: No prefetch available - fetch from cache (instant)
+    // =====================================================
     showContentLoading('view-art');
     
     try {
+        // Fetch from cache (instant response)
         const response = await fetch(`${API_BASE_URL}/art/fresh`, { 
             headers: getAuthHeaders() 
         });
@@ -308,7 +330,6 @@ async function goNextArt() {
         if (response.status === 429) {
             hideContentLoading('view-art');
             isNavigating = false;
-            // Sync frontend limit to max (backend says limit reached)
             syncLimitToMax('art');
             handleLimitReached('art');
             return;
@@ -319,23 +340,26 @@ async function goNextArt() {
         const result = await response.json();
         const art = result.data;
         
+        // Add to history
         artHistory.push(art);
         artHistoryIndex = artHistory.length - 1;
         
+        // Display
         appState.setArtData(art);
         displayArt(art);
         
         incrementUsage('art');
         updateAllFavoriteButtons();
         
-        // ✅ WICHTIG: Loading verstecken und Navigation beenden BEVOR Prefetch
+        // Hide loading and end navigation
         hideContentLoading('view-art');
         isNavigating = false;
         
-        // ✅ Prefetch next art im Hintergrund (non-blocking)
+        // ✅ Start prefetching fresh content for next click
         if (isLoggedIn() && canNavigate('art')) {
             setTimeout(() => prefetchArt(), PREFETCH_DELAY_MS);
         }
+        
     } catch (error) {
         if (window.showToast) {
             window.showToast('Artwork konnte nicht geladen werden', 'error');
@@ -345,25 +369,25 @@ async function goNextArt() {
     }
 }
 
-// ===== PREFETCH ART =====
+// ===== PREFETCH ART (with ?prefetch=true for fresh content) =====
 
 async function prefetchArt() {
     if (!isLoggedIn() || isPrefetchingArt || prefetchedArt) return;
     if (artPrefetchRetries >= MAX_PREFETCH_RETRIES) return;
-    // Don't prefetch if limit already reached
     if (!canNavigate('art')) return;
     
     isPrefetchingArt = true;
+    console.log('🔄 Prefetching fresh artwork...');
     
     try {
-        const response = await fetch(`${API_BASE_URL}/art/fresh`, { 
+        // ✅ Use ?prefetch=true to get FRESH content from API
+        const response = await fetch(`${API_BASE_URL}/art/fresh?prefetch=true`, { 
             headers: getAuthHeaders() 
         });
         
         if (response.status === 429) {
-            // Limit reached - sync and stop prefetching
             syncLimitToMax('art');
-            artPrefetchRetries = MAX_PREFETCH_RETRIES; // Stop further attempts
+            artPrefetchRetries = MAX_PREFETCH_RETRIES;
             return;
         }
         
@@ -372,16 +396,20 @@ async function prefetchArt() {
             const art = result.data;
             const favoriteIds = getFavoriteIds('art');
             
+            // Double-check it's not a favorite
             if (!favoriteIds.includes(art.id)) {
                 prefetchedArt = art;
                 artPrefetchRetries = 0;
+                console.log('✅ Art prefetched:', art.title);
             } else {
+                console.log('⚠️ Prefetched art is favorite, discarding');
                 artPrefetchRetries++;
             }
         } else {
             artPrefetchRetries++;
         }
     } catch (error) {
+        console.error('❌ Art prefetch failed:', error.message);
         artPrefetchRetries++;
     } finally {
         isPrefetchingArt = false;
