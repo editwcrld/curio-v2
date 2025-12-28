@@ -26,7 +26,7 @@ function corsMiddleware(req, res, next) {
         );
         res.setHeader(
             'Access-Control-Allow-Headers',
-            'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+            'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Key'
         );
     }
     

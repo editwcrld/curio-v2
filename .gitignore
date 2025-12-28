@@ -36,3 +36,4 @@ build/
 temp/
 tmp/
 tree.ps1
+browser_console_scripts
