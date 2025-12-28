@@ -275,7 +275,11 @@ async function fetchFromRijksSearch(excludeIds = []) {
         
         const excludeSet = new Set(excludeIds.map(String));
         const validArtworks = response.data.artObjects.filter(a => 
-            a.webImage?.url && !excludeSet.has(a.objectNumber)
+            a.webImage?.url && 
+            !a.webImage.url.includes('1x1.png') &&  // ✅ Filter out placeholder
+            !a.webImage.url.includes('placeholder') &&
+            a.webImage.url.startsWith('http') &&  // ✅ Must be full URL
+            !excludeSet.has(a.objectNumber)
         );
         
         if (validArtworks.length === 0) {
@@ -343,7 +347,11 @@ async function fetchFromRijksCurated(excludeIds = []) {
             
             const art = response.data?.artObject;
             
+            // ✅ Skip if no image or placeholder image
             if (!art?.webImage?.url) continue;
+            if (art.webImage.url.includes('1x1.png')) continue;
+            if (art.webImage.url.includes('placeholder')) continue;
+            if (!art.webImage.url.startsWith('http')) continue;
             
             const imageUrl = art.webImage.url.replace('=s0', '=s800');
             const imageUrlLarge = art.webImage.url;
