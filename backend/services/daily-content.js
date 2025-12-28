@@ -3,13 +3,14 @@
  * ✅ Generiert täglich um 00:01 CET neuen Content
  * ✅ ALLE User sehen dasselbe Art + Quote pro Tag
  * ✅ AI wird vorgeneriert
+ * ✅ Attribution für API Compliance
  */
 
 const { supabase } = require('../config/db');
 const { getRandomCachedArt, cacheArt } = require('./art-cache');
 const { getRandomCachedQuote, cacheQuote } = require('./quote-cache');
 const { fetchRandomArtwork } = require('./art-api');
-const { fetchRandomQuote } = require('./quotes-api');  // ✅ CHANGED
+const { fetchRandomQuote } = require('./quotes-api');
 
 // AI Service (optional)
 let generateArtDescription = null;
@@ -20,6 +21,26 @@ try {
     generateQuoteDescription = mistral.generateQuoteDescription;
 } catch (e) {
     console.warn('⚠️ Mistral AI not available for daily content');
+}
+
+// =====================================================
+// ATTRIBUTION HELPER
+// =====================================================
+
+function getAttribution(sourceApi) {
+    const attributions = {
+        'artic': {
+            text: 'Image courtesy of the Art Institute of Chicago',
+            url: 'https://www.artic.edu',
+            license: 'CC0 Public Domain'
+        },
+        'rijks': {
+            text: 'Image courtesy of the Rijksmuseum',
+            url: 'https://www.rijksmuseum.nl',
+            license: 'CC0 Public Domain'
+        }
+    };
+    return attributions[sourceApi] || null;
 }
 
 // =====================================================
@@ -53,11 +74,13 @@ async function getDailyContent() {
             quote_id,
             artworks (
                 id, title, artist, year, image_url,
-                ai_description_de, ai_description_en, metadata
+                ai_description_de, ai_description_en, metadata,
+                source_api, external_id
             ),
             quotes (
                 id, text, author, source, category,
-                ai_description_de, ai_description_en
+                ai_description_de, ai_description_en,
+                source_api, external_id
             )
         `)
         .eq('date', today)
@@ -79,7 +102,10 @@ async function getDailyContent() {
                 imageUrl: existing.artworks.image_url,
                 ai_description_de: existing.artworks.ai_description_de,
                 ai_description_en: existing.artworks.ai_description_en,
-                metadata: existing.artworks.metadata
+                metadata: existing.artworks.metadata,
+                source_api: existing.artworks.source_api,
+                external_id: existing.artworks.external_id,
+                attribution: getAttribution(existing.artworks.source_api)
             },
             quote: {
                 id: existing.quotes.id,
@@ -88,7 +114,9 @@ async function getDailyContent() {
                 source: existing.quotes.source,
                 category: existing.quotes.category,
                 ai_description_de: existing.quotes.ai_description_de,
-                ai_description_en: existing.quotes.ai_description_en
+                ai_description_en: existing.quotes.ai_description_en,
+                source_api: existing.quotes.source_api,
+                external_id: existing.quotes.external_id
             }
         };
     }
@@ -197,7 +225,10 @@ async function generateDailyContent() {
                 imageUrl: art.image_url,
                 ai_description_de: art.ai_description_de,
                 ai_description_en: art.ai_description_en,
-                metadata: art.metadata
+                metadata: art.metadata,
+                source_api: art.source_api,
+                external_id: art.external_id,
+                attribution: getAttribution(art.source_api)
             },
             quote: {
                 id: quote.id,
@@ -206,7 +237,9 @@ async function generateDailyContent() {
                 source: quote.source,
                 category: quote.category,
                 ai_description_de: quote.ai_description_de,
-                ai_description_en: quote.ai_description_en
+                ai_description_en: quote.ai_description_en,
+                source_api: quote.source_api,
+                external_id: quote.external_id
             }
         };
     } catch (error) {
