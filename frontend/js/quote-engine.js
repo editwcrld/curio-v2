@@ -132,6 +132,13 @@ export function displayQuote(data, gradient) {
     
     // ✅ Update attribution display (currently hidden for quotes)
     updateQuoteAttribution(data);
+
+// ✅ Reset scroll position to show description
+    const infoContent = quoteView.querySelector('.info-content');
+    if (infoContent) {
+        infoContent.scrollTop = 0;
+    }
+
 }
 
 export function initQuoteView() {

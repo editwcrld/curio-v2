@@ -127,6 +127,12 @@ export function displayArt(data) {
     
     // ✅ Update attribution display
     updateArtAttribution(data);
+
+        // ✅ Reset scroll position to show description
+    const infoContent = artView.querySelector('.info-content');
+    if (infoContent) {
+        infoContent.scrollTop = 0;
+    }
 }
 
 /**
