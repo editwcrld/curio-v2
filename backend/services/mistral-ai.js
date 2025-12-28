@@ -2,6 +2,7 @@
  * CURIO BACKEND - Mistral AI Service
  * Generates descriptions in German AND English
  * ✅ Kein Markdown im Output!
+ * ✅ Strukturierte Absätze mit Leerzeilen
  */
 
 const MISTRAL_API_URL = 'https://api.mistral.ai/v1/chat/completions';
@@ -30,7 +31,7 @@ function cleanMarkdown(text) {
         .replace(/^[-*]\s+/gm, '')
         // Remove numbered lists
         .replace(/^\d+\.\s+/gm, '')
-        // Clean up extra whitespace
+        // Clean up extra whitespace (but keep double newlines for paragraphs)
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 }
@@ -79,19 +80,47 @@ async function generateQuoteDescription(quote) {
     
     console.log(`🤖 Generating AI for quote by ${author}...`);
     
-    const promptDE = `Schreibe einen kurzen informativen Text (150-200 Wörter) über dieses Zitat und seinen Autor:
+    const promptDE = `Schreibe einen kurzen, prägnanten Hintergrundtext zum Zitat:
 "${text}" - ${author}
 
-WICHTIG: Schreibe NUR Fließtext. Keine Überschriften, keine Titel, keine Formatierung wie ** oder #. Beginne direkt mit dem Text.`;
+WICHTIG - Struktur:
+- 1-2 kurze Absätze, getrennt durch Leerzeile
+- Falls relevant: historischer Kontext, Entstehung, kulturelle Bedeutung
+- Bezug zum Autor nur wenn es das Zitat bereichert, falls unbekannt nur interpretieren
 
-    const promptEN = `Write a brief informative text (150-200 words) about this quote and its author:
+STIL:
+- Kompakt und pointiert (30-65 Wörter)
+- Keine Wiederholung des Zitats
+- Keine generischen Einleitungen wie "Dieses Zitat zeigt..."
+- Keine Hinweise auf Zuordnung wie "Dieses wird oft zugeschrieben aber keine Belege...", nur am Ende ganz prägnant ob es belegt ist oder nicht als letzten Absatz
+- Nur schreiben wenn es etwas Interessantes zu sagen gibt
+
+Falls keine bedeutsame Geschichte bekannt ist, schreibe nur 1-2 Sätze zur Kernaussage.
+
+WICHTIG: Schreibe NUR Fließtext ohne Formatierung wie ** oder #. Trenne Absätze mit einer Leerzeile.`;
+
+    const promptEN = `Write a short, concise background text for the quote:
 "${text}" - ${author}
 
-IMPORTANT: Write ONLY prose. No headings, no titles, no formatting like ** or #. Start directly with the text.`;
+IMPORTANT - Structure:
+- 1-2 short paragraphs, separated by blank line
+- If relevant: historical context, origin, cultural significance
+- Reference to author only if it enriches the quote, if unknown just interpret
+
+STYLE:
+- Compact and to the point (30-65 words)
+- No repetition of the quote itself
+- No generic introductions like "This quote shows..."
+- No hints about attribution like "This is often attributed but no evidence...", only at the end very concisely whether it is documented or not as last paragraph
+- Only write if there's something interesting to say
+
+If no significant story is known, write only 1-2 sentences about the core message.
+
+IMPORTANT: Write ONLY prose without formatting like ** or #. Separate paragraphs with a blank line.`;
 
     const [descDE, descEN] = await Promise.all([
-        callMistral(promptDE, 300),
-        callMistral(promptEN, 300)
+        callMistral(promptDE, 200),
+        callMistral(promptEN, 200)
     ]);
     
     return {
@@ -105,19 +134,39 @@ async function generateArtDescription(artwork) {
     
     console.log(`🤖 Generating AI for "${title}"...`);
     
-    const promptDE = `Schreibe einen informativen Text (200-300 Wörter) über dieses Kunstwerk:
-"${title}" von ${artist} (${year || 'unbekannt'})
+    const promptDE = `Schreibe einen informativen Text über das Kunstwerk "${title}" von ${artist} (${year || 'unbekannt'}).
 
-WICHTIG: Schreibe NUR Fließtext. Keine Überschriften, keine Titel am Anfang, keine Formatierung wie ** oder #. Beginne direkt mit dem informativen Text über das Kunstwerk.`;
+WICHTIG - Struktur mit Absätzen:
+- Absatz 1: Bedeutung und Wirkung - Welchen Einfluss hatte das Werk? Wie wurde es rezipiert?
+- Absatz 2: Entstehungsgeschichte des Werks - Was hat den Künstler inspiriert? Welcher Kontext?
+- Absatz 3: Kurze Einordnung des Künstlers (Nationalität, Lebensdaten, Stilrichtung)
 
-    const promptEN = `Write an informative text (200-300 words) about this artwork:
-"${title}" by ${artist} (${year || 'unknown'})
+STIL:
+- Sachlich aber lebendig, wie ein Museumstext
+- Konkrete Details und Anekdoten wenn bekannt
+- Keine generischen Floskeln wie "dieses Meisterwerk zeigt..."
+- Länge je nach verfügbarer Geschichte: 80-180 Wörter
 
-IMPORTANT: Write ONLY prose. No headings, no title at the beginning, no formatting like ** or #. Start directly with the informative text about the artwork.`;
+WICHTIG: Schreibe NUR Fließtext ohne Formatierung wie ** oder #. Trenne die Absätze mit einer Leerzeile.`;
+
+    const promptEN = `Write an informative text about the artwork "${title}" by ${artist} (${year || 'unknown'}).
+
+IMPORTANT - Structure with paragraphs:
+- Paragraph 1: Significance and impact - What influence did the work have? How was it received?
+- Paragraph 2: Creation story - What inspired the artist? What was the context?
+- Paragraph 3: Brief context about the artist (nationality, life dates, artistic movement)
+
+STYLE:
+- Factual yet engaging, like a museum text
+- Specific details and anecdotes when known
+- No generic phrases like "this masterpiece shows..."
+- Length depending on available history: 80-180 words
+
+IMPORTANT: Write ONLY prose without formatting like ** or #. Separate paragraphs with a blank line.`;
 
     const [descDE, descEN] = await Promise.all([
-        callMistral(promptDE, 400),
-        callMistral(promptEN, 400)
+        callMistral(promptDE, 350),
+        callMistral(promptEN, 350)
     ]);
     
     return {
