@@ -10,23 +10,29 @@
 
 .quote-text-wrapper {
     width: 100%; 
-    max-width: 600px; 
+    max-width: 800px; 
     text-align: center; 
-    margin-bottom: 240px; 
+    margin-bottom: 220px; 
+    margin-top: 40px;
     position: relative; 
-    padding: 0 25px;
+    padding: 0 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .quote-text-wrapper::before {
-    content: ""; 
+    content: '\201C'; 
     position: absolute; 
-    top: -60px; 
+    top: -75px; 
     left: 50%; 
     transform: translateX(-50%);
-    font-size: clamp(4rem, 15vw, 8rem); 
-    font-family: serif; 
-    color: rgba(255, 255, 255, 0.3); 
+    font-size: clamp(3rem, 10vw,10rem); 
+    font-family: "Times New Roman", Times, serif; 
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5); 
     line-height: 1;
+    pointer-events: none;
 }
 
 .quote-text {
@@ -51,71 +57,123 @@
 
 @media (min-width: 768px) { 
     .quote-text-wrapper { 
-        margin-bottom: 100px; 
+        margin-bottom: 140px; 
     } 
 }
 
 /* =====================================================
-   DYNAMIC QUOTE TEXT SIZING
+   DYNAMIC QUOTE TEXT SIZING - 7 STUFEN
    Based on quote length for optimal readability
    ===================================================== */
 
-/* Short quotes (≤80 chars) - largest text */
-.quote-text.quote-size-small {
+/* XS: Very short quotes (≤50 chars) - largest */
+.quote-text.quote-size-xs {
     font-size: clamp(1.8rem, 9vw, 3.5rem);
 }
 
-/* Medium quotes (81-150 chars) */
-.quote-text.quote-size-medium {
+/* S: Short quotes (51-100 chars) */
+.quote-text.quote-size-s {
     font-size: clamp(1.5rem, 7vw, 2.8rem);
 }
 
-/* Longer quotes (151-250 chars) */
-.quote-text.quote-size-large {
-    font-size: clamp(1.3rem, 5.5vw, 2.2rem);
+/* M: Medium quotes (101-160 chars) */
+.quote-text.quote-size-m {
+    font-size: clamp(1.3rem, 5.5vw, 2.3rem);
 }
 
-/* Very long quotes (>250 chars) - smallest text */
-.quote-text.quote-size-xlarge {
-    font-size: clamp(1.1rem, 4.5vw, 1.8rem);
+/* L: Longer quotes (161-230 chars) */
+.quote-text.quote-size-l {
+    font-size: clamp(1.1rem, 4.5vw, 1.9rem);
 }
 
-/* Mobile adjustments for quote sizes */
+/* XL: Long quotes (231-310 chars) */
+.quote-text.quote-size-xl {
+    font-size: clamp(0.95rem, 3.8vw, 1.6rem);
+    line-height: 1.3;
+}
+
+/* XXL: Very long quotes (311-420 chars) */
+.quote-text.quote-size-xxl {
+    font-size: clamp(0.85rem, 3.2vw, 1.4rem);
+    line-height: 1.25;
+}
+
+/* XXXL: Extra long quotes (>420 chars) - smallest */
+.quote-text.quote-size-xxxl {
+    font-size: clamp(0.75rem, 2.8vw, 1.2rem);
+    line-height: 1.2;
+}
+
+/* =====================================================
+   MOBILE ADJUSTMENTS
+   ===================================================== */
+
 @media (max-width: 480px) {
-    .quote-text.quote-size-small {
-        font-size: clamp(1.5rem, 8vw, 2.2rem);
+    .quote-text-wrapper {
+        margin-bottom: 200px;
+        margin-top: 30px;
+        padding: 0 20px;
     }
     
-    .quote-text.quote-size-medium {
-        font-size: clamp(1.3rem, 6.5vw, 1.9rem);
+    .quote-text.quote-size-xs {
+        font-size: clamp(1.4rem, 7vw, 2rem);
     }
     
-    .quote-text.quote-size-large {
-        font-size: clamp(1.15rem, 5vw, 1.6rem);
+    .quote-text.quote-size-s {
+        font-size: clamp(1.2rem, 6vw, 1.7rem);
     }
     
-    .quote-text.quote-size-xlarge {
-        font-size: clamp(1rem, 4vw, 1.35rem);
+    .quote-text.quote-size-m {
+        font-size: clamp(1.05rem, 5vw, 1.45rem);
+    }
+    
+    .quote-text.quote-size-l {
+        font-size: clamp(0.95rem, 4.5vw, 1.3rem);
+    }
+    
+    .quote-text.quote-size-xl {
+        font-size: clamp(0.85rem, 4vw, 1.15rem);
+        line-height: 1.25;
+    }
+    
+    .quote-text.quote-size-xxl {
+        font-size: clamp(0.75rem, 3.5vw, 1rem);
+        line-height: 1.2;
+    }
+    
+    .quote-text.quote-size-xxxl {
+        font-size: clamp(0.65rem, 3vw, 0.9rem);
+        line-height: 1.2;
+    }
+    
+    .quote-author {
+        margin-top: 15px;
+        font-size: 0.8rem;
     }
 }
 
 /* =====================================================
-   HEIGHT-BASED ADJUSTMENTS (for landscape tablets)
+   HEIGHT-BASED ADJUSTMENTS (landscape/short screens)
    ===================================================== */
 
 @media (max-height: 700px) {
-    .quote-text {
-        font-size: clamp(1.2rem, 4vw, 1.8rem) !important;
-    }
-    
     .quote-text-wrapper {
         margin-bottom: 180px;
+        margin-top: 20px;
     }
     
     .quote-text-wrapper::before {
-        font-size: clamp(3rem, 10vw, 5rem);
-        top: -40px;
+        font-size: clamp(3.5rem, 8vw, 4rem);
+        top: -30px;
     }
+    
+    .quote-text.quote-size-xs { font-size: clamp(1.3rem, 5vw, 2rem); }
+    .quote-text.quote-size-s { font-size: clamp(1.1rem, 4.5vw, 1.7rem); }
+    .quote-text.quote-size-m { font-size: clamp(1rem, 4vw, 1.5rem); }
+    .quote-text.quote-size-l { font-size: clamp(0.9rem, 3.5vw, 1.3rem); }
+    .quote-text.quote-size-xl { font-size: clamp(0.8rem, 3vw, 1.1rem); }
+    .quote-text.quote-size-xxl { font-size: clamp(0.7rem, 2.8vw, 1rem); }
+    .quote-text.quote-size-xxxl { font-size: clamp(0.65rem, 2.5vw, 0.9rem); }
     
     .quote-author {
         margin-top: 12px;
@@ -124,20 +182,50 @@
 }
 
 @media (max-height: 500px) {
-    .quote-text {
-        font-size: clamp(1rem, 3.5vw, 1.4rem) !important;
-    }
-    
     .quote-text-wrapper {
-        margin-bottom: 140px;
+        margin-bottom: 150px;
+        margin-top: 10px;
     }
     
     .quote-text-wrapper::before {
         display: none;
     }
     
+    .quote-text.quote-size-xs { font-size: clamp(1rem, 4vw, 1.5rem); }
+    .quote-text.quote-size-s { font-size: clamp(0.9rem, 3.5vw, 1.3rem); }
+    .quote-text.quote-size-m { font-size: clamp(0.85rem, 3vw, 1.2rem); }
+    .quote-text.quote-size-l { font-size: clamp(0.8rem, 2.8vw, 1.1rem); }
+    .quote-text.quote-size-xl { font-size: clamp(0.75rem, 2.5vw, 1rem); }
+    .quote-text.quote-size-xxl { font-size: clamp(0.7rem, 2.3vw, 0.9rem); }
+    .quote-text.quote-size-xxxl { font-size: clamp(0.65rem, 2vw, 0.85rem); }
+    
     .quote-author {
         margin-top: 8px;
         font-size: 0.75rem;
+    }
+}
+
+/* =====================================================
+   DESKTOP/LARGE SCREENS
+   ===================================================== */
+
+@media (min-width: 1024px) {
+    .quote-text-wrapper {
+        max-width: 900px;
+        margin-bottom: 160px;
+    }
+    
+    .quote-text.quote-size-xs { font-size: clamp(2rem, 4vw, 3.5rem); }
+    .quote-text.quote-size-s { font-size: clamp(1.7rem, 3.5vw, 2.8rem); }
+    .quote-text.quote-size-m { font-size: clamp(1.5rem, 3vw, 2.3rem); }
+    .quote-text.quote-size-l { font-size: clamp(1.3rem, 2.5vw, 1.9rem); }
+    .quote-text.quote-size-xl { font-size: clamp(1.1rem, 2.2vw, 1.6rem); }
+    .quote-text.quote-size-xxl { font-size: clamp(1rem, 2vw, 1.4rem); }
+    .quote-text.quote-size-xxxl { font-size: clamp(0.9rem, 1.8vw, 1.2rem); }
+}
+
+@media (min-width: 1400px) {
+    .quote-text-wrapper {
+        max-width: 1000px;
     }
 }

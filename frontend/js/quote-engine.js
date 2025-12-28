@@ -4,6 +4,7 @@
  * ✅ Language Support (DE/EN)
  * ✅ Attribution Display für API Compliance
  * ✅ NEW: Proper paragraph display with newlines
+ * ✅ NEW: 7-level dynamic text sizing
  */
 
 import { API_BASE_URL, getRandomGradient } from './config.js';
@@ -19,6 +20,41 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * ✅ Get size class based on quote length (7 levels)
+ */
+function getQuoteSizeClass(textLength) {
+    if (textLength <= 50) return 'quote-size-xs';      // Very short
+    if (textLength <= 100) return 'quote-size-s';      // Short
+    if (textLength <= 160) return 'quote-size-m';      // Medium
+    if (textLength <= 230) return 'quote-size-l';      // Longer
+    if (textLength <= 310) return 'quote-size-xl';     // Long
+    if (textLength <= 420) return 'quote-size-xxl';    // Very long
+    return 'quote-size-xxxl';                          // Extra long
+}
+
+/**
+ * ✅ Apply size class to quote element
+ */
+function applyQuoteSize(element, text) {
+    if (!element || !text) return;
+    
+    // Remove all size classes
+    element.classList.remove(
+        'quote-size-xs',
+        'quote-size-s', 
+        'quote-size-m',
+        'quote-size-l',
+        'quote-size-xl',
+        'quote-size-xxl',
+        'quote-size-xxxl'
+    );
+    
+    // Add appropriate size class
+    const sizeClass = getQuoteSizeClass(text.length);
+    element.classList.add(sizeClass);
 }
 
 // Cache für Tages-Content
@@ -95,9 +131,10 @@ export function displayQuote(data, gradient) {
     const titleEl = quoteView.querySelector('.info-title');
     const contentEl = quoteView.querySelector('.info-content p');
     
-    // Set quote text
+    // Set quote text with dynamic sizing
     if (quoteTextEl) {
         quoteTextEl.textContent = `"${data.text}"`;
+        applyQuoteSize(quoteTextEl, data.text);
     }
     
     // Set author (main display)
@@ -133,12 +170,11 @@ export function displayQuote(data, gradient) {
     // ✅ Update attribution display (currently hidden for quotes)
     updateQuoteAttribution(data);
 
-// ✅ Reset scroll position to show description
+    // ✅ Reset scroll position to show description
     const infoContent = quoteView.querySelector('.info-content');
     if (infoContent) {
         infoContent.scrollTop = 0;
     }
-
 }
 
 export function initQuoteView() {
