@@ -74,7 +74,7 @@ const LightboxState = {
 
 // ===== CONSTANTS =====
 const MIN_SCALE = 1;
-const MAX_SCALE = 10;  // ✅ 1000% zoom
+const MAX_SCALE = 7.5;  // ✅ 1000% zoom
 const SWIPE_CLOSE_THRESHOLD = 100;
 const SWIPE_VELOCITY_THRESHOLD = 0.5;
 const ZOOM_SMOOTH_DURATION = '0.3s';  // ✅ Slightly longer for smoother feel
@@ -96,7 +96,7 @@ export function initLightbox() {
 /**
  * Convert standard image URL to high-resolution version for lightbox
  * - ARTIC: /full/843,/ → /full/full/ (original)
- * - Rijks: =s800 → =s0 (original)
+ * - Rijks: =s800 → =s0 (original) - hosted on googleusercontent.com
  */
 function getHighResUrl(url) {
     if (!url) return url;
@@ -107,8 +107,8 @@ function getHighResUrl(url) {
         return url.replace(/\/full\/\d+,\//, '/full/full/');
     }
     
-    // Rijksmuseum
-    if (url.includes('rijksmuseum.nl')) {
+    // Rijksmuseum (hosted on Google Cloud Storage)
+    if (url.includes('googleusercontent.com') || url.includes('rijksmuseum.nl')) {
         // Replace =s800 or =s400 with =s0 (original)
         return url.replace(/=s\d+/, '=s0');
     }
