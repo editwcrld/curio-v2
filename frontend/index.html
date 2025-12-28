@@ -31,7 +31,6 @@
     <link rel="stylesheet" href="css/art-section.css">
     <link rel="stylesheet" href="css/quote-section.css">
     <link rel="stylesheet" href="css/info-section.css">
-    <link rel="stylesheet" href="css/info-drag-handler.css">
     <link rel="stylesheet" href="css/fav-section.css">
     <link rel="stylesheet" href="css/auth-modal.css">
     <link rel="stylesheet" href="css/lightbox.css">
@@ -200,30 +199,19 @@
 
             <!-- FAVORITES VIEW -->
             <div id="view-favorites" class="view hidden">
-                <div class="fav-header">
-                    <div class="fav-title-section">
-                        <h1 class="fav-title">Library</h1>
-                        <p class="fav-count">0 Favoriten</p>
-                    </div>
-                    
+                <div class="fav-toolbar">
                     <div class="fav-search-container">
-                        <svg class="fav-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="11" cy="11" r="8"/>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        <svg class="fav-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="11" cy="11" r="7"/>
+                            <path d="m20 20-4-4"/>
                         </svg>
                         <input 
                             type="text" 
                             id="fav-search" 
-                            class="fav-search-input" 
-                            placeholder="Suche in Favoriten..."
+                            placeholder="Search..."
                             autocomplete="off"
                         >
-                        <button id="fav-search-clear" class="fav-search-clear" aria-label="Clear search">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                <line x1="6" y1="6" x2="18" y2="18"/>
-                            </svg>
-                        </button>
+                        <button id="fav-search-clear" aria-label="Clear search">×</button>
                     </div>
                     
                     <div class="fav-filters">
@@ -234,7 +222,7 @@
                 </div>
                 
                 <div class="fav-content">
-                    <div id="fav-list" class="fav-grid"></div>
+                    <div id="fav-list"></div>
                 </div>
             </div>
 

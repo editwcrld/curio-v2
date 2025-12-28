@@ -110,7 +110,7 @@ export function toggleFavorite(item, type) {
             type,
             favoriteId: null,
             savedAt: Date.now(),
-            savedGradient: appState.currentGradient || null
+            savedGradient: appState.currentGradient || document.body.style.background || null
         };
         
         favorites.unshift(newFav);
@@ -178,16 +178,9 @@ export function getFilteredFavorites() {
 
 export function renderFavorites() {
     const container = document.getElementById('fav-list');
-    const countEl = document.querySelector('.fav-count');
-    
     if (!container) return;
     
     const filtered = getFilteredFavorites();
-    
-    // Update count
-    if (countEl) {
-        countEl.textContent = `${favorites.length} ${favorites.length === 1 ? 'Favorit' : 'Favoriten'}`;
-    }
     
     // Clear
     container.innerHTML = '';
@@ -195,6 +188,9 @@ export function renderFavorites() {
     // Empty state
     if (filtered.length === 0) {
         container.innerHTML = createEmptyState();
+        // Show empty state
+        const emptyEl = container.querySelector('.fav-empty');
+        if (emptyEl) emptyEl.classList.add('visible');
         return;
     }
     
@@ -211,13 +207,13 @@ function createCard(item) {
     
     if (item.type === 'art') {
         card.innerHTML = `
-            <img class="fav-card-image" src="${item.imageUrl}" alt="${item.title}" loading="lazy">
-            <div class="fav-card-content">
+            <div class="fav-card-image" style="background-image: url('${item.imageUrl}')"></div>
+            <div class="fav-card-info">
                 <h3 class="fav-card-title">${item.title}</h3>
                 <p class="fav-card-meta">${item.artist}</p>
             </div>
             <button class="fav-card-delete" aria-label="Remove">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -230,7 +226,7 @@ function createCard(item) {
             <p class="fav-card-quote">"${item.text}"</p>
             <p class="fav-card-author">${item.author}</p>
             <button class="fav-card-delete" aria-label="Remove">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <line x1="18" y1="6" x2="6" y2="18"/>
                     <line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -238,25 +234,25 @@ function createCard(item) {
         `;
     }
     
-    // Click handlers
+    // Click handler - open detail
     card.addEventListener('click', (e) => {
         if (!e.target.closest('.fav-card-delete')) {
             openDetail(item);
         }
     });
     
+    // Delete handler
     card.querySelector('.fav-card-delete').addEventListener('click', (e) => {
         e.stopPropagation();
         
-        // Animate
-        card.style.opacity = '0';
-        card.style.transform = 'scale(0.8)';
+        // Fade out animation
+        card.classList.add('removing');
         
         setTimeout(() => {
             toggleFavorite(item, item.type);
             renderFavorites();
             updateAllFavoriteButtons();
-        }, 250);
+        }, 200);
     });
     
     return card;
@@ -276,25 +272,25 @@ function createEmptyState() {
         }, 50);
         
         return `
-            <div class="fav-empty">
+            <div class="fav-empty visible">
                 <svg class="fav-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
-                <h3 class="fav-empty-title">Melde dich an um Favoriten zu speichern</h3>
-                <p class="fav-empty-text">Speichere deine Lieblingskunstwerke und Zitate</p>
-                <button class="fav-login-btn">Jetzt anmelden</button>
+                <h3 class="fav-empty-title">Nothing saved</h3>
+                <p class="fav-empty-text">Tap the heart to save art & quotes</p>
+                <button class="fav-login-btn">Login</button>
             </div>
         `;
     }
     
     return `
-        <div class="fav-empty">
+        <div class="fav-empty visible">
             <svg class="fav-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                 <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
             </svg>
-            <h3 class="fav-empty-title">${currentSearch ? 'Keine Treffer' : 'Noch keine Favoriten'}</h3>
+            <h3 class="fav-empty-title">${currentSearch ? 'No results' : 'Nothing saved'}</h3>
             <p class="fav-empty-text">
-                ${currentSearch ? 'Versuche einen anderen Suchbegriff' : 'Speichere Kunst und Zitate, indem du auf das Herz klickst'}
+                ${currentSearch ? 'Try a different search term' : 'Tap the heart to save art & quotes'}
             </p>
         </div>
     `;
@@ -304,7 +300,6 @@ function openDetail(item) {
     if (item.type === 'art') {
         appState.setArtData(item);
         switchView('art');
-        // Update favorite button after view switch
         setTimeout(() => updateFavoriteButtonState('art', item.id), 50);
     } else {
         appState.setQuoteData(item);
@@ -312,7 +307,6 @@ function openDetail(item) {
             appState.setGradient(item.savedGradient);
         }
         switchView('quotes');
-        // Update favorite button after view switch
         setTimeout(() => updateFavoriteButtonState('quotes', item.id), 50);
     }
 }
@@ -375,7 +369,7 @@ function setupFavoritesUI() {
             timeout = setTimeout(() => {
                 setSearch(val);
                 renderFavorites();
-            }, 200);
+            }, 150);
         });
     }
     
