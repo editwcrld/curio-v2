@@ -34,7 +34,7 @@ async function isDuplicate(externalId) {
     try {
         const { data, error } = await supabase
             .from('artworks')
-            .select('id')
+            .select('id, medium, dimensions')
             .eq('external_id', externalId)
             .maybeSingle();
         
@@ -57,6 +57,30 @@ async function cacheArt(artwork) {
         const existing = await isDuplicate(artwork.externalId);
         if (existing) {
             console.log('⚠️ Artwork exists, returning ID:', existing.id);
+            
+            // ✅ Update medium/dimensions if missing and we have new data
+            const needsUpdate = 
+                (artwork.medium && !existing.medium) || 
+                (artwork.dimensions && !existing.dimensions);
+            
+            if (needsUpdate) {
+                console.log('📝 Updating existing artwork with medium/dimensions...');
+                const { data, error } = await supabase
+                    .from('artworks')
+                    .update({
+                        medium: artwork.medium || existing.medium,
+                        dimensions: artwork.dimensions || existing.dimensions
+                    })
+                    .eq('id', existing.id)
+                    .select()
+                    .single();
+                
+                if (!error && data) {
+                    console.log('✅ Updated medium/dimensions for:', existing.id);
+                    return data;
+                }
+            }
+            
             const { data } = await supabase
                 .from('artworks')
                 .select('*')
