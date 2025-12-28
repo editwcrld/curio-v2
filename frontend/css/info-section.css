@@ -16,7 +16,8 @@
     -webkit-backdrop-filter: blur(25px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.4); 
     border-radius: var(--radius-l);
-    transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+                max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     display: flex; 
     flex-direction: column; 
     overflow: hidden; 
@@ -29,8 +30,10 @@
     transition: none !important;
 }
 
+/* ✅ FIX: Dynamic height based on content, with max-height limit */
 .info-section.expanded { 
-    height: 60vh; 
+    height: auto;
+    max-height: 60vh; 
 }
 
 .info-header { 
