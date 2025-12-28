@@ -77,6 +77,8 @@ async function cacheArt(artwork) {
                 year: artwork.year,
                 image_url: artwork.imageUrl,
                 source_api: artwork.sourceApi || 'artic',
+                medium: artwork.medium || null,
+                dimensions: artwork.dimensions || null,
                 metadata: artwork.metadata || {}
             })
             .select()

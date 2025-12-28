@@ -6,6 +6,7 @@
  * ✅ Fair Distribution durch Shuffle
  * ✅ PUBLIC DOMAIN ONLY - Commercial use safe
  * ✅ Attribution included in response
+ * ✅ NEW: Medium and Dimensions support
  * 
  * APIs:
  * 1. Art Institute of Chicago (primary, no key needed) - CC0/Public Domain
@@ -87,6 +88,7 @@ function generateAttribution(sourceApi, artwork) {
 /**
  * Fetch artwork from Art Institute of Chicago via search
  * ✅ ONLY PUBLIC DOMAIN (is_public_domain=true filter)
+ * ✅ NEW: Includes medium_display and dimensions
  */
 async function fetchFromArticSearch(excludeIds = []) {
     try {
@@ -99,8 +101,9 @@ async function fetchFromArticSearch(excludeIds = []) {
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
         // ✅ CRITICAL: is_public_domain=true ensures commercial use is safe
+        // ✅ NEW: Added medium_display and dimensions to fields
         const response = await fetch(
-            `${ART_APIS.artic.baseUrl}/search?q=${encodeURIComponent(term)}&page=${page}&limit=30&fields=id,title,artist_title,date_display,image_id,is_public_domain&query[term][is_public_domain]=true`,
+            `${ART_APIS.artic.baseUrl}/search?q=${encodeURIComponent(term)}&page=${page}&limit=30&fields=id,title,artist_title,date_display,image_id,is_public_domain,medium_display,dimensions&query[term][is_public_domain]=true`,
             { signal: controller.signal }
         );
         
@@ -141,7 +144,13 @@ async function fetchFromArticSearch(excludeIds = []) {
             imageUrlLarge: buildArticImageUrl(art.image_id, 1686),
             sourceApi: 'artic',
             isPublicDomain: true,
-            metadata: {}
+            // ✅ NEW: Medium and Dimensions
+            medium: art.medium_display || null,
+            dimensions: art.dimensions || null,
+            metadata: {
+                medium: art.medium_display || null,
+                dimensions: art.dimensions || null
+            }
         };
         
         // Add attribution
@@ -179,9 +188,9 @@ async function fetchFromArticCurated(excludeIds = []) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);
             
-            // ✅ Include is_public_domain in fields
+            // ✅ Include is_public_domain, medium_display, dimensions in fields
             const response = await fetch(
-                `${ART_APIS.artic.baseUrl}/${id}?fields=id,title,artist_title,date_display,image_id,is_public_domain`,
+                `${ART_APIS.artic.baseUrl}/${id}?fields=id,title,artist_title,date_display,image_id,is_public_domain,medium_display,dimensions`,
                 { signal: controller.signal }
             );
             
@@ -204,7 +213,13 @@ async function fetchFromArticCurated(excludeIds = []) {
                 imageUrlLarge: buildArticImageUrl(art.image_id, 1686),
                 sourceApi: 'artic',
                 isPublicDomain: true,
-                metadata: {}
+                // ✅ NEW: Medium and Dimensions
+                medium: art.medium_display || null,
+                dimensions: art.dimensions || null,
+                metadata: {
+                    medium: art.medium_display || null,
+                    dimensions: art.dimensions || null
+                }
             };
             
             artwork.attribution = generateAttribution('artic', artwork);
@@ -242,33 +257,33 @@ async function fetchFromArtic(excludeIds = []) {
 
 /**
  * Fetch artwork from Rijksmuseum via search
- * ✅ Rijksmuseum images are CC0 (Public Domain Dedication)
+ * ✅ NEW: Includes physicalMedium and dimensions from subTitle
  */
 async function fetchFromRijksSearch(excludeIds = []) {
     try {
         const apiKey = process.env.RIJKSMUSEUM_API_KEY;
         if (!apiKey) {
-            console.warn('   ⚠️ Rijksmuseum: No API key configured');
+            console.warn('   ⚠️ Rijks: No API key configured');
             return null;
         }
 
-        const term = getRandomItem(ART_APIS.rijks.searchTerms);
+        const technique = getRandomItem(ART_APIS.rijks.techniques);
         const page = Math.floor(Math.random() * 5) + 1;
         
-        console.log(`   🔍 Rijks: Searching "${term}" (page ${page})...`);
-        
+        console.log(`   🔍 Rijks: Searching technique "${technique}" (page ${page})...`);
+
         const response = await axios.get(ART_APIS.rijks.baseUrl, {
             params: {
                 key: apiKey,
-                q: term,
-                type: 'painting',
+                technique: technique,
                 imgonly: true,
-                ps: 30,  // page size
-                p: page
+                ps: 30,
+                p: page,
+                s: 'relevance'
             },
             timeout: 10000
         });
-        
+
         if (!response.data?.artObjects?.length) {
             return null;
         }
@@ -292,6 +307,16 @@ async function fetchFromRijksSearch(excludeIds = []) {
         const imageUrl = art.webImage.url.replace('=s0', '=s800');
         const imageUrlLarge = art.webImage.url; // Original size
         
+        // ✅ NEW: Extract dimensions from longTitle if available
+        // Format: "Title, Artist, date, h × w cm"
+        let dimensions = null;
+        if (art.longTitle) {
+            const dimMatch = art.longTitle.match(/(\d+(?:[.,]\d+)?\s*[×x]\s*\d+(?:[.,]\d+)?(?:\s*[×x]\s*\d+(?:[.,]\d+)?)?\s*cm)/i);
+            if (dimMatch) {
+                dimensions = dimMatch[1];
+            }
+        }
+        
         const artwork = {
             externalId: art.objectNumber,
             title: art.title || 'Untitled',
@@ -301,8 +326,13 @@ async function fetchFromRijksSearch(excludeIds = []) {
             imageUrlLarge: imageUrlLarge,
             sourceApi: 'rijks',
             isPublicDomain: true, // Rijksmuseum collection is CC0
+            // ✅ NEW: Medium from technique, dimensions from longTitle
+            medium: technique || null,
+            dimensions: dimensions,
             metadata: {
-                objectNumber: art.objectNumber
+                objectNumber: art.objectNumber,
+                medium: technique || null,
+                dimensions: dimensions
             }
         };
         
@@ -317,6 +347,7 @@ async function fetchFromRijksSearch(excludeIds = []) {
 
 /**
  * Fetch artwork from Rijksmuseum curated list
+ * ✅ NEW: Includes physicalMedium and dimensions
  */
 async function fetchFromRijksCurated(excludeIds = []) {
     try {
@@ -356,6 +387,18 @@ async function fetchFromRijksCurated(excludeIds = []) {
             const imageUrl = art.webImage.url.replace('=s0', '=s800');
             const imageUrlLarge = art.webImage.url;
             
+            // ✅ NEW: Get medium and dimensions from detailed response
+            const medium = art.physicalMedium || null;
+            let dimensions = null;
+            
+            // Try to get dimensions from subTitle or dating
+            if (art.subTitle) {
+                const dimMatch = art.subTitle.match(/(\d+(?:[.,]\d+)?\s*[×x]\s*\d+(?:[.,]\d+)?(?:\s*[×x]\s*\d+(?:[.,]\d+)?)?\s*cm)/i);
+                if (dimMatch) {
+                    dimensions = dimMatch[1];
+                }
+            }
+            
             const artwork = {
                 externalId: art.objectNumber,
                 title: art.title || 'Untitled',
@@ -365,8 +408,13 @@ async function fetchFromRijksCurated(excludeIds = []) {
                 imageUrlLarge: imageUrlLarge,
                 sourceApi: 'rijks',
                 isPublicDomain: true,
+                // ✅ NEW: Medium and Dimensions
+                medium: medium,
+                dimensions: dimensions,
                 metadata: {
-                    objectNumber: art.objectNumber
+                    objectNumber: art.objectNumber,
+                    physicalMedium: medium,
+                    dimensions: dimensions
                 }
             };
             
@@ -409,6 +457,7 @@ async function fetchFromRijks(excludeIds = []) {
  * 
  * ✅ ALL returned artworks are PUBLIC DOMAIN
  * ✅ Attribution info included in response
+ * ✅ Medium and Dimensions included when available
  * 
  * @param {array} excludeIds - IDs to exclude (already in cache)
  * @returns {Promise<object>} - Artwork object with attribution
@@ -436,6 +485,8 @@ async function fetchRandomArtwork(excludeIds = []) {
         if (artwork) {
             console.log(`   ✅ Got artwork: "${artwork.title}" from ${apiName}`);
             console.log(`   📜 License: ${artwork.attribution?.license}`);
+            if (artwork.medium) console.log(`   🎨 Medium: ${artwork.medium}`);
+            if (artwork.dimensions) console.log(`   📏 Dimensions: ${artwork.dimensions}`);
             return artwork;
         }
         
