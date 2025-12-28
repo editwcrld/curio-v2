@@ -154,21 +154,49 @@ export function updateArtAttribution(artData) {
     // Get attribution from data or generate default
     const attribution = artData.attribution || generateDefaultAttribution(artData);
     
-    if (attribution && attribution.museum) {
+    if (attribution && (attribution.text || attribution.museum)) {
         const lang = localStorage.getItem('curio_language') || 'de';
         const sourceText = lang === 'en' ? 'Source' : 'Quelle';
+        
+        // Support both backend format (text/url) and legacy format (museum/museumUrl)
+        const displayText = attribution.text || `Image courtesy of ${attribution.museum}`;
+        const linkUrl = attribution.url || attribution.artworkUrl || attribution.museumUrl || '#';
+        const license = attribution.license || 'Public Domain';
+        
+        // Extract museum name from text for display, or use museum directly
+        let museumName = attribution.museum;
+        if (!museumName && attribution.text) {
+            // Extract from "Image courtesy of the Art Institute of Chicago"
+            if (attribution.text.includes('Art Institute of Chicago')) {
+                museumName = 'Art Institute of Chicago';
+            } else if (attribution.text.includes('Rijksmuseum')) {
+                museumName = 'Rijksmuseum';
+            } else {
+                museumName = attribution.text;
+            }
+        }
+        
+        // Build artwork-specific URL if we have external_id
+        let artworkUrl = linkUrl;
+        if (artData.external_id && artData.source_api) {
+            if (artData.source_api === 'artic') {
+                artworkUrl = `https://www.artic.edu/artworks/${artData.external_id}`;
+            } else if (artData.source_api === 'rijks') {
+                artworkUrl = `https://www.rijksmuseum.nl/en/collection/${artData.external_id}`;
+            }
+        }
         
         // Create attribution HTML
         attributionEl.innerHTML = `
             <span class="attribution-label">${sourceText}:</span>
-            <a href="${attribution.artworkUrl || attribution.museumUrl || '#'}" 
+            <a href="${artworkUrl}" 
                target="_blank" 
                rel="noopener noreferrer"
                class="attribution-link"
                onclick="event.stopPropagation()">
-                ${attribution.museum}
+                ${museumName}
             </a>
-            <span class="attribution-license">(${attribution.license || 'Public Domain'})</span>
+            <span class="attribution-license">(${license})</span>
         `;
         attributionEl.style.display = 'flex';
     } else {
