@@ -209,7 +209,9 @@ function formatArtResponse(art, ai = {}) {
         metadata: art.metadata || {},
         source_api: art.source_api || null,
         external_id: art.external_id || null,
-        attribution: getAttribution(art.source_api)
+        attribution: getAttribution(art.source_api),
+        medium: art.medium || null,
+        dimensions: art.dimensions || null
     };
 }
 
