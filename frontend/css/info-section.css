@@ -21,7 +21,7 @@
     flex-direction: column; 
     overflow: hidden; 
     cursor: pointer; 
-    height: 165px;
+    height: 185px; /* ✅ Increased from 165px for subtitle + 2-line description */
 }
 
 /* ✅ Integriert von info-drag-handler.css */
@@ -282,7 +282,7 @@
 
 @media (max-width: 480px) {
     .info-section {
-        height: 155px; /* Etwas kleiner auf Mobile */
+        height: 175px; /* ✅ Increased from 155px for subtitle + 2-line description */
     }
     
     .info-title {
