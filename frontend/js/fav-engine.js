@@ -35,7 +35,7 @@ async function fetchFavoritesFromBackend() {
     }
 }
 
-async function addFavoriteToBackend(type, itemId) {
+async function addFavoriteToBackend(type, itemId, gradient) {
     const token = localStorage.getItem('auth_token');
     if (!token) return null;
     
@@ -46,7 +46,7 @@ async function addFavoriteToBackend(type, itemId) {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ type, itemId })
+            body: JSON.stringify({ type, itemId, gradient })
         });
         
         if (!response.ok) return null;
@@ -116,7 +116,7 @@ export function toggleFavorite(item, type) {
         favorites.unshift(newFav);
         
         // Backend (background) - update favoriteId when done
-        addFavoriteToBackend(type, item.id).then(favId => {
+        addFavoriteToBackend(type, item.id, newFav.savedGradient).then(favId => {
             if (favId) {
                 const fav = favorites.find(f => f.id === item.id);
                 if (fav) fav.favoriteId = favId;
