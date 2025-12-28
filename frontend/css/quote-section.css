@@ -98,3 +98,46 @@
         font-size: clamp(1rem, 4vw, 1.35rem);
     }
 }
+
+/* =====================================================
+   HEIGHT-BASED ADJUSTMENTS (for landscape tablets)
+   ===================================================== */
+
+@media (max-height: 700px) {
+    .quote-text {
+        font-size: clamp(1.2rem, 4vw, 1.8rem) !important;
+    }
+    
+    .quote-text-wrapper {
+        margin-bottom: 180px;
+    }
+    
+    .quote-text-wrapper::before {
+        font-size: clamp(3rem, 10vw, 5rem);
+        top: -40px;
+    }
+    
+    .quote-author {
+        margin-top: 12px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-height: 500px) {
+    .quote-text {
+        font-size: clamp(1rem, 3.5vw, 1.4rem) !important;
+    }
+    
+    .quote-text-wrapper {
+        margin-bottom: 140px;
+    }
+    
+    .quote-text-wrapper::before {
+        display: none;
+    }
+    
+    .quote-author {
+        margin-top: 8px;
+        font-size: 0.75rem;
+    }
+}
