@@ -267,15 +267,16 @@ async function fetchFromRijksSearch(excludeIds = []) {
             return null;
         }
 
-        const technique = getRandomItem(ART_APIS.rijks.techniques);
+        // ✅ FIX: Use searchTerms instead of techniques
+        const searchTerm = getRandomItem(ART_APIS.rijks.searchTerms);
         const page = Math.floor(Math.random() * 5) + 1;
         
-        console.log(`   🔍 Rijks: Searching technique "${technique}" (page ${page})...`);
+        console.log(`   🔍 Rijks: Searching "${searchTerm}" (page ${page})...`);
 
         const response = await axios.get(ART_APIS.rijks.baseUrl, {
             params: {
                 key: apiKey,
-                technique: technique,
+                q: searchTerm,  // ✅ Use q parameter for search
                 imgonly: true,
                 ps: 30,
                 p: page,
@@ -326,12 +327,11 @@ async function fetchFromRijksSearch(excludeIds = []) {
             imageUrlLarge: imageUrlLarge,
             sourceApi: 'rijks',
             isPublicDomain: true, // Rijksmuseum collection is CC0
-            // ✅ NEW: Medium from technique, dimensions from longTitle
-            medium: technique || null,
+            // ✅ Medium: not available in search results, will be fetched in detail call if needed
+            medium: null,
             dimensions: dimensions,
             metadata: {
                 objectNumber: art.objectNumber,
-                medium: technique || null,
                 dimensions: dimensions
             }
         };
