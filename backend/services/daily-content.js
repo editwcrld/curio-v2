@@ -79,8 +79,7 @@ async function getDailyContent() {
             ),
             quotes (
                 id, text, author, source, category,
-                ai_description_de, ai_description_en,
-                source_api, external_id
+                ai_description_de, ai_description_en
             )
         `)
         .eq('date', today)
@@ -114,9 +113,7 @@ async function getDailyContent() {
                 source: existing.quotes.source,
                 category: existing.quotes.category,
                 ai_description_de: existing.quotes.ai_description_de,
-                ai_description_en: existing.quotes.ai_description_en,
-                source_api: existing.quotes.source_api,
-                external_id: existing.quotes.external_id
+                ai_description_en: existing.quotes.ai_description_en
             }
         };
     }
@@ -237,9 +234,7 @@ async function generateDailyContent() {
                 source: quote.source,
                 category: quote.category,
                 ai_description_de: quote.ai_description_de,
-                ai_description_en: quote.ai_description_en,
-                source_api: quote.source_api,
-                external_id: quote.external_id
+                ai_description_en: quote.ai_description_en
             }
         };
     } catch (error) {
