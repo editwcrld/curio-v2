@@ -1,28 +1,21 @@
 /**
- * CURIO BACKEND - Constants
- * Zentrale Konfiguration für das gesamte Backend
+ * CURIO BACKEND - Central Configuration
+ * Alle Konstanten und Konfigurationen an einem Ort
  */
 
 // =====================================================
-// PREMIUM CONFIGURATION
+// PREMIUM FALLBACK (für Testing ohne Payment)
 // =====================================================
 
-/**
- * Premium Emails werden jetzt in der DB verwaltet!
- * Diese Liste ist nur als Fallback, falls DB nicht erreichbar.
- */
 const PREMIUM_FALLBACK_EMAILS = [
-    'editw_rld@proton.me'
+    // Hier können Test-Emails eingetragen werden
+    // die automatisch als Premium gelten
 ];
 
 // =====================================================
-// LIMITS CONFIGURATION
+// USER LIMITS
 // =====================================================
 
-/**
- * Daily Navigation Limits pro User-Typ
- * Guest: 3, Registered: 10, Premium: 50
- */
 const LIMITS = {
     guest: {
         art: 3,
@@ -39,124 +32,162 @@ const LIMITS = {
 };
 
 // =====================================================
-// API CONFIGURATION
+// QUOTE APIs
 // =====================================================
 
-/**
- * Quote APIs (Multi-API Rotation)
- */
 const QUOTE_APIS = {
     ninjas: {
-        url: 'https://api.api-ninjas.com/v2/randomquotes',
+        url: 'https://api.api-ninjas.com/v1/quotes',
         key: process.env.API_NINJAS_KEY,
         categories: [
-            'wisdom', 'philosophy', 'life', 'truth', 'inspirational',
-            'knowledge', 'success', 'courage', 'happiness', 'art',
-            'freedom', 'leadership'
+            'inspirational', 'wisdom', 'happiness', 'success',
+            'life', 'love', 'motivational', 'philosophy',
+            'knowledge', 'courage', 'hope', 'faith'
         ]
     },
-    quotable: {
-        url: 'https://api.quotable.io/random',
-        key: null  // No API key needed
+    favqs: {
+        url: 'https://favqs.com/api/quotes',
+        qotdUrl: 'https://favqs.com/api/qotd',
+        key: process.env.FAVQS_API_KEY,
+        tags: [
+            'wisdom', 'life', 'inspirational', 'philosophy',
+            'motivational', 'success', 'happiness', 'love'
+        ]
     },
     zenquotes: {
-        url: 'https://zenquotes.io/api/random',
-        key: null  // No API key needed
-    }
-};
-
-/**
- * Art API Configuration
- */
-const ART_API = {
-    artic: {
-        url: 'https://api.artic.edu/api/v1/artworks',
-        key: null,  // No API key needed
-        imageBaseUrl: 'https://www.artic.edu/iiif/2'
+        url: 'https://zenquotes.io/api/random'
+        // No key needed
     }
 };
 
 // =====================================================
-// MISTRAL AI CONFIGURATION
+// ART APIs
+// =====================================================
+
+const ART_APIS = {
+    artic: {
+        baseUrl: 'https://api.artic.edu/api/v1/artworks',
+        iiifUrl: 'https://www.artic.edu/iiif/2',
+        searchTerms: [
+            'painting', 'impressionism', 'portrait', 'landscape',
+            'renaissance', 'baroque', 'watercolor', 'still life',
+            'expressionism', 'realism'
+        ],
+        curatedIds: [
+            27992,  // A Sunday on La Grande Jatte - Seurat
+            28560,  // The Bedroom - Van Gogh
+            14598,  // The Old Guitarist - Picasso
+            6565,   // America Windows - Chagall
+            111628, // Nighthawks - Hopper
+            24306,  // The Bath - Cassatt
+            20684,  // Water Lily Pond - Monet
+            81512,  // American Gothic - Wood
+            16568,  // Paris Street; Rainy Day - Caillebotte
+            64818,  // The Child's Bath - Cassatt
+            87479,  // Sky Above Clouds IV - O'Keeffe
+            76571,  // Two Sisters (On the Terrace) - Renoir
+            59847,  // Bathers by a River - Matisse
+            16487,  // The Herring Net - Homer
+            14655,  // Mother and Child - Picasso
+            109439, // Stacks of Wheat - Monet
+            83642,  // The Bay - Frankenthaler
+            100472, // The Old Fishing Boat
+            129884, // Fishing Boats
+            102611, // Landscape
+        ]
+    },
+    rijks: {
+        baseUrl: 'https://www.rijksmuseum.nl/api/en/collection',
+        key: process.env.RIJKSMUSEUM_API_KEY,
+        searchTerms: [
+            'painting', 'Rembrandt', 'Vermeer', 'landscape',
+            'portrait', 'still life', 'golden age', 'Dutch masters'
+        ],
+        curatedIds: [
+            'SK-C-5',      // De Nachtwacht - Rembrandt
+            'SK-A-1595',   // Zelfportret - Rembrandt
+            'SK-A-2344',   // Het Melkmeisje - Vermeer
+            'SK-C-216',    // Het Joodse Bruidje - Rembrandt
+            'SK-A-4',      // Winterlandschap - Avercamp
+            'SK-A-180',    // Stilleven met bloemen - De Heem
+            'SK-A-2860',   // De Bedreigde Zwaan - Asselijn
+            'SK-A-4691',   // Self-portrait - Van Gogh
+            'SK-A-1935',   // De Staalmeesters - Rembrandt
+        ]
+    }
+};
+
+// Legacy export (für Kompatibilität mit altem Code)
+const ART_API = {
+    url: ART_APIS.artic.baseUrl,
+    iiif: ART_APIS.artic.iiifUrl
+};
+
+// =====================================================
+// MISTRAL AI
 // =====================================================
 
 const MISTRAL_CONFIG = {
     apiKey: process.env.MISTRAL_API_KEY,
-    model: 'mistral-large-latest',
-    maxTokens: {
-        art: 500,      // ~300-400 words
-        quote: 400     // ~200-300 words
-    },
+    model: 'mistral-small-latest',
+    maxTokens: 300,
     temperature: 0.7
 };
 
 // =====================================================
-// SCHEDULER CONFIGURATION
+// SCHEDULER
 // =====================================================
 
 const SCHEDULER_CONFIG = {
-    dailyResetTime: '00:01',  // 00:01 CET
-    timezone: 'Europe/Berlin',
-    enabled: process.env.NODE_ENV === 'production'
+    dailyTasksCron: '1 0 * * *',  // 00:01 CET
+    timezone: 'Europe/Berlin'
 };
 
 // =====================================================
-// CORS CONFIGURATION
+// CORS
 // =====================================================
 
-/**
- * Allowed Origins für CORS
- * Automatische Erkennung von Local + Production
- */
 const ALLOWED_ORIGINS = [
-    // Local Development
     'http://localhost:5500',
     'http://127.0.0.1:5500',
     'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    // Production (Render.com)
     'https://curio-v2-1.onrender.com',
-    // Future custom domain
     'https://curio.day',
-    'https://www.curio.day',
-    // From ENV (backup)
-    process.env.FRONTEND_URL
-].filter(Boolean).map(url => url.replace(/\/$/, ''));
+    'https://www.curio.day'
+];
 
 // =====================================================
-// ERROR MESSAGES
+// MESSAGES
 // =====================================================
 
 const ERROR_MESSAGES = {
-    LIMIT_REACHED: 'Daily limit reached',
-    UNAUTHORIZED: 'Unauthorized access',
-    NOT_FOUND: 'Resource not found',
-    SERVER_ERROR: 'Internal server error',
-    INVALID_INPUT: 'Invalid input data',
-    DB_ERROR: 'Database error'
+    unauthorized: 'Authentication required',
+    forbidden: 'Access denied',
+    notFound: 'Resource not found',
+    limitReached: 'Daily limit reached',
+    serverError: 'Internal server error',
+    invalidEmail: 'Invalid email format',
+    passwordTooShort: 'Password must be at least 6 characters',
+    userExists: 'User already exists',
+    invalidCredentials: 'Invalid credentials'
 };
-
-// =====================================================
-// SUCCESS MESSAGES
-// =====================================================
 
 const SUCCESS_MESSAGES = {
-    LOGIN: 'Successfully logged in',
-    LOGOUT: 'Successfully logged out',
-    SIGNUP: 'Account created successfully',
-    FAVORITE_ADDED: 'Added to favorites',
-    FAVORITE_REMOVED: 'Removed from favorites'
+    loggedIn: 'Successfully logged in',
+    loggedOut: 'Successfully logged out',
+    registered: 'Successfully registered',
+    favoriteAdded: 'Added to favorites',
+    favoriteRemoved: 'Removed from favorites'
 };
 
 // =====================================================
-// CACHE CONFIGURATION
+// CACHE CONFIG
 // =====================================================
 
 const CACHE_CONFIG = {
-    dailyContentTTL: 24 * 60 * 60,      // 24 hours in seconds
-    artworkCacheTTL: 7 * 24 * 60 * 60,  // 7 days
-    quoteCacheTTL: 7 * 24 * 60 * 60,    // 7 days
-    maxCacheSize: 1000                  // Max items in cache
+    minCacheSize: 2,
+    batchSize: 2,
+    apiDelay: 3000  // ms between API calls
 };
 
 // =====================================================
@@ -167,7 +198,8 @@ module.exports = {
     PREMIUM_FALLBACK_EMAILS,
     LIMITS,
     QUOTE_APIS,
-    ART_API,
+    ART_APIS,
+    ART_API,  // Legacy
     MISTRAL_CONFIG,
     SCHEDULER_CONFIG,
     ALLOWED_ORIGINS,

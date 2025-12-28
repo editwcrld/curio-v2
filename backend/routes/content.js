@@ -15,7 +15,7 @@ const { LIMITS } = require('../config/constants');
 
 // Services
 const { getQuote, cacheQuote, getRandomCachedQuote } = require('../services/quote-cache');
-const { fetchRandomQuote } = require('../services/api-aggregator');
+const { fetchRandomQuote } = require('../services/quotes-api');  // ✅ CHANGED
 const { getArt, cacheArt, getRandomCachedArt } = require('../services/art-cache');
 const { fetchRandomArtwork } = require('../services/art-api');
 const { getDailyContent } = require('../services/daily-content');

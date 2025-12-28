@@ -42,13 +42,9 @@ export function initContentNavigation() {
         btn.addEventListener('click', handleNext);
     });
     
-    if (isLoggedIn()) {
-        setTimeout(() => {
-            // Only prefetch if user has remaining limits
-            if (canNavigate('quotes')) prefetchQuote();
-            if (canNavigate('art')) prefetchArt();
-        }, PREFETCH_DELAY_MS);
-    }
+    // ✅ FIX: No initial prefetch on page load
+    // Prefetch only starts AFTER first manual "Next" click
+    // This saves API calls and limits on page refresh
 }
 
 // ===== HELPERS =====
@@ -144,6 +140,7 @@ async function goNextQuote() {
         incrementUsage('quotes');
         updateAllFavoriteButtons();
         
+        // ✅ Prefetch next quote (only quotes, not art)
         setTimeout(() => prefetchQuote(), 500);
         isNavigating = false;
         return;
@@ -183,14 +180,18 @@ async function goNextQuote() {
         incrementUsage('quotes');
         updateAllFavoriteButtons();
         
-        if (isLoggedIn()) {
+        // ✅ WICHTIG: Loading verstecken und Navigation beenden BEVOR Prefetch
+        hideContentLoading('view-quotes');
+        isNavigating = false;
+        
+        // ✅ Prefetch next quote im Hintergrund (non-blocking)
+        if (isLoggedIn() && canNavigate('quotes')) {
             setTimeout(() => prefetchQuote(), PREFETCH_DELAY_MS);
         }
     } catch (error) {
         if (window.showToast) {
             window.showToast('Quote konnte nicht geladen werden', 'error');
         }
-    } finally {
         hideContentLoading('view-quotes');
         isNavigating = false;
     }
@@ -289,6 +290,7 @@ async function goNextArt() {
         incrementUsage('art');
         updateAllFavoriteButtons();
         
+        // ✅ Prefetch next art (only art, not quotes)
         setTimeout(() => prefetchArt(), 500);
         isNavigating = false;
         return;
@@ -326,14 +328,18 @@ async function goNextArt() {
         incrementUsage('art');
         updateAllFavoriteButtons();
         
-        if (isLoggedIn()) {
+        // ✅ WICHTIG: Loading verstecken und Navigation beenden BEVOR Prefetch
+        hideContentLoading('view-art');
+        isNavigating = false;
+        
+        // ✅ Prefetch next art im Hintergrund (non-blocking)
+        if (isLoggedIn() && canNavigate('art')) {
             setTimeout(() => prefetchArt(), PREFETCH_DELAY_MS);
         }
     } catch (error) {
         if (window.showToast) {
             window.showToast('Artwork konnte nicht geladen werden', 'error');
         }
-    } finally {
         hideContentLoading('view-art');
         isNavigating = false;
     }

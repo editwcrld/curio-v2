@@ -6,7 +6,7 @@
  */
 
 const { supabase } = require('../config/db');
-const { fetchRandomQuote, fetchMultipleQuotes } = require('./api-aggregator');
+const { fetchRandomQuote, fetchMultipleQuotes } = require('./quotes-api');  // ✅ CHANGED
 
 // ✅ REDUZIERT für API Schonung
 const MIN_CACHE_SIZE = 2;

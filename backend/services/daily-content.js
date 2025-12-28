@@ -9,7 +9,7 @@ const { supabase } = require('../config/db');
 const { getRandomCachedArt, cacheArt } = require('./art-cache');
 const { getRandomCachedQuote, cacheQuote } = require('./quote-cache');
 const { fetchRandomArtwork } = require('./art-api');
-const { fetchRandomQuote } = require('./api-aggregator');
+const { fetchRandomQuote } = require('./quotes-api');  // ✅ CHANGED
 
 // AI Service (optional)
 let generateArtDescription = null;
