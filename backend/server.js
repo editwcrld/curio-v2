@@ -118,15 +118,21 @@ if (typeof honeypotMiddleware === 'function') {
 }
 
 // =====================================================
-// ROUTES
+// ROOT & HEALTH ROUTES (for Render health checks)
 // =====================================================
 
-app.use('/api/auth', authRoutes);
-app.use('/api', contentRoutes);
-app.use('/api/user', userRoutes);
-app.use('/api/favorites', favoritesRoutes);
+app.get('/', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        service: 'curio-backend',
+        version: '2.0.0'
+    });
+});
 
-// Health check
+app.head('/', (req, res) => {
+    res.status(200).end();
+});
+
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'ok', 
@@ -134,6 +140,15 @@ app.get('/health', (req, res) => {
         scheduler: isSchedulerRunning ? isSchedulerRunning() : false
     });
 });
+
+// =====================================================
+// API ROUTES
+// =====================================================
+
+app.use('/api/auth', authRoutes);
+app.use('/api', contentRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/favorites', favoritesRoutes);
 
 // =====================================================
 // ERROR HANDLING
