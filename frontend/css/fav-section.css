@@ -24,7 +24,7 @@
 .fav-search-container {
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -57,7 +57,7 @@
 }
 
 #fav-search::placeholder {
-    color: #444;
+    color: #969696;
 }
 
 #fav-search-clear {
@@ -89,10 +89,10 @@
 .fav-filter-pill {
     flex: 1;
     padding: 8px 0;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.137);
     border-radius: 8px;
     color: rgba(255, 255, 255, 0.6);
     font-size: 12px;
