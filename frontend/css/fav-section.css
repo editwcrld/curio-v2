@@ -212,12 +212,13 @@
 .fav-card.type-quotes::before {
     content: '\201C';
     position: absolute;
-    top: 50%;
+    top: 85%;
     right: 5%;
+    transform: translateY(-50%);
     font-family: "Times New Roman", Times, serif;
-    font-size: 100px;
+    font-size: 80px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.2);
     pointer-events: none;
     line-height: 1;
 }
@@ -339,6 +340,7 @@
     
     .fav-card {
         min-height: 200px;
+        height: 200px;
     }
     
     .fav-card.type-art .fav-card-image {
@@ -356,7 +358,7 @@
     }
     
     .fav-card-delete {
-        opacity: 0;
+        opacity: 0.6;
         transition: opacity 0.15s;
     }
     
@@ -394,6 +396,7 @@
     
     .fav-card {
         min-height: 240px;
+        height: 240px;
     }
     
     .fav-card.type-art .fav-card-image {
