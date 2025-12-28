@@ -180,6 +180,22 @@ function formatQuoteResponse(quote, ai = {}) {
     };
 }
 
+function getAttribution(sourceApi) {
+    const attributions = {
+        'artic': {
+            text: 'Image courtesy of the Art Institute of Chicago',
+            url: 'https://www.artic.edu',
+            license: 'CC0 Public Domain'
+        },
+        'rijks': {
+            text: 'Image courtesy of the Rijksmuseum',
+            url: 'https://www.rijksmuseum.nl',
+            license: 'CC0 Public Domain'
+        }
+    };
+    return attributions[sourceApi] || null;
+}
+
 function formatArtResponse(art, ai = {}) {
     return {
         id: art.id,
@@ -190,7 +206,10 @@ function formatArtResponse(art, ai = {}) {
         ai_description_de: ai.ai_description_de || art.ai_description_de || null,
         ai_description_en: ai.ai_description_en || art.ai_description_en || null,
         backgroundInfo: ai.ai_description_de || ai.ai_description_en || art.ai_description_de || null,
-        metadata: art.metadata || {}
+        metadata: art.metadata || {},
+        source_api: art.source_api || null,
+        external_id: art.external_id || null,
+        attribution: getAttribution(art.source_api)
     };
 }
 
