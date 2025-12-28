@@ -2,11 +2,13 @@
  * Art Engine Module
  * ✅ Nutzt /daily/today für fixes Tages-Content
  * ✅ Language Support (DE/EN)
+ * ✅ Attribution Display für API Compliance
  */
 
 import { API_BASE_URL } from './config.js';
 import { appState } from './state.js';
 import { addToArtHistory } from './content-navigation.js';
+import { updateArtAttribution } from './info-panel.js';
 
 // Cache für Tages-Content (damit nicht jeder Reload neu fetcht)
 let dailyArtCache = null;
@@ -97,6 +99,9 @@ export function displayArt(data) {
         
         contentEl.textContent = description;
     }
+    
+    // ✅ Update attribution display
+    updateArtAttribution(data);
 }
 
 export function initArtView() {

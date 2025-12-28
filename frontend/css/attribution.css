@@ -1,0 +1,63 @@
+/* =====================================================
+   ATTRIBUTION STYLES
+   Curio - API Compliance Attribution Display
+   ===================================================== */
+
+/* Attribution Container */
+.attribution {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 0;
+    margin-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    flex-wrap: wrap;
+}
+
+.attribution-label {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.attribution-link {
+    color: rgba(255, 255, 255, 0.7);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.attribution-link:hover {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: underline;
+}
+
+.attribution-license {
+    color: rgba(255, 255, 255, 0.35);
+    font-size: 10px;
+}
+
+.attribution-text {
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+}
+
+/* Quote view specific - slightly different styling */
+#view-quotes .attribution {
+    border-top-color: rgba(255, 255, 255, 0.15);
+}
+
+#view-quotes .attribution-link {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* When info section is expanded, show full attribution */
+.info-section.expanded .attribution {
+    padding: 12px 0;
+}
+
+/* Hide attribution on very small screens when collapsed */
+@media (max-height: 600px) {
+    .info-section:not(.expanded) .attribution {
+        display: none;
+    }
+}

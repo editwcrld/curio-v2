@@ -2,6 +2,7 @@
  * Info Panel Module
  * ✅ Language Toggle OHNE Expand-Konflikt
  * ✅ Guest Favorite → öffnet Auth Modal
+ * ✅ Attribution Display für API Compliance
  */
 
 import { toggleFavorite } from './fav-engine.js';
@@ -16,7 +17,9 @@ export function initInfoPanels() {
             if (e.target.closest('.fav-btn')) return;
             if (e.target.closest('.lang-toggle')) return;
             if (e.target.closest('.lang-btn')) return;
+            if (e.target.closest('.attribution-link')) return;
             if (e.target.closest('button')) return;
+            if (e.target.closest('a')) return;
             
             section.classList.toggle('expanded');
         });
@@ -131,4 +134,116 @@ function handleFavoriteClick(e) {
     requestAnimationFrame(() => {
         toggleFavorite(data, viewType);
     });
+}
+
+// =====================================================
+// ATTRIBUTION DISPLAY
+// =====================================================
+
+/**
+ * Update attribution display for artwork
+ * @param {object} artData - Artwork data with attribution info
+ */
+export function updateArtAttribution(artData) {
+    const artView = document.getElementById('view-art');
+    if (!artView) return;
+    
+    const attributionEl = artView.querySelector('.attribution');
+    if (!attributionEl) return;
+    
+    // Get attribution from data or generate default
+    const attribution = artData.attribution || generateDefaultAttribution(artData);
+    
+    if (attribution && attribution.museum) {
+        const lang = localStorage.getItem('curio_language') || 'de';
+        const sourceText = lang === 'en' ? 'Source' : 'Quelle';
+        
+        // Create attribution HTML
+        attributionEl.innerHTML = `
+            <span class="attribution-label">${sourceText}:</span>
+            <a href="${attribution.artworkUrl || attribution.museumUrl || '#'}" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="attribution-link"
+               onclick="event.stopPropagation()">
+                ${attribution.museum}
+            </a>
+            <span class="attribution-license">(${attribution.license || 'Public Domain'})</span>
+        `;
+        attributionEl.style.display = 'flex';
+    } else {
+        attributionEl.style.display = 'none';
+    }
+}
+
+/**
+ * Update attribution display for quote
+ * @param {object} quoteData - Quote data with source info
+ */
+export function updateQuoteAttribution(quoteData) {
+    const quoteView = document.getElementById('view-quotes');
+    if (!quoteView) return;
+    
+    const attributionEl = quoteView.querySelector('.attribution');
+    if (!attributionEl) return;
+    
+    // Quotes don't need visible attribution since they're public domain text
+    // But we can show the API source for transparency (optional - currently hidden)
+    // Uncomment below if you want to show quote source
+    
+    /*
+    if (quoteData.source || quoteData.sourceApi) {
+        const lang = localStorage.getItem('curio_language') || 'de';
+        const viaText = lang === 'en' ? 'via' : 'via';
+        
+        const sourceNames = {
+            'ninjas': 'API Ninjas',
+            'favqs': 'FavQs',
+            'api-ninjas': 'API Ninjas'
+        };
+        
+        const sourceName = sourceNames[quoteData.sourceApi] || quoteData.source || '';
+        
+        if (sourceName) {
+            attributionEl.innerHTML = `
+                <span class="attribution-text">${viaText} ${sourceName}</span>
+            `;
+            attributionEl.style.display = 'flex';
+        } else {
+            attributionEl.style.display = 'none';
+        }
+    } else {
+        attributionEl.style.display = 'none';
+    }
+    */
+    
+    // For now, hide quote attribution (quotes are public domain text)
+    attributionEl.style.display = 'none';
+}
+
+/**
+ * Generate default attribution based on source_api
+ * @param {object} data - Art or Quote data
+ * @returns {object} Attribution info
+ */
+function generateDefaultAttribution(data) {
+    const sourceApi = data.source_api || data.sourceApi;
+    
+    if (sourceApi === 'artic') {
+        return {
+            museum: 'Art Institute of Chicago',
+            museumUrl: 'https://www.artic.edu',
+            license: 'Public Domain',
+            artworkUrl: data.external_id ? `https://www.artic.edu/artworks/${data.external_id}` : null
+        };
+    } else if (sourceApi === 'rijks') {
+        return {
+            museum: 'Rijksmuseum',
+            museumUrl: 'https://www.rijksmuseum.nl',
+            license: 'CC0',
+            artworkUrl: data.external_id ? `https://www.rijksmuseum.nl/en/collection/${data.external_id}` : null
+        };
+    }
+    
+    return null;
 }

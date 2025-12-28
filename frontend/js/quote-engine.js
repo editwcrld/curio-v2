@@ -2,11 +2,13 @@
  * Quote Engine Module
  * ✅ Nutzt /daily/today für fixes Tages-Content
  * ✅ Language Support (DE/EN)
+ * ✅ Attribution Display für API Compliance
  */
 
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import { appState } from './state.js';
 import { addToQuoteHistory } from './content-navigation.js';
+import { updateQuoteAttribution } from './info-panel.js';
 
 // Cache für Tages-Content
 let dailyQuoteCache = null;
@@ -115,6 +117,9 @@ export function displayQuote(data, gradient) {
         
         contentEl.textContent = description;
     }
+    
+    // ✅ Update attribution display (currently hidden for quotes)
+    updateQuoteAttribution(data);
 }
 
 export function initQuoteView() {

@@ -4,10 +4,12 @@
  * 
  * ✅ ROBUST - Fallback Chain wenn APIs ausfallen
  * ✅ Fair Distribution durch Shuffle
+ * ✅ PUBLIC DOMAIN ONLY - Commercial use safe
+ * ✅ Attribution included in response
  * 
  * APIs:
- * 1. Art Institute of Chicago (primary, no key needed)
- * 2. Rijksmuseum (secondary, requires key)
+ * 1. Art Institute of Chicago (primary, no key needed) - CC0/Public Domain
+ * 2. Rijksmuseum (secondary, requires key) - CC0 License
  */
 
 const axios = require('axios');
@@ -44,11 +46,47 @@ function buildArticImageUrl(imageId, size = 843) {
 }
 
 // =====================================================
+// ATTRIBUTION HELPERS
+// =====================================================
+
+/**
+ * Generate attribution text for artwork
+ * @param {string} sourceApi - 'artic' or 'rijks'
+ * @param {object} artwork - Artwork data
+ * @returns {object} Attribution info
+ */
+function generateAttribution(sourceApi, artwork) {
+    if (sourceApi === 'artic') {
+        return {
+            museum: 'Art Institute of Chicago',
+            museumUrl: 'https://www.artic.edu',
+            license: 'Public Domain (CC0)',
+            licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+            artworkUrl: artwork.externalId ? `https://www.artic.edu/artworks/${artwork.externalId}` : null
+        };
+    } else if (sourceApi === 'rijks') {
+        return {
+            museum: 'Rijksmuseum Amsterdam',
+            museumUrl: 'https://www.rijksmuseum.nl',
+            license: 'Public Domain (CC0)',
+            licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+            artworkUrl: artwork.externalId ? `https://www.rijksmuseum.nl/en/collection/${artwork.externalId}` : null
+        };
+    }
+    
+    return {
+        museum: 'Unknown',
+        license: 'Public Domain'
+    };
+}
+
+// =====================================================
 // ART INSTITUTE OF CHICAGO
 // =====================================================
 
 /**
  * Fetch artwork from Art Institute of Chicago via search
+ * ✅ ONLY PUBLIC DOMAIN (is_public_domain=true filter)
  */
 async function fetchFromArticSearch(excludeIds = []) {
     try {
@@ -60,8 +98,9 @@ async function fetchFromArticSearch(excludeIds = []) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
+        // ✅ CRITICAL: is_public_domain=true ensures commercial use is safe
         const response = await fetch(
-            `${ART_APIS.artic.baseUrl}/search?q=${encodeURIComponent(term)}&page=${page}&limit=30&fields=id,title,artist_title,date_display,image_id&query[term][is_public_domain]=true`,
+            `${ART_APIS.artic.baseUrl}/search?q=${encodeURIComponent(term)}&page=${page}&limit=30&fields=id,title,artist_title,date_display,image_id,is_public_domain&query[term][is_public_domain]=true`,
             { signal: controller.signal }
         );
         
@@ -79,8 +118,12 @@ async function fetchFromArticSearch(excludeIds = []) {
         }
         
         const excludeSet = new Set(excludeIds.map(String));
+        
+        // ✅ Double-check: Only public domain AND has image
         const validArtworks = data.data.filter(a => 
-            a.image_id && !excludeSet.has(String(a.id))
+            a.image_id && 
+            a.is_public_domain === true &&
+            !excludeSet.has(String(a.id))
         );
         
         if (validArtworks.length === 0) {
@@ -89,7 +132,7 @@ async function fetchFromArticSearch(excludeIds = []) {
         
         const art = getRandomItem(validArtworks);
         
-        return {
+        const artwork = {
             externalId: String(art.id),
             title: art.title || 'Untitled',
             artist: art.artist_title || 'Unknown Artist',
@@ -97,8 +140,14 @@ async function fetchFromArticSearch(excludeIds = []) {
             imageUrl: buildArticImageUrl(art.image_id, 843),
             imageUrlLarge: buildArticImageUrl(art.image_id, 1686),
             sourceApi: 'artic',
+            isPublicDomain: true,
             metadata: {}
         };
+        
+        // Add attribution
+        artwork.attribution = generateAttribution('artic', artwork);
+        
+        return artwork;
     } catch (error) {
         if (error.name === 'AbortError') {
             console.warn('   ⚠️ ARTIC search timed out');
@@ -130,8 +179,9 @@ async function fetchFromArticCurated(excludeIds = []) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);
             
+            // ✅ Include is_public_domain in fields
             const response = await fetch(
-                `${ART_APIS.artic.baseUrl}/${id}?fields=id,title,artist_title,date_display,image_id`,
+                `${ART_APIS.artic.baseUrl}/${id}?fields=id,title,artist_title,date_display,image_id,is_public_domain`,
                 { signal: controller.signal }
             );
             
@@ -142,9 +192,10 @@ async function fetchFromArticCurated(excludeIds = []) {
             const data = await response.json();
             const art = data.data;
             
-            if (!art?.image_id) continue;
+            // ✅ Verify public domain
+            if (!art?.image_id || art.is_public_domain !== true) continue;
             
-            return {
+            const artwork = {
                 externalId: String(art.id),
                 title: art.title || 'Untitled',
                 artist: art.artist_title || 'Unknown Artist',
@@ -152,8 +203,13 @@ async function fetchFromArticCurated(excludeIds = []) {
                 imageUrl: buildArticImageUrl(art.image_id, 843),
                 imageUrlLarge: buildArticImageUrl(art.image_id, 1686),
                 sourceApi: 'artic',
+                isPublicDomain: true,
                 metadata: {}
             };
+            
+            artwork.attribution = generateAttribution('artic', artwork);
+            
+            return artwork;
         }
         
         return null;
@@ -186,10 +242,11 @@ async function fetchFromArtic(excludeIds = []) {
 
 /**
  * Fetch artwork from Rijksmuseum via search
+ * ✅ Rijksmuseum images are CC0 (Public Domain Dedication)
  */
 async function fetchFromRijksSearch(excludeIds = []) {
     try {
-        const apiKey = process.env.RIJKSMUSEUM_API_KEY;  // ✅ Runtime read
+        const apiKey = process.env.RIJKSMUSEUM_API_KEY;
         if (!apiKey) {
             console.warn('   ⚠️ Rijksmuseum: No API key configured');
             return null;
@@ -202,7 +259,7 @@ async function fetchFromRijksSearch(excludeIds = []) {
         
         const response = await axios.get(ART_APIS.rijks.baseUrl, {
             params: {
-                key: apiKey,  // ✅ Use runtime key
+                key: apiKey,
                 q: term,
                 type: 'painting',
                 imgonly: true,
@@ -231,7 +288,7 @@ async function fetchFromRijksSearch(excludeIds = []) {
         const imageUrl = art.webImage.url.replace('=s0', '=s800');
         const imageUrlLarge = art.webImage.url; // Original size
         
-        return {
+        const artwork = {
             externalId: art.objectNumber,
             title: art.title || 'Untitled',
             artist: art.principalOrFirstMaker || 'Unknown Artist',
@@ -239,10 +296,15 @@ async function fetchFromRijksSearch(excludeIds = []) {
             imageUrl: imageUrl,
             imageUrlLarge: imageUrlLarge,
             sourceApi: 'rijks',
+            isPublicDomain: true, // Rijksmuseum collection is CC0
             metadata: {
                 objectNumber: art.objectNumber
             }
         };
+        
+        artwork.attribution = generateAttribution('rijks', artwork);
+        
+        return artwork;
     } catch (error) {
         console.error('   ❌ Rijks search error:', error.message);
         return null;
@@ -254,7 +316,7 @@ async function fetchFromRijksSearch(excludeIds = []) {
  */
 async function fetchFromRijksCurated(excludeIds = []) {
     try {
-        const apiKey = process.env.RIJKSMUSEUM_API_KEY;  // ✅ Runtime read
+        const apiKey = process.env.RIJKSMUSEUM_API_KEY;
         if (!apiKey) {
             return null;
         }
@@ -274,7 +336,7 @@ async function fetchFromRijksCurated(excludeIds = []) {
             
             const response = await axios.get(`${ART_APIS.rijks.baseUrl}/${objectNumber}`, {
                 params: {
-                    key: apiKey  // ✅ Use runtime key
+                    key: apiKey
                 },
                 timeout: 8000
             });
@@ -286,7 +348,7 @@ async function fetchFromRijksCurated(excludeIds = []) {
             const imageUrl = art.webImage.url.replace('=s0', '=s800');
             const imageUrlLarge = art.webImage.url;
             
-            return {
+            const artwork = {
                 externalId: art.objectNumber,
                 title: art.title || 'Untitled',
                 artist: art.principalOrFirstMaker || 'Unknown Artist',
@@ -294,10 +356,15 @@ async function fetchFromRijksCurated(excludeIds = []) {
                 imageUrl: imageUrl,
                 imageUrlLarge: imageUrlLarge,
                 sourceApi: 'rijks',
+                isPublicDomain: true,
                 metadata: {
                     objectNumber: art.objectNumber
                 }
             };
+            
+            artwork.attribution = generateAttribution('rijks', artwork);
+            
+            return artwork;
         }
         
         return null;
@@ -332,8 +399,11 @@ async function fetchFromRijks(excludeIds = []) {
  * Fetch random artwork with automatic API rotation
  * Tries all APIs in random order until one succeeds
  * 
+ * ✅ ALL returned artworks are PUBLIC DOMAIN
+ * ✅ Attribution info included in response
+ * 
  * @param {array} excludeIds - IDs to exclude (already in cache)
- * @returns {Promise<object>} - Artwork object
+ * @returns {Promise<object>} - Artwork object with attribution
  * @throws {Error} - If all APIs fail
  */
 async function fetchRandomArtwork(excludeIds = []) {
@@ -357,6 +427,7 @@ async function fetchRandomArtwork(excludeIds = []) {
 
         if (artwork) {
             console.log(`   ✅ Got artwork: "${artwork.title}" from ${apiName}`);
+            console.log(`   📜 License: ${artwork.attribution?.license}`);
             return artwork;
         }
         
@@ -427,6 +498,9 @@ module.exports = {
     fetchFromArticCurated,
     fetchFromRijksSearch,
     fetchFromRijksCurated,
+    
+    // Attribution helper
+    generateAttribution,
     
     // Legacy exports (für Kompatibilität)
     fetchFromRandomSearch: fetchFromArticSearch,

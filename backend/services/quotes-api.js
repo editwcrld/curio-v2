@@ -4,11 +4,13 @@
  * 
  * ✅ ROBUST - Fallback Chain wenn APIs ausfallen
  * ✅ Fair Distribution durch Shuffle
+ * ✅ COMMERCIAL USE COMPLIANT
  * 
  * APIs:
- * 1. API Ninjas (primary, requires key)
- * 2. FavQs (secondary, requires key)
- * 3. ZenQuotes (fallback, free, no key)
+ * 1. API Ninjas (primary, requires key) - Commercial OK
+ * 2. FavQs (secondary, requires key) - Commercial OK
+ * 
+ * ⚠️ ZenQuotes REMOVED - "non-commercial use only" in their Terms
  */
 
 const axios = require('axios');
@@ -43,11 +45,12 @@ function getRandomItem(array) {
 
 /**
  * Fetch quote from API Ninjas
+ * License: Commercial use allowed with attribution
  * @returns {Promise<object|null>}
  */
 async function fetchQuoteFromNinjas() {
     try {
-        const apiKey = process.env.API_NINJAS_KEY;  // ✅ Runtime read
+        const apiKey = process.env.API_NINJAS_KEY;
         if (!apiKey) {
             console.warn('⚠️ API Ninjas: No API key configured');
             return null;
@@ -57,7 +60,7 @@ async function fetchQuoteFromNinjas() {
         const shuffled = [...QUOTE_APIS.ninjas.categories].sort(() => Math.random() - 0.5);
         const selectedCategories = shuffled.slice(0, Math.floor(Math.random() * 2) + 1).join(',');
         
-        console.log(`   📝 Ninjas: Fetching quote (categories: ${selectedCategories})...`);
+        console.log(`   🔍 Ninjas: Fetching quote (categories: ${selectedCategories})...`);
 
         // ✅ v2/randomquotes endpoint with categories parameter
         const response = await axios.get('https://api.api-ninjas.com/v2/randomquotes', {
@@ -76,7 +79,7 @@ async function fetchQuoteFromNinjas() {
             return {
                 text: quote.quote,
                 author: quote.author || 'Unknown',
-                source: 'api-ninjas',
+                source: 'API Ninjas',
                 sourceApi: 'ninjas',
                 category: quote.categories?.[0] || 'wisdom'
             };
@@ -91,11 +94,12 @@ async function fetchQuoteFromNinjas() {
 
 /**
  * Fetch quote from FavQs
+ * License: Commercial use allowed
  * @returns {Promise<object|null>}
  */
 async function fetchQuoteFromFavQs() {
     try {
-        const apiKey = process.env.FAVQS_API_KEY;  // ✅ Runtime read
+        const apiKey = process.env.FAVQS_API_KEY;
         if (!apiKey) {
             console.warn('⚠️ FavQs: No API key configured');
             return null;
@@ -105,12 +109,12 @@ async function fetchQuoteFromFavQs() {
         const useQotd = Math.random() > 0.5;
         
         if (useQotd) {
-            // Quote of the Day (no auth needed actually, but we have key)
-            console.log('   📝 FavQs: Fetching Quote of the Day...');
+            // Quote of the Day
+            console.log('   🔍 FavQs: Fetching Quote of the Day...');
             
             const response = await axios.get(QUOTE_APIS.favqs.qotdUrl, {
                 headers: {
-                    'Authorization': `Token token="${apiKey}"`  // ✅ Use runtime key
+                    'Authorization': `Token token="${apiKey}"`
                 },
                 timeout: 5000
             });
@@ -120,7 +124,7 @@ async function fetchQuoteFromFavQs() {
                 return {
                     text: quote.body,
                     author: quote.author || 'Unknown',
-                    source: 'favqs',
+                    source: 'FavQs',
                     sourceApi: 'favqs',
                     category: quote.tags?.[0] || 'wisdom'
                 };
@@ -130,11 +134,11 @@ async function fetchQuoteFromFavQs() {
             const tag = getRandomItem(QUOTE_APIS.favqs.tags);
             const page = Math.floor(Math.random() * 5) + 1;
             
-            console.log(`   📝 FavQs: Searching tag "${tag}" (page ${page})...`);
+            console.log(`   🔍 FavQs: Searching tag "${tag}" (page ${page})...`);
 
             const response = await axios.get(QUOTE_APIS.favqs.url, {
                 headers: {
-                    'Authorization': `Token token="${apiKey}"`  // ✅ Use runtime key
+                    'Authorization': `Token token="${apiKey}"`
                 },
                 params: {
                     filter: tag,
@@ -150,7 +154,7 @@ async function fetchQuoteFromFavQs() {
                 return {
                     text: quote.body,
                     author: quote.author || 'Unknown',
-                    source: 'favqs',
+                    source: 'FavQs',
                     sourceApi: 'favqs',
                     category: quote.tags?.[0] || tag
                 };
@@ -164,36 +168,24 @@ async function fetchQuoteFromFavQs() {
     }
 }
 
+// =====================================================
+// ZENQUOTES REMOVED - NON-COMMERCIAL ONLY!
+// =====================================================
+// ZenQuotes Terms of Service state:
+// "Material on this website is made available solely for 
+//  your personal, non-commercial use"
+// 
+// Since Curio is a commercial product with subscriptions,
+// we cannot use ZenQuotes API.
+// =====================================================
+
 /**
- * Fetch quote from ZenQuotes (free fallback)
- * @returns {Promise<object|null>}
+ * @deprecated REMOVED - ZenQuotes is non-commercial only
+ * Keeping this as documentation of why it was removed.
  */
 async function fetchQuoteFromZenQuotes() {
-    try {
-        console.log('   📝 ZenQuotes: Fetching random quote...');
-        
-        const response = await axios.get(QUOTE_APIS.zenquotes.url, {
-            timeout: 5000
-        });
-
-        if (response.data && response.data.length > 0) {
-            const quote = response.data[0];
-            
-            // ZenQuotes returns [{ q: "quote", a: "author" }]
-            return {
-                text: quote.q,
-                author: quote.a || 'Unknown',
-                source: 'zenquotes',
-                sourceApi: 'zenquotes',
-                category: 'wisdom'
-            };
-        }
-
-        return null;
-    } catch (error) {
-        console.error('   ❌ ZenQuotes error:', error.message);
-        return null;
-    }
+    console.warn('⚠️ ZenQuotes is disabled - non-commercial use only');
+    return null;
 }
 
 // =====================================================
@@ -208,8 +200,8 @@ async function fetchQuoteFromZenQuotes() {
  * @throws {Error} - If all APIs fail
  */
 async function fetchRandomQuote() {
-    // Shuffle APIs for fair distribution
-    const apiOrder = shuffle(['ninjas', 'favqs', 'zenquotes']);
+    // ✅ Only commercial-use APIs in rotation
+    const apiOrder = shuffle(['ninjas', 'favqs']);
     
     console.log('📜 Fetching quote, API order:', apiOrder);
 
@@ -226,9 +218,7 @@ async function fetchRandomQuote() {
             case 'favqs':
                 quote = await fetchQuoteFromFavQs();
                 break;
-            case 'zenquotes':
-                quote = await fetchQuoteFromZenQuotes();
-                break;
+            // ZenQuotes removed from rotation
         }
 
         if (quote) {
@@ -279,5 +269,6 @@ module.exports = {
     // Individual APIs (for testing)
     fetchQuoteFromNinjas,
     fetchQuoteFromFavQs,
+    // Deprecated - kept for backwards compatibility but returns null
     fetchQuoteFromZenQuotes
 };

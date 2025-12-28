@@ -39,6 +39,7 @@
     <link rel="stylesheet" href="css/limits.css">     
     <link rel="stylesheet" href="css/user-menu.css">
     <link rel="stylesheet" href="css/onboarding.css">
+    <link rel="stylesheet" href="css/attribution.css">
 </head>
 <body>
     <!-- INSTANT LOADING SCREEN (in HTML to prevent black flash) -->
@@ -132,6 +133,8 @@
                             </div>
                             <div class="info-content">
                                 <p></p>
+                                <!-- ✅ Attribution for API Compliance -->
+                                <div class="attribution" style="display: none;"></div>
                             </div>
                         </section>
                     </div>
@@ -179,6 +182,8 @@
                             </div>
                             <div class="info-content">
                                 <p></p>
+                                <!-- ✅ Attribution for API Compliance -->
+                                <div class="attribution" style="display: none;"></div>
                             </div>
                         </section>
                     </div>
@@ -188,13 +193,8 @@
             <!-- FAVORITES VIEW -->
             <div id="view-favorites" class="view hidden">
                 <div class="fav-header">
-                    <div class="fav-title-section">
-                        <h1 class="fav-title">Library</h1>
-                        <p class="fav-count">0 Favoriten</p>
-                    </div>
-                    
-                    <div class="fav-search-container">
-                        <svg class="fav-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <div class="fav-search-wrapper">
+                        <svg class="fav-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="11" cy="11" r="8"/>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                         </svg>

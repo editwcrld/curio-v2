@@ -1,6 +1,9 @@
 /**
  * CURIO BACKEND - Central Configuration
  * Alle Konstanten und Konfigurationen an einem Ort
+ * 
+ * ✅ UPDATED: ZenQuotes removed for commercial compliance
+ * ✅ UPDATED: API Ninjas v2 endpoint
  */
 
 // =====================================================
@@ -37,8 +40,9 @@ const LIMITS = {
 
 const QUOTE_APIS = {
     ninjas: {
-        url: 'https://api.api-ninjas.com/v1/quotes',
-        key: process.env.API_NINJAS_KEY,
+        // ✅ v2 API - siehe https://api-ninjas.com/api/randomquotes
+        url: 'https://api.api-ninjas.com/v2/randomquotes',
+        // key loaded at runtime from process.env.API_NINJAS_KEY
         categories: [
             'inspirational', 'wisdom', 'happiness', 'success',
             'life', 'love', 'motivational', 'philosophy',
@@ -48,16 +52,23 @@ const QUOTE_APIS = {
     favqs: {
         url: 'https://favqs.com/api/quotes',
         qotdUrl: 'https://favqs.com/api/qotd',
-        key: process.env.FAVQS_API_KEY,
+        // key loaded at runtime from process.env.FAVQS_API_KEY
         tags: [
             'wisdom', 'life', 'inspirational', 'philosophy',
             'motivational', 'success', 'happiness', 'love'
         ]
-    },
-    zenquotes: {
-        url: 'https://zenquotes.io/api/random'
-        // No key needed
     }
+    
+    // ⚠️ ZENQUOTES REMOVED - Non-commercial use only!
+    // Their Terms of Service state:
+    // "Material on this website is made available solely for 
+    //  your personal, non-commercial use"
+    // 
+    // DO NOT re-add this API for commercial projects!
+    // 
+    // zenquotes: {
+    //     url: 'https://zenquotes.io/api/random'
+    // }
 };
 
 // =====================================================
@@ -98,7 +109,7 @@ const ART_APIS = {
     },
     rijks: {
         baseUrl: 'https://www.rijksmuseum.nl/api/en/collection',
-        key: process.env.RIJKSMUSEUM_API_KEY,
+        // key loaded at runtime from process.env.RIJKSMUSEUM_API_KEY
         searchTerms: [
             'painting', 'Rembrandt', 'Vermeer', 'landscape',
             'portrait', 'still life', 'golden age', 'Dutch masters'
