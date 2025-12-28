@@ -88,7 +88,7 @@ function generateAttribution(sourceApi, artwork) {
 /**
  * Fetch artwork from Art Institute of Chicago via search
  * ✅ ONLY PUBLIC DOMAIN (is_public_domain=true filter)
- * ✅ NEW: Includes medium_display and dimensions
+ * ✅ Fetches clean medium/dimensions from detail endpoint
  */
 async function fetchFromArticSearch(excludeIds = []) {
     try {
@@ -101,9 +101,8 @@ async function fetchFromArticSearch(excludeIds = []) {
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
         // ✅ CRITICAL: is_public_domain=true ensures commercial use is safe
-        // ✅ NEW: Added medium_display and dimensions to fields
         const response = await fetch(
-            `${ART_APIS.artic.baseUrl}/search?q=${encodeURIComponent(term)}&page=${page}&limit=30&fields=id,title,artist_title,date_display,image_id,is_public_domain,medium_display,dimensions&query[term][is_public_domain]=true`,
+            `${ART_APIS.artic.baseUrl}/search?q=${encodeURIComponent(term)}&page=${page}&limit=30&fields=id,title,artist_title,date_display,image_id,is_public_domain&query[term][is_public_domain]=true`,
             { signal: controller.signal }
         );
         
@@ -135,6 +134,35 @@ async function fetchFromArticSearch(excludeIds = []) {
         
         const art = getRandomItem(validArtworks);
         
+        // ✅ Fetch clean medium/dimensions from manifest
+        let medium = null;
+        let dimensions = null;
+        
+        try {
+            const manifestUrl = `https://api.artic.edu/api/v1/artworks/${art.id}/manifest.json`;
+            const manifestResponse = await fetch(manifestUrl, { timeout: 5000 });
+            
+            if (manifestResponse.ok) {
+                const manifest = await manifestResponse.json();
+                
+                // Extract from metadata array
+                if (manifest.metadata && Array.isArray(manifest.metadata)) {
+                    for (const item of manifest.metadata) {
+                        if (item.label === 'Medium' && item.value) {
+                            medium = item.value;
+                        }
+                        if (item.label === 'Dimensions' && item.value) {
+                            dimensions = item.value;
+                        }
+                    }
+                }
+                
+                console.log(`   📋 Manifest: Medium="${medium}", Dimensions="${dimensions}"`);
+            }
+        } catch (manifestError) {
+            console.warn(`   ⚠️ Could not fetch manifest:`, manifestError.message);
+        }
+        
         const artwork = {
             externalId: String(art.id),
             title: art.title || 'Untitled',
@@ -144,12 +172,11 @@ async function fetchFromArticSearch(excludeIds = []) {
             imageUrlLarge: buildArticImageUrl(art.image_id, 1686),
             sourceApi: 'artic',
             isPublicDomain: true,
-            // ✅ NEW: Medium and Dimensions
-            medium: art.medium_display || null,
-            dimensions: art.dimensions || null,
+            medium: medium,
+            dimensions: dimensions,
             metadata: {
-                medium: art.medium_display || null,
-                dimensions: art.dimensions || null
+                medium: medium,
+                dimensions: dimensions
             }
         };
         
@@ -188,9 +215,8 @@ async function fetchFromArticCurated(excludeIds = []) {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);
             
-            // ✅ Include is_public_domain, medium_display, dimensions in fields
             const response = await fetch(
-                `${ART_APIS.artic.baseUrl}/${id}?fields=id,title,artist_title,date_display,image_id,is_public_domain,medium_display,dimensions`,
+                `${ART_APIS.artic.baseUrl}/${id}?fields=id,title,artist_title,date_display,image_id,is_public_domain`,
                 { signal: controller.signal }
             );
             
@@ -204,6 +230,34 @@ async function fetchFromArticCurated(excludeIds = []) {
             // ✅ Verify public domain
             if (!art?.image_id || art.is_public_domain !== true) continue;
             
+            // ✅ Fetch clean medium/dimensions from manifest
+            let medium = null;
+            let dimensions = null;
+            
+            try {
+                const manifestUrl = `https://api.artic.edu/api/v1/artworks/${art.id}/manifest.json`;
+                const manifestResponse = await fetch(manifestUrl, { timeout: 5000 });
+                
+                if (manifestResponse.ok) {
+                    const manifest = await manifestResponse.json();
+                    
+                    if (manifest.metadata && Array.isArray(manifest.metadata)) {
+                        for (const item of manifest.metadata) {
+                            if (item.label === 'Medium' && item.value) {
+                                medium = item.value;
+                            }
+                            if (item.label === 'Dimensions' && item.value) {
+                                dimensions = item.value;
+                            }
+                        }
+                    }
+                    
+                    console.log(`   📋 Manifest: Medium="${medium}", Dimensions="${dimensions}"`);
+                }
+            } catch (manifestError) {
+                console.warn(`   ⚠️ Could not fetch manifest:`, manifestError.message);
+            }
+            
             const artwork = {
                 externalId: String(art.id),
                 title: art.title || 'Untitled',
@@ -213,12 +267,11 @@ async function fetchFromArticCurated(excludeIds = []) {
                 imageUrlLarge: buildArticImageUrl(art.image_id, 1686),
                 sourceApi: 'artic',
                 isPublicDomain: true,
-                // ✅ NEW: Medium and Dimensions
-                medium: art.medium_display || null,
-                dimensions: art.dimensions || null,
+                medium: medium,
+                dimensions: dimensions,
                 metadata: {
-                    medium: art.medium_display || null,
-                    dimensions: art.dimensions || null
+                    medium: medium,
+                    dimensions: dimensions
                 }
             };
             
