@@ -4,12 +4,23 @@
  * ✅ Language Support (DE/EN)
  * ✅ Attribution Display für API Compliance
  * ✅ NEW: Title/Subtitle structure, Dimensions/Medium display
+ * ✅ NEW: Proper paragraph display with newlines
  */
 
 import { API_BASE_URL } from './config.js';
 import { appState } from './state.js';
 import { addToArtHistory } from './content-navigation.js';
 import { updateArtAttribution } from './info-panel.js';
+
+/**
+ * ✅ Escape HTML to prevent XSS when using innerHTML
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // Cache für Tages-Content (damit nicht jeder Reload neu fetcht)
 let dailyArtCache = null;
@@ -104,7 +115,8 @@ export function displayArt(data) {
             description = data.ai_description_de || data.ai_description_en || data.backgroundInfo || '';
         }
         
-        contentEl.textContent = description;
+        // ✅ Convert newlines to <br> for proper paragraph display
+        contentEl.innerHTML = escapeHtml(description).replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
     }
     
     // ✅ NEW: Update dimensions display

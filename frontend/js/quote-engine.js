@@ -3,13 +3,23 @@
  * ✅ Nutzt /daily/today für fixes Tages-Content
  * ✅ Language Support (DE/EN)
  * ✅ Attribution Display für API Compliance
- * ✅ NEW: Dynamic quote text sizing based on length
+ * ✅ NEW: Proper paragraph display with newlines
  */
 
 import { API_BASE_URL, getRandomGradient } from './config.js';
 import { appState } from './state.js';
 import { addToQuoteHistory } from './content-navigation.js';
 import { updateQuoteAttribution } from './info-panel.js';
+
+/**
+ * ✅ Escape HTML to prevent XSS when using innerHTML
+ */
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // Cache für Tages-Content
 let dailyQuoteCache = null;
@@ -74,20 +84,6 @@ export async function loadDailyQuote() {
     }
 }
 
-/**
- * Get size class based on quote text length
- * @param {string} text - Quote text
- * @returns {string} CSS class name
- */
-function getQuoteSizeClass(text) {
-    const length = text?.length || 0;
-    
-    if (length <= 80) return 'quote-size-small';      // Short quotes - largest text
-    if (length <= 150) return 'quote-size-medium';    // Medium quotes
-    if (length <= 250) return 'quote-size-large';     // Longer quotes
-    return 'quote-size-xlarge';                       // Very long quotes - smallest text
-}
-
 export function displayQuote(data, gradient) {
     if (!data) return;
     
@@ -102,10 +98,6 @@ export function displayQuote(data, gradient) {
     // Set quote text
     if (quoteTextEl) {
         quoteTextEl.textContent = `"${data.text}"`;
-        
-        // ✅ NEW: Apply dynamic size class
-        quoteTextEl.classList.remove('quote-size-small', 'quote-size-medium', 'quote-size-large', 'quote-size-xlarge');
-        quoteTextEl.classList.add(getQuoteSizeClass(data.text));
     }
     
     // Set author (main display)
@@ -134,7 +126,8 @@ export function displayQuote(data, gradient) {
             description = data.ai_description_de || data.ai_description_en || data.backgroundInfo || '';
         }
         
-        contentEl.textContent = description;
+        // ✅ Convert newlines to <br> for proper paragraph display
+        contentEl.innerHTML = escapeHtml(description).replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
     }
     
     // ✅ Update attribution display (currently hidden for quotes)
