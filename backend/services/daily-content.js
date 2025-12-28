@@ -75,7 +75,7 @@ async function getDailyContent() {
             artworks (
                 id, title, artist, year, image_url,
                 ai_description_de, ai_description_en, metadata,
-                source_api, external_id
+                source_api, external_id, medium, dimensions
             ),
             quotes (
                 id, text, author, source, category,
@@ -104,6 +104,8 @@ async function getDailyContent() {
                 metadata: existing.artworks.metadata,
                 source_api: existing.artworks.source_api,
                 external_id: existing.artworks.external_id,
+                medium: existing.artworks.medium,
+                dimensions: existing.artworks.dimensions,
                 attribution: getAttribution(existing.artworks.source_api)
             },
             quote: {
@@ -225,6 +227,8 @@ async function generateDailyContent() {
                 metadata: art.metadata,
                 source_api: art.source_api,
                 external_id: art.external_id,
+                medium: art.medium,
+                dimensions: art.dimensions,
                 attribution: getAttribution(art.source_api)
             },
             quote: {
