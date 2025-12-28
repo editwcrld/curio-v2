@@ -91,7 +91,7 @@ WICHTIG - Struktur:
 STIL:
 - Kompakt und pointiert (30-65 Wörter)
 - Keine Wiederholung des Zitats
-- Keine generischen Einleitungen wie "Dieses Zitat zeigt..."
+- Keine generischen Einleitungen wie "Dieses Zitat zeigt...", "Das Zitat stammt aus...", "Der Satz stammt aus..."
 - Keine Hinweise auf Zuordnung wie "Dieses wird oft zugeschrieben aber keine Belege...", nur am Ende ganz prägnant ob es belegt ist oder nicht als letzten Absatz
 - Nur schreiben wenn es etwas Interessantes zu sagen gibt
 
@@ -110,7 +110,7 @@ IMPORTANT - Structure:
 STYLE:
 - Compact and to the point (30-65 words)
 - No repetition of the quote itself
-- No generic introductions like "This quote shows..."
+- No generic introductions like "This quote shows...", "The quote resonates...", 
 - No hints about attribution like "This is often attributed but no evidence...", only at the end very concisely whether it is documented or not as last paragraph
 - Only write if there's something interesting to say
 
@@ -144,7 +144,7 @@ WICHTIG - Struktur mit Absätzen:
 STIL:
 - Sachlich aber lebendig, wie ein Museumstext
 - Konkrete Details und Anekdoten wenn bekannt
-- Keine generischen Floskeln wie "dieses Meisterwerk zeigt..."
+- Keine generischen Floskeln wie "dieses Meisterwerk zeigt...", "Die Inspiration für...", "Die Entstehung des..."
 - Länge je nach verfügbarer Geschichte: 80-180 Wörter
 
 WICHTIG: Schreibe NUR Fließtext ohne Formatierung wie ** oder #. Trenne die Absätze mit einer Leerzeile.`;
@@ -159,7 +159,7 @@ IMPORTANT - Structure with paragraphs:
 STYLE:
 - Factual yet engaging, like a museum text
 - Specific details and anecdotes when known
-- No generic phrases like "this masterpiece shows..."
+- No generic phrases like "this masterpiece shows...", "The inspiration for..", 
 - Length depending on available history: 80-180 words
 
 IMPORTANT: Write ONLY prose without formatting like ** or #. Separate paragraphs with a blank line.`;
