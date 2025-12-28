@@ -180,7 +180,7 @@
     min-height: 0;
 }
 
-/* Vorschau-Logik für Description */
+/* ✅ Vorschau-Logik für Description - 2 Zeilen Preview */
 .info-section:not(.expanded) .info-content p {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -188,6 +188,20 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin: 0;
+}
+
+/* ✅ FIX: Full paragraph display when expanded */
+.info-section.expanded .info-content p {
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+    -webkit-box-orient: initial;
+    overflow: visible;
+    text-overflow: initial;
+    margin: 0;
+    /* ✅ Ensure whitespace and line breaks are preserved */
+    white-space: pre-wrap;
 }
 
 .info-section.expanded .info-content { 

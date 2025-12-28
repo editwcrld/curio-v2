@@ -13,6 +13,9 @@
  * - ✅ Smooth slide-down close animation
  * - ✅ High-res image loading for lightbox
  * - ✅ Boundary clamping (image never leaves viewport)
+ * - ✅ FIX: Smooth boundary animation (no hard snapping)
+ * - ✅ FIX: Double tap to zoom working on mobile
+ * - ✅ FIX: Better pinch zoom responsiveness
  */
 
 // ===== SINGLETON STATE =====
@@ -39,10 +42,18 @@ const LightboxState = {
     initialPinchScale: 1,
     initialPinchCenter: { x: 0, y: 0 },
     
+    // ✅ FIX: Track pinch center for continuous updates
+    currentPinchCenter: { x: 0, y: 0 },
+    
     // Mouse drag (desktop)
     isDragging: false,
     dragStartX: 0,
     dragStartY: 0,
+    
+    // ✅ FIX: Double tap detection
+    lastTapTime: 0,
+    lastTapX: 0,
+    lastTapY: 0,
     
     // DOM references
     overlay: null,
@@ -57,6 +68,7 @@ const LightboxState = {
         this.isDragging = false;
         this.imageWidth = 0;
         this.imageHeight = 0;
+        this.lastTapTime = 0;
     }
 };
 
@@ -65,7 +77,9 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 10;  // ✅ 1000% zoom
 const SWIPE_CLOSE_THRESHOLD = 100;
 const SWIPE_VELOCITY_THRESHOLD = 0.5;
-const ZOOM_SMOOTH_DURATION = '0.25s';
+const ZOOM_SMOOTH_DURATION = '0.3s';  // ✅ Slightly longer for smoother feel
+const DOUBLE_TAP_DELAY = 300;  // ms
+const DOUBLE_TAP_DISTANCE = 50;  // px tolerance
 
 // ===== INITIALIZATION =====
 
@@ -225,11 +239,12 @@ function cleanupAfterClose() {
 // ===== BOUNDARY CLAMPING =====
 
 /**
- * ✅ Clamp translation so image never leaves viewport
+ * ✅ FIX: Clamp translation so image never leaves viewport
+ * Returns true if clamping was applied
  */
 function clampTranslation() {
     const img = LightboxState.image;
-    if (!img) return;
+    if (!img) return false;
     
     const rect = img.getBoundingClientRect();
     const containerRect = LightboxState.container.getBoundingClientRect();
@@ -240,6 +255,10 @@ function clampTranslation() {
     
     const viewportWidth = containerRect.width;
     const viewportHeight = containerRect.height;
+    
+    let clamped = false;
+    const oldX = LightboxState.translateX;
+    const oldY = LightboxState.translateY;
     
     // If image is smaller than viewport, center it
     if (scaledWidth <= viewportWidth) {
@@ -256,6 +275,13 @@ function clampTranslation() {
         const maxTranslateY = (scaledHeight - viewportHeight) / 2;
         LightboxState.translateY = Math.max(-maxTranslateY, Math.min(maxTranslateY, LightboxState.translateY));
     }
+    
+    // Check if we actually clamped
+    if (oldX !== LightboxState.translateX || oldY !== LightboxState.translateY) {
+        clamped = true;
+    }
+    
+    return clamped;
 }
 
 // ===== TRANSFORM =====
@@ -264,11 +290,16 @@ function applyTransform(smooth = false) {
     const img = LightboxState.image;
     if (!img) return;
     
-    // ✅ Smoother transition
-    img.style.transition = smooth ? `transform ${ZOOM_SMOOTH_DURATION} cubic-bezier(0.25, 0.1, 0.25, 1)` : 'none';
+    // ✅ FIX: Use easeOutCubic for smoother deceleration
+    img.style.transition = smooth 
+        ? `transform ${ZOOM_SMOOTH_DURATION} cubic-bezier(0.33, 1, 0.68, 1)` 
+        : 'none';
     img.style.transform = `translate(${LightboxState.translateX}px, ${LightboxState.translateY}px) scale(${LightboxState.scale})`;
 }
 
+/**
+ * ✅ FIX: Improved setScale with optional smooth boundary correction
+ */
 function setScale(newScale, smooth = true, centerX = null, centerY = null) {
     const oldScale = LightboxState.scale;
     LightboxState.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
@@ -294,7 +325,7 @@ function setScale(newScale, smooth = true, centerX = null, centerY = null) {
         LightboxState.translateX = 0;
         LightboxState.translateY = 0;
     } else {
-        // ✅ Apply boundary clamping
+        // ✅ FIX: Apply boundary clamping but don't animate during gesture
         clampTranslation();
     }
     
@@ -326,6 +357,11 @@ function handleTouchStart(e) {
             x: (touches[0].clientX + touches[1].clientX) / 2,
             y: (touches[0].clientY + touches[1].clientY) / 2
         };
+        LightboxState.currentPinchCenter = { ...LightboxState.initialPinchCenter };
+        
+        // ✅ FIX: Store initial translation for pinch
+        LightboxState.initialTranslateX = LightboxState.translateX;
+        LightboxState.initialTranslateY = LightboxState.translateY;
         
     } else if (touches.length === 1) {
         // SINGLE TOUCH START
@@ -346,12 +382,37 @@ function handleTouchMove(e) {
     if (LightboxState.gestureType === 'pinch' && touches.length === 2) {
         // PINCH ZOOM
         e.preventDefault();
+        
         const currentDistance = getTouchDistance(touches[0], touches[1]);
         const scaleRatio = currentDistance / LightboxState.initialPinchDistance;
         const newScale = LightboxState.initialPinchScale * scaleRatio;
         
-        // ✅ Zoom towards pinch center
-        setScale(newScale, false, LightboxState.initialPinchCenter.x, LightboxState.initialPinchCenter.y);
+        // ✅ FIX: Update current pinch center for smooth tracking
+        LightboxState.currentPinchCenter = {
+            x: (touches[0].clientX + touches[1].clientX) / 2,
+            y: (touches[0].clientY + touches[1].clientY) / 2
+        };
+        
+        // ✅ FIX: Better zoom calculation towards pinch center
+        const containerRect = LightboxState.container.getBoundingClientRect();
+        const imgCenterX = containerRect.width / 2;
+        const imgCenterY = containerRect.height / 2;
+        
+        // Use initial pinch center for consistent zoom point
+        const offsetX = LightboxState.initialPinchCenter.x - imgCenterX;
+        const offsetY = LightboxState.initialPinchCenter.y - imgCenterY;
+        
+        const clampedScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+        const actualScaleRatio = clampedScale / LightboxState.initialPinchScale;
+        
+        LightboxState.scale = clampedScale;
+        LightboxState.translateX = LightboxState.initialTranslateX * actualScaleRatio - offsetX * (actualScaleRatio - 1);
+        LightboxState.translateY = LightboxState.initialTranslateY * actualScaleRatio - offsetY * (actualScaleRatio - 1);
+        
+        // ✅ FIX: Clamp during pinch but don't animate
+        clampTranslation();
+        applyTransform(false);
+        showZoomIndicator();
         return;
     }
     
@@ -391,8 +452,8 @@ function handleTouchMove(e) {
         LightboxState.translateX += moveDeltaX;
         LightboxState.translateY += moveDeltaY;
         
-        // ✅ Apply boundary clamping during pan
-        clampTranslation();
+        // ✅ FIX: Soft boundary during pan (allow slight overscroll)
+        softClampTranslation();
         applyTransform(false);
         
     } else if (LightboxState.gestureType === 'swipe-close') {
@@ -411,6 +472,46 @@ function handleTouchMove(e) {
     
     LightboxState.lastTouchX = touch.clientX;
     LightboxState.lastTouchY = touch.clientY;
+}
+
+/**
+ * ✅ FIX: Soft clamp - allows slight overscroll with resistance
+ */
+function softClampTranslation() {
+    const img = LightboxState.image;
+    if (!img) return;
+    
+    const rect = img.getBoundingClientRect();
+    const containerRect = LightboxState.container.getBoundingClientRect();
+    
+    const scaledWidth = rect.width;
+    const scaledHeight = rect.height;
+    
+    const viewportWidth = containerRect.width;
+    const viewportHeight = containerRect.height;
+    
+    // Calculate max translation
+    const maxTranslateX = scaledWidth <= viewportWidth ? 0 : (scaledWidth - viewportWidth) / 2;
+    const maxTranslateY = scaledHeight <= viewportHeight ? 0 : (scaledHeight - viewportHeight) / 2;
+    
+    // ✅ Soft resistance when exceeding boundaries
+    const overscrollResistance = 0.3;
+    
+    if (LightboxState.translateX > maxTranslateX) {
+        const overscroll = LightboxState.translateX - maxTranslateX;
+        LightboxState.translateX = maxTranslateX + overscroll * overscrollResistance;
+    } else if (LightboxState.translateX < -maxTranslateX) {
+        const overscroll = -maxTranslateX - LightboxState.translateX;
+        LightboxState.translateX = -maxTranslateX - overscroll * overscrollResistance;
+    }
+    
+    if (LightboxState.translateY > maxTranslateY) {
+        const overscroll = LightboxState.translateY - maxTranslateY;
+        LightboxState.translateY = maxTranslateY + overscroll * overscrollResistance;
+    } else if (LightboxState.translateY < -maxTranslateY) {
+        const overscroll = -maxTranslateY - LightboxState.translateY;
+        LightboxState.translateY = -maxTranslateY - overscroll * overscrollResistance;
+    }
 }
 
 function handleTouchEnd(e) {
@@ -437,13 +538,56 @@ function handleTouchEnd(e) {
             applyTransform(true);
         }
     } else if (gestureType === 'pan' || gestureType === 'pinch') {
-        // ✅ Smooth snap to boundaries after gesture ends
+        // ✅ FIX: Smooth snap to boundaries after gesture ends
         clampTranslation();
-        applyTransform(true);
+        applyTransform(true);  // Animate the snap
+    }
+    
+    // ✅ FIX: Check for double tap AFTER handling other gestures
+    if (!gestureType || gestureType === 'ignore') {
+        checkDoubleTap(e);
     }
     
     // Reset gesture
     LightboxState.gestureType = null;
+}
+
+/**
+ * ✅ FIX: Improved double tap detection
+ */
+function checkDoubleTap(e) {
+    const touch = e.changedTouches ? e.changedTouches[0] : null;
+    if (!touch) return;
+    
+    const now = Date.now();
+    const timeSinceLastTap = now - LightboxState.lastTapTime;
+    const distanceFromLastTap = Math.sqrt(
+        Math.pow(touch.clientX - LightboxState.lastTapX, 2) +
+        Math.pow(touch.clientY - LightboxState.lastTapY, 2)
+    );
+    
+    if (timeSinceLastTap < DOUBLE_TAP_DELAY && distanceFromLastTap < DOUBLE_TAP_DISTANCE) {
+        // Double tap detected!
+        e.preventDefault();
+        
+        if (LightboxState.scale > MIN_SCALE) {
+            // Zoom out to fit
+            setScale(MIN_SCALE, true);
+        } else {
+            // Zoom in to 300% at tap position
+            setScale(3, true, touch.clientX, touch.clientY);
+        }
+        
+        // Reset tap tracking
+        LightboxState.lastTapTime = 0;
+        LightboxState.lastTapX = 0;
+        LightboxState.lastTapY = 0;
+    } else {
+        // Record this tap
+        LightboxState.lastTapTime = now;
+        LightboxState.lastTapX = touch.clientX;
+        LightboxState.lastTapY = touch.clientY;
+    }
 }
 
 function handleTouchCancel() {
@@ -471,7 +615,7 @@ function handleWheel(e) {
     e.preventDefault();
     
     // ✅ Smoother zoom steps
-    const delta = e.deltaY > 0 ? -0.3 : 0.3;
+    const delta = e.deltaY > 0 ? -0.25 : 0.25;
     const newScale = LightboxState.scale * (1 + delta);
     
     // ✅ Zoom towards mouse position
@@ -494,8 +638,8 @@ function handleMouseMove(e) {
     LightboxState.translateX = e.clientX - LightboxState.dragStartX;
     LightboxState.translateY = e.clientY - LightboxState.dragStartY;
     
-    // ✅ Apply boundary clamping during drag
-    clampTranslation();
+    // ✅ FIX: Soft boundary during drag
+    softClampTranslation();
     applyTransform(false);
 }
 
@@ -507,36 +651,9 @@ function handleMouseUp() {
         LightboxState.container.style.cursor = 'grab';
     }
     
-    // ✅ Smooth snap to boundaries
+    // ✅ FIX: Smooth snap to boundaries
     clampTranslation();
     applyTransform(true);
-}
-
-// ===== DOUBLE TAP TO ZOOM =====
-
-let lastTapTime = 0;
-
-function handleDoubleTap(e) {
-    const now = Date.now();
-    const timeSinceLastTap = now - lastTapTime;
-    
-    if (timeSinceLastTap < 300 && timeSinceLastTap > 0) {
-        // Double tap detected
-        e.preventDefault();
-        
-        if (LightboxState.scale > MIN_SCALE) {
-            // Zoom out
-            setScale(MIN_SCALE, true);
-        } else {
-            // Zoom in to 300% at tap position
-            const touch = e.changedTouches ? e.changedTouches[0] : e;
-            setScale(3, true, touch.clientX, touch.clientY);
-        }
-        
-        lastTapTime = 0;
-    } else {
-        lastTapTime = now;
-    }
 }
 
 // ===== TOP SWIPE AREA CLOSE =====
@@ -726,10 +843,7 @@ function createLightboxDOM() {
     // Touch events on container
     LightboxState.container.addEventListener('touchstart', handleTouchStart, { passive: false });
     LightboxState.container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    LightboxState.container.addEventListener('touchend', (e) => {
-        handleTouchEnd(e);
-        handleDoubleTap(e);  // ✅ Double tap to zoom
-    }, { passive: false });
+    LightboxState.container.addEventListener('touchend', handleTouchEnd, { passive: false });
     LightboxState.container.addEventListener('touchcancel', handleTouchCancel, { passive: true });
     
     // Mouse events
