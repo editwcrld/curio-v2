@@ -291,8 +291,10 @@ function setScale(newScale, smooth = true, centerX = null, centerY = null) {
     const oldScale = State.scale;
     State.scale = clamp(newScale, MIN_SCALE, MAX_SCALE);
     
+    if (oldScale === State.scale) return;
+    
     // Zoom towards point
-    if (centerX !== null && centerY !== null && oldScale !== State.scale) {
+    if (centerX !== null && centerY !== null) {
         const contRect = State.container.getBoundingClientRect();
         const imgCenterX = contRect.width / 2;
         const imgCenterY = contRect.height / 2;
@@ -305,11 +307,25 @@ function setScale(newScale, smooth = true, centerX = null, centerY = null) {
         State.y = State.y * ratio - offsetY * (ratio - 1);
     }
     
-    // Reset when zoomed out
+    // Reset when fully zoomed out
     if (State.scale === MIN_SCALE) {
         State.x = 0;
         State.y = 0;
     } else {
+        // Smooth clamp - animate towards valid bounds
+        const bounds = getBounds();
+        
+        // Gradually pull towards bounds during zoom-out
+        if (State.scale < oldScale) {
+            // Zooming out - smoothly approach bounds
+            const t = 0.3; // Interpolation factor
+            const targetX = clamp(State.x, bounds.minX, bounds.maxX);
+            const targetY = clamp(State.y, bounds.minY, bounds.maxY);
+            State.x = State.x + (targetX - State.x) * t;
+            State.y = State.y + (targetY - State.y) * t;
+        }
+        
+        // Final clamp to ensure we're in bounds
         clampToBounds();
     }
     
