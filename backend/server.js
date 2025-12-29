@@ -3,6 +3,7 @@
  * ✅ Express Server
  * ✅ Routes
  * ✅ Scheduler für Daily Tasks
+ * ✅ Limits aus DB laden beim Start
  */
 
 require('dotenv').config();
@@ -96,6 +97,16 @@ try {
     getDailyContent = async () => null;
 }
 
+// Config - Limits aus DB laden
+let loadLimitsFromDB;
+try {
+    const constants = require('./config/constants');
+    loadLimitsFromDB = constants.loadLimitsFromDB;
+} catch (e) {
+    console.log('⚠️ Constants not found');
+    loadLimitsFromDB = async () => {};
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -166,6 +177,16 @@ app.listen(PORT, async () => {
     console.log(`🚀 CURIO Backend running on port ${PORT}`);
     console.log(`📅 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log('═══════════════════════════════════════');
+    
+    // Load limits from DB
+    try {
+        if (loadLimitsFromDB) {
+            console.log('📊 Loading limits from database...');
+            await loadLimitsFromDB();
+        }
+    } catch (error) {
+        console.error('⚠️ Failed to load limits from DB:', error.message);
+    }
     
     // Start scheduler for daily tasks
     try {

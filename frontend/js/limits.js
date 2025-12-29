@@ -1,26 +1,26 @@
 /**
  * Limits Module
  * Handles daily navigation limits for guests, registered, and premium users
- * Backend-ready: localStorage structure mimics future API responses
+ * ✅ Fetches limits from backend on init
+ * ✅ Falls back to local limits if backend unreachable
  */
 
 // ========================================
 // LIMIT CONFIGURATION
-// Guest: 3, Registered: 10, Premium: 50
 // ========================================
-const LIMITS = {
-    guest: {
-        art: 3,
-        quotes: 3
-    },
-    registered: {
-        art: 10,
-        quotes: 10
-    },
-    premium: {
-        art: 50,
-        quotes: 50
-    }
+
+// Fallback limits (used when backend not reachable)
+const FALLBACK_LIMITS = {
+    guest: { art: 3, quotes: 3 },
+    registered: { art: 10, quotes: 10 },
+    premium: { art: 50, quotes: 50 }
+};
+
+// Live limits from backend (will be fetched on init)
+let LIMITS = {
+    guest: { ...FALLBACK_LIMITS.guest },
+    registered: { ...FALLBACK_LIMITS.registered },
+    premium: { ...FALLBACK_LIMITS.premium }
 };
 
 const STORAGE_KEYS = {
@@ -28,6 +28,16 @@ const STORAGE_KEYS = {
     LAST_RESET: 'limits_last_reset_v1',
     USER_TYPE: 'user_type_v1'
 };
+
+// ========================================
+// API BASE URL
+// ========================================
+
+function getApiBaseUrl() {
+    return window.location.hostname === 'localhost' 
+        ? 'http://localhost:3000/api' 
+        : 'https://curio-backend.onrender.com/api';
+}
 
 // ========================================
 // USER TYPE DETECTION
@@ -45,7 +55,7 @@ export function getUserType() {
 
 export function getCurrentLimits() {
     const userType = getUserType();
-    return LIMITS[userType];
+    return LIMITS[userType] || FALLBACK_LIMITS[userType];
 }
 
 // ========================================
@@ -73,10 +83,49 @@ function resetLimits() {
     localStorage.setItem(STORAGE_KEYS.LAST_RESET, new Date().toISOString());
 }
 
-export function initLimits() {
+// ========================================
+// BACKEND SYNC
+// ========================================
+
+async function fetchLimitsFromBackend() {
+    const token = localStorage.getItem('auth_token');
+    if (!token) return;
+    
+    try {
+        const response = await fetch(`${getApiBaseUrl()}/user/limits`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            const data = result.data;
+            
+            // Update LIMITS with backend values
+            LIMITS[data.userType] = {
+                art: data.limits.art.max,
+                quotes: data.limits.quotes.max
+            };
+            
+            // Sync usage from backend
+            const usage = getLimitUsage();
+            usage.art.used = data.limits.art.used;
+            usage.quotes.used = data.limits.quotes.used;
+            localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(usage));
+            
+            console.log('✅ Limits synced from backend:', data.userType, LIMITS[data.userType]);
+        }
+    } catch (error) {
+        console.warn('⚠️ Could not fetch limits from backend, using fallback');
+    }
+}
+
+export async function initLimits() {
     if (shouldResetLimits()) {
         resetLimits();
     }
+    
+    // Fetch limits from backend if logged in
+    await fetchLimitsFromBackend();
 }
 
 // ========================================
@@ -137,15 +186,15 @@ export function handleLimitReached(type) {
     } else if (userType === 'registered') {
         showUpgradeModal(type);
     } else if (userType === 'premium') {
-        // Premium hat jetzt auch Limits (50)
         showPremiumLimitModal(type);
     }
 }
 
 function showPremiumLimitModal(type) {
     const typeName = type === 'art' ? 'Kunstwerke' : 'Zitate';
+    const limit = getCurrentLimits()[type];
     if (window.showToast) {
-        window.showToast(`Tageslimit von 50 ${typeName} erreicht. Morgen geht's weiter!`, 'info');
+        window.showToast(`Tageslimit von ${limit} ${typeName} erreicht. Morgen geht's weiter!`, 'info');
     }
 }
 
@@ -182,7 +231,6 @@ function updateAuthModalWithLimitInfo(type) {
     const typeName = type === 'art' ? 'Kunstwerke' : 'Zitate';
     const registeredLimit = LIMITS.registered[type];
     
-    // Simple box without any icons
     limitInfo.innerHTML = `
         <div class="limit-warning">
             <div class="limit-text">
@@ -201,6 +249,7 @@ function updateAuthModalWithLimitInfo(type) {
 // ========================================
 
 export async function syncLimitsWithBackend() {
+    await fetchLimitsFromBackend();
     return {
         userType: getUserType(),
         limits: getCurrentLimits(),
@@ -258,4 +307,9 @@ export function debugSetLimitReached(type) {
     };
     localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(usage));
     console.log(`🔧 Debug: ${type} limit set to maximum (${limits[type]}/${limits[type]})`);
+}
+
+export function debugForceFetchLimits() {
+    fetchLimitsFromBackend();
+    console.log('🔧 Debug: Forcing limit fetch from backend');
 }

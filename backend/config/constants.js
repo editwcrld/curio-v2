@@ -4,6 +4,7 @@
  * 
  * ✅ UPDATED: ZenQuotes removed for commercial compliance
  * ✅ UPDATED: API Ninjas v2 endpoint
+ * ✅ UPDATED: Limits loaded from DB (app_config table)
  */
 
 // =====================================================
@@ -16,23 +17,68 @@ const PREMIUM_FALLBACK_EMAILS = [
 ];
 
 // =====================================================
-// USER LIMITS
+// USER LIMITS (Fallback - wird von DB überschrieben)
 // =====================================================
 
-const LIMITS = {
+let LIMITS = {
     guest: {
-        art: 3,
-        quotes: 3
+        art: 5,
+        quotes: 5
     },
     registered: {
-        art: 10,
-        quotes: 10
-    },
-    premium: {
         art: 50,
         quotes: 50
+    },
+    premium: {
+        art: 100,
+        quotes: 100
     }
 };
+
+// Flag to track if limits have been loaded from DB
+let limitsLoaded = false;
+
+/**
+ * Load limits from app_config table
+ * Called once on server startup
+ */
+async function loadLimitsFromDB() {
+    if (limitsLoaded) return LIMITS;
+    
+    try {
+        // Dynamic import to avoid circular dependency
+        const { supabase } = require('./db');
+        
+        const { data, error } = await supabase
+            .from('app_config')
+            .select('value')
+            .eq('key', 'limits')
+            .single();
+        
+        if (error) {
+            console.warn('⚠️ Could not load limits from DB, using fallback:', error.message);
+            return LIMITS;
+        }
+        
+        if (data && data.value) {
+            LIMITS = data.value;
+            limitsLoaded = true;
+            console.log('✅ Limits loaded from DB:', LIMITS);
+        }
+        
+        return LIMITS;
+    } catch (error) {
+        console.warn('⚠️ Error loading limits from DB:', error.message);
+        return LIMITS;
+    }
+}
+
+/**
+ * Get current limits (sync - returns cached value)
+ */
+function getLimits() {
+    return LIMITS;
+}
 
 // =====================================================
 // QUOTE APIs
@@ -208,6 +254,8 @@ const CACHE_CONFIG = {
 module.exports = {
     PREMIUM_FALLBACK_EMAILS,
     LIMITS,
+    getLimits,
+    loadLimitsFromDB,
     QUOTE_APIS,
     ART_APIS,
     ART_API,  // Legacy
