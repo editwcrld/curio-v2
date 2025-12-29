@@ -5,6 +5,8 @@
  * ✅ Falls back to local limits if backend unreachable
  */
 
+import { API_BASE_URL } from './config.js';
+
 // ========================================
 // LIMIT CONFIGURATION
 // ========================================
@@ -28,16 +30,6 @@ const STORAGE_KEYS = {
     LAST_RESET: 'limits_last_reset_v1',
     USER_TYPE: 'user_type_v1'
 };
-
-// ========================================
-// API BASE URL
-// ========================================
-
-function getApiBaseUrl() {
-    return window.location.hostname === 'localhost' 
-        ? 'http://localhost:3000/api' 
-        : 'https://curio-backend.onrender.com/api';
-}
 
 // ========================================
 // USER TYPE DETECTION
@@ -92,7 +84,7 @@ async function fetchLimitsFromBackend() {
     
     try {
         // Always fetch public limits config (for all user types)
-        const configResponse = await fetch(`${getApiBaseUrl()}/config/limits`);
+        const configResponse = await fetch(`${API_BASE_URL}/config/limits`);
         if (configResponse.ok) {
             const configResult = await configResponse.json();
             if (configResult.data) {
@@ -110,7 +102,7 @@ async function fetchLimitsFromBackend() {
     if (!token) return;
     
     try {
-        const response = await fetch(`${getApiBaseUrl()}/user/limits`, {
+        const response = await fetch(`${API_BASE_URL}/user/limits`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
@@ -130,10 +122,10 @@ async function fetchLimitsFromBackend() {
             usage.quotes.used = data.limits.quotes.used;
             localStorage.setItem(STORAGE_KEYS.LIMITS, JSON.stringify(usage));
             
-            console.log('✅ Limits synced from backend:', data.userType, LIMITS[data.userType]);
+            console.log('✅ Usage synced from backend:', data.userType);
         }
     } catch (error) {
-        console.warn('⚠️ Could not fetch limits from backend, using fallback');
+        console.warn('⚠️ Could not fetch user limits from backend');
     }
 }
 
@@ -142,7 +134,7 @@ export async function initLimits() {
         resetLimits();
     }
     
-    // Fetch limits from backend if logged in
+    // Fetch limits from backend
     await fetchLimitsFromBackend();
 }
 
