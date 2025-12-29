@@ -1,13 +1,15 @@
 /**
- * Image Lightbox Module - REWORK v2
+ * Image Lightbox Module - Clean Rewrite
  * 
- * Best Practices Implementation:
- * ✅ Momentum/Inertia scrolling (physics-based, wie iOS)
- * ✅ Pinch-to-zoom (touch) + Mousewheel zoom (desktop)
- * ✅ Boundary clamping mit smooth elastic snapback
- * ✅ Double-tap/click → 300% zoom toggle
- * ✅ Swipe down to close am drag-handler
- * ✅ Close + Fit-to-screen buttons
+ * Best Practices:
+ * ✅ Zoom 100% - 700%
+ * ✅ Double-tap/click to zoom 300%
+ * ✅ Pinch-to-zoom (touch)
+ * ✅ Mouse wheel zoom (desktop)
+ * ✅ Pan when zoomed (boundaries enforced - NO black edges ever)
+ * ✅ Swipe down to close (via top handle)
+ * ✅ X button for desktop
+ * ✅ Fit-to-screen button
  * ✅ High-res image loading
  */
 
@@ -18,38 +20,39 @@ const State = {
     x: 0,
     y: 0,
     
-    // Velocity for momentum
-    velocityX: 0,
-    velocityY: 0,
+    // Image dimensions
+    imgNaturalWidth: 0,
+    imgNaturalHeight: 0,
+    imgDisplayWidth: 0,
+    imgDisplayHeight: 0,
     
-    // Image info
-    imgWidth: 0,
-    imgHeight: 0,
+    // Container dimensions
+    containerWidth: 0,
+    containerHeight: 0,
     
     // Touch tracking
-    touches: [],
-    gesture: null, // 'pan' | 'pinch' | 'swipe-close'
-    startX: 0,
-    startY: 0,
-    startScale: 1,
-    startPinchDist: 0,
-    pinchCenterX: 0,
-    pinchCenterY: 0,
+    lastTouchX: 0,
+    lastTouchY: 0,
+    isPanning: false,
+    isPinching: false,
+    initialPinchDist: 0,
+    initialScale: 1,
+    pinchMidX: 0,
+    pinchMidY: 0,
     
-    // Double tap
-    lastTap: 0,
+    // Double tap detection
+    lastTapTime: 0,
     lastTapX: 0,
     lastTapY: 0,
     
     // Mouse drag
-    isDragging: false,
-    dragStartX: 0,
-    dragStartY: 0,
+    isMouseDragging: false,
     
-    // Momentum animation
-    momentumId: null,
+    // Swipe to close
+    isSwipingToClose: false,
+    swipeStartY: 0,
     
-    // DOM
+    // DOM references
     overlay: null,
     container: null,
     image: null,
@@ -58,34 +61,21 @@ const State = {
         this.scale = 1;
         this.x = 0;
         this.y = 0;
-        this.velocityX = 0;
-        this.velocityY = 0;
-        this.gesture = null;
-        this.isDragging = false;
-        this.imgWidth = 0;
-        this.imgHeight = 0;
-        this.lastTap = 0;
-        if (this.momentumId) {
-            cancelAnimationFrame(this.momentumId);
-            this.momentumId = null;
-        }
+        this.isPanning = false;
+        this.isPinching = false;
+        this.isMouseDragging = false;
+        this.isSwipingToClose = false;
+        this.lastTapTime = 0;
     }
 };
 
 // ===== CONSTANTS =====
 const MIN_SCALE = 1;
-const MAX_SCALE = 8;
+const MAX_SCALE = 7;
 const DOUBLE_TAP_ZOOM = 3;
 const DOUBLE_TAP_DELAY = 300;
-const DOUBLE_TAP_DIST = 40;
-const SWIPE_CLOSE_THRESHOLD = 100;
-const SWIPE_VELOCITY_THRESHOLD = 0.5;
-
-// Momentum physics
-const FRICTION = 0.92;
-const MIN_VELOCITY = 0.5;
-const BOUNCE_RESISTANCE = 0.3;
-const BOUNCE_BACK_DURATION = 400;
+const DOUBLE_TAP_DISTANCE = 50;
+const ANIMATION_DURATION = 250;
 
 // ===== INIT =====
 
@@ -101,17 +91,95 @@ export function initLightbox() {
 function getHighResUrl(url) {
     if (!url) return url;
     
-    // Art Institute of Chicago
+    // Art Institute of Chicago - get full resolution
     if (url.includes('artic.edu/iiif')) {
         return url.replace(/\/full\/\d+,\//, '/full/full/');
     }
     
-    // Rijksmuseum
+    // Rijksmuseum - get full resolution
     if (url.includes('googleusercontent.com') || url.includes('rijksmuseum.nl')) {
         return url.replace(/=s\d+/, '=s0');
     }
     
     return url;
+}
+
+// ===== BOUNDARY CALCULATION =====
+
+function updateDimensions() {
+    if (!State.image || !State.container) return;
+    
+    const containerRect = State.container.getBoundingClientRect();
+    State.containerWidth = containerRect.width;
+    State.containerHeight = containerRect.height;
+    
+    // Get the displayed size of the image at scale 1
+    const imgRect = State.image.getBoundingClientRect();
+    State.imgDisplayWidth = imgRect.width / State.scale;
+    State.imgDisplayHeight = imgRect.height / State.scale;
+}
+
+function getBounds() {
+    // Calculate how far the image can move before showing black
+    const scaledWidth = State.imgDisplayWidth * State.scale;
+    const scaledHeight = State.imgDisplayHeight * State.scale;
+    
+    // If image is smaller than container, no movement allowed
+    const maxX = Math.max(0, (scaledWidth - State.containerWidth) / 2);
+    const maxY = Math.max(0, (scaledHeight - State.containerHeight) / 2);
+    
+    return { minX: -maxX, maxX, minY: -maxY, maxY };
+}
+
+function clampPosition() {
+    const bounds = getBounds();
+    State.x = Math.max(bounds.minX, Math.min(bounds.maxX, State.x));
+    State.y = Math.max(bounds.minY, Math.min(bounds.maxY, State.y));
+}
+
+// ===== TRANSFORM =====
+
+function applyTransform(animate = false) {
+    if (!State.image) return;
+    
+    State.image.style.transition = animate 
+        ? `transform ${ANIMATION_DURATION}ms ease-out` 
+        : 'none';
+    State.image.style.transform = `translate(${State.x}px, ${State.y}px) scale(${State.scale})`;
+}
+
+function setScale(newScale, animate = true, centerX = null, centerY = null) {
+    const oldScale = State.scale;
+    newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+    
+    if (newScale === oldScale) return;
+    
+    // Default center is screen center
+    if (centerX === null) centerX = State.containerWidth / 2;
+    if (centerY === null) centerY = State.containerHeight / 2;
+    
+    // Adjust position to zoom toward the center point
+    const ratio = newScale / oldScale;
+    
+    // Calculate offset from center
+    const offsetX = centerX - State.containerWidth / 2;
+    const offsetY = centerY - State.containerHeight / 2;
+    
+    // Adjust position
+    State.x = (State.x - offsetX) * ratio + offsetX;
+    State.y = (State.y - offsetY) * ratio + offsetY;
+    State.scale = newScale;
+    
+    // Reset position if zoomed all the way out
+    if (State.scale === MIN_SCALE) {
+        State.x = 0;
+        State.y = 0;
+    } else {
+        clampPosition();
+    }
+    
+    applyTransform(animate);
+    showZoomIndicator();
 }
 
 // ===== OPEN / CLOSE =====
@@ -130,36 +198,46 @@ export function openLightbox(imageSrc) {
     const loading = document.getElementById('lightbox-loading');
     
     State.reset();
-    applyTransform(false);
     
-    // Reset styles
-    State.overlay.style.opacity = '';
-    State.overlay.style.transition = 'opacity 0.3s ease';
-    State.image.style.opacity = '1';
-    
+    // Show loading
     loading.style.display = 'block';
     State.image.style.display = 'none';
+    State.image.style.opacity = '0';
+    
+    // Reset overlay
+    State.overlay.style.opacity = '';
+    State.overlay.style.transition = '';
     
     const highResUrl = getHighResUrl(imageSrc);
     
     const img = new Image();
     img.onload = () => {
-        State.image.src = highResUrl;
-        State.imgWidth = img.naturalWidth;
-        State.imgHeight = img.naturalHeight;
+        State.imgNaturalWidth = img.naturalWidth;
+        State.imgNaturalHeight = img.naturalHeight;
         
+        State.image.src = highResUrl;
         loading.style.display = 'none';
         State.image.style.display = 'block';
+        
+        // Wait for image to render, then get dimensions
+        requestAnimationFrame(() => {
+            updateDimensions();
+            State.image.style.opacity = '1';
+            applyTransform(false);
+        });
         
         State.overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
         State.isOpen = true;
         
+        // Show hint on mobile
         if (window.innerWidth <= 768) {
             showSwipeHint();
         }
     };
+    
     img.onerror = () => {
+        // Fallback to original URL
         if (highResUrl !== imageSrc) {
             img.src = imageSrc;
         } else {
@@ -167,6 +245,7 @@ export function openLightbox(imageSrc) {
             closeLightbox();
         }
     };
+    
     img.src = highResUrl;
 }
 
@@ -174,230 +253,41 @@ export function closeLightbox(slideDown = false) {
     if (!State.isOpen) return;
     State.isOpen = false;
     
-    stopMomentum();
-    
-    const { overlay, image } = State;
-    if (!overlay) return;
-    
     document.body.style.overflow = '';
     
-    if (slideDown && image) {
-        image.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
-        image.style.transform = `translate(${State.x}px, ${window.innerHeight}px) scale(${State.scale})`;
-        image.style.opacity = '0';
+    if (slideDown && State.image) {
+        State.image.style.transition = `transform ${ANIMATION_DURATION}ms ease-out, opacity ${ANIMATION_DURATION}ms ease-out`;
+        State.image.style.transform = `translate(${State.x}px, ${window.innerHeight}px) scale(${State.scale})`;
+        State.image.style.opacity = '0';
         
-        overlay.style.transition = 'opacity 0.3s ease-out';
-        overlay.style.opacity = '0';
+        State.overlay.style.transition = `opacity ${ANIMATION_DURATION}ms ease-out`;
+        State.overlay.style.opacity = '0';
         
         setTimeout(() => {
-            overlay.classList.remove('active');
-            cleanup();
-        }, 300);
+            State.overlay.classList.remove('active');
+            resetStyles();
+        }, ANIMATION_DURATION);
     } else {
-        overlay.style.transition = 'opacity 0.3s ease';
-        overlay.classList.remove('active');
-        setTimeout(cleanup, 300);
+        State.overlay.classList.remove('active');
+        setTimeout(resetStyles, ANIMATION_DURATION);
     }
 }
 
-function cleanup() {
-    State.reset();
+function resetStyles() {
     if (State.image) {
         State.image.style.transform = '';
-        State.image.style.opacity = '';
         State.image.style.transition = '';
+        State.image.style.opacity = '';
     }
     if (State.overlay) {
         State.overlay.style.opacity = '';
         State.overlay.style.transition = '';
     }
-}
-
-// ===== BOUNDARIES =====
-
-function getBounds() {
-    if (!State.image || !State.container) return { minX: 0, maxX: 0, minY: 0, maxY: 0 };
-    
-    const imgRect = State.image.getBoundingClientRect();
-    const contRect = State.container.getBoundingClientRect();
-    
-    const scaledW = imgRect.width;
-    const scaledH = imgRect.height;
-    const viewW = contRect.width;
-    const viewH = contRect.height;
-    
-    // If image smaller than viewport, center it (bounds = 0)
-    const maxX = scaledW <= viewW ? 0 : (scaledW - viewW) / 2;
-    const maxY = scaledH <= viewH ? 0 : (scaledH - viewH) / 2;
-    
-    return { minX: -maxX, maxX, minY: -maxY, maxY };
-}
-
-function clamp(val, min, max) {
-    return Math.max(min, Math.min(max, val));
-}
-
-function clampToBounds(smooth = false) {
-    const bounds = getBounds();
-    const newX = clamp(State.x, bounds.minX, bounds.maxX);
-    const newY = clamp(State.y, bounds.minY, bounds.maxY);
-    
-    const changed = newX !== State.x || newY !== State.y;
-    State.x = newX;
-    State.y = newY;
-    
-    if (changed && smooth) {
-        applyTransform(true);
-    }
-    
-    return changed;
-}
-
-function softClamp() {
-    const bounds = getBounds();
-    
-    // Allow overscroll with resistance
-    if (State.x > bounds.maxX) {
-        State.x = bounds.maxX + (State.x - bounds.maxX) * BOUNCE_RESISTANCE;
-    } else if (State.x < bounds.minX) {
-        State.x = bounds.minX + (State.x - bounds.minX) * BOUNCE_RESISTANCE;
-    }
-    
-    if (State.y > bounds.maxY) {
-        State.y = bounds.maxY + (State.y - bounds.maxY) * BOUNCE_RESISTANCE;
-    } else if (State.y < bounds.minY) {
-        State.y = bounds.minY + (State.y - bounds.minY) * BOUNCE_RESISTANCE;
-    }
-}
-
-function isOutOfBounds() {
-    const bounds = getBounds();
-    return State.x < bounds.minX || State.x > bounds.maxX ||
-           State.y < bounds.minY || State.y > bounds.maxY;
-}
-
-// ===== TRANSFORM =====
-
-function applyTransform(smooth = false) {
-    if (!State.image) return;
-    
-    State.image.style.transition = smooth 
-        ? `transform ${BOUNCE_BACK_DURATION}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)`
-        : 'none';
-    State.image.style.transform = `translate(${State.x}px, ${State.y}px) scale(${State.scale})`;
-}
-
-function setScale(newScale, smooth = true, centerX = null, centerY = null) {
-    const oldScale = State.scale;
-    State.scale = clamp(newScale, MIN_SCALE, MAX_SCALE);
-    
-    if (oldScale === State.scale) return;
-    
-    const contRect = State.container.getBoundingClientRect();
-    const imgCenterX = contRect.width / 2;
-    const imgCenterY = contRect.height / 2;
-    
-    // Default to center if no point specified
-    const zoomX = centerX ?? imgCenterX;
-    const zoomY = centerY ?? imgCenterY;
-    
-    // Calculate offset from image center
-    const offsetX = zoomX - imgCenterX;
-    const offsetY = zoomY - imgCenterY;
-    
-    // Adjust position to zoom towards point
-    const ratio = State.scale / oldScale;
-    State.x = State.x * ratio - offsetX * (ratio - 1);
-    State.y = State.y * ratio - offsetY * (ratio - 1);
-    
-    // Reset when fully zoomed out
-    if (State.scale === MIN_SCALE) {
-        State.x = 0;
-        State.y = 0;
-    } else if (State.scale < oldScale) {
-        // Zooming out - smoothly approach bounds
-        const bounds = getBounds();
-        const t = 0.5;
-        const targetX = clamp(State.x, bounds.minX, bounds.maxX);
-        const targetY = clamp(State.y, bounds.minY, bounds.maxY);
-        State.x = State.x + (targetX - State.x) * t;
-        State.y = State.y + (targetY - State.y) * t;
-        clampToBounds();
-    } else {
-        clampToBounds();
-    }
-    
-    applyTransform(smooth);
-    showZoomIndicator();
+    State.reset();
 }
 
 function fitToScreen() {
-    stopMomentum();
     setScale(MIN_SCALE, true);
-}
-
-// ===== MOMENTUM =====
-
-function startMomentum() {
-    stopMomentum();
-    
-    if (Math.abs(State.velocityX) < MIN_VELOCITY && Math.abs(State.velocityY) < MIN_VELOCITY) {
-        // No significant velocity, just snap to bounds
-        if (isOutOfBounds()) {
-            clampToBounds(true);
-        }
-        return;
-    }
-    
-    const animate = () => {
-        // Apply friction
-        State.velocityX *= FRICTION;
-        State.velocityY *= FRICTION;
-        
-        // Update position
-        State.x += State.velocityX;
-        State.y += State.velocityY;
-        
-        // Check bounds
-        const bounds = getBounds();
-        let hitBound = false;
-        
-        if (State.x < bounds.minX || State.x > bounds.maxX) {
-            hitBound = true;
-            State.velocityX *= -0.3; // Bounce back
-            State.x = clamp(State.x, bounds.minX, bounds.maxX);
-        }
-        
-        if (State.y < bounds.minY || State.y > bounds.maxY) {
-            hitBound = true;
-            State.velocityY *= -0.3;
-            State.y = clamp(State.y, bounds.minY, bounds.maxY);
-        }
-        
-        applyTransform(false);
-        
-        // Continue if still moving
-        if (Math.abs(State.velocityX) > MIN_VELOCITY || Math.abs(State.velocityY) > MIN_VELOCITY) {
-            State.momentumId = requestAnimationFrame(animate);
-        } else {
-            State.momentumId = null;
-            // Final snap to bounds
-            if (isOutOfBounds()) {
-                clampToBounds(true);
-            }
-        }
-    };
-    
-    State.momentumId = requestAnimationFrame(animate);
-}
-
-function stopMomentum() {
-    if (State.momentumId) {
-        cancelAnimationFrame(State.momentumId);
-        State.momentumId = null;
-    }
-    State.velocityX = 0;
-    State.velocityY = 0;
 }
 
 // ===== TOUCH HANDLERS =====
@@ -405,26 +295,45 @@ function stopMomentum() {
 function handleTouchStart(e) {
     if (!State.isOpen) return;
     
-    stopMomentum();
-    
     const touches = e.touches;
-    State.touches = Array.from(touches).map(t => ({ x: t.clientX, y: t.clientY, time: Date.now() }));
     
     if (touches.length === 2) {
         // Pinch start
         e.preventDefault();
-        State.gesture = 'pinch';
-        State.startScale = State.scale;
-        State.startPinchDist = getTouchDist(touches[0], touches[1]);
-        State.pinchCenterX = (touches[0].clientX + touches[1].clientX) / 2;
-        State.pinchCenterY = (touches[0].clientY + touches[1].clientY) / 2;
-        State.startX = State.x;
-        State.startY = State.y;
+        State.isPinching = true;
+        State.isPanning = false;
+        State.initialPinchDist = getTouchDistance(touches[0], touches[1]);
+        State.initialScale = State.scale;
+        State.pinchMidX = (touches[0].clientX + touches[1].clientX) / 2;
+        State.pinchMidY = (touches[0].clientY + touches[1].clientY) / 2;
         
     } else if (touches.length === 1) {
-        State.startX = touches[0].clientX;
-        State.startY = touches[0].clientY;
-        State.gesture = null;
+        State.lastTouchX = touches[0].clientX;
+        State.lastTouchY = touches[0].clientY;
+        
+        // Check for double tap
+        const now = Date.now();
+        const timeDiff = now - State.lastTapTime;
+        const dist = Math.hypot(
+            touches[0].clientX - State.lastTapX,
+            touches[0].clientY - State.lastTapY
+        );
+        
+        if (timeDiff < DOUBLE_TAP_DELAY && dist < DOUBLE_TAP_DISTANCE) {
+            // Double tap detected
+            e.preventDefault();
+            if (State.scale > MIN_SCALE) {
+                setScale(MIN_SCALE, true);
+            } else {
+                setScale(DOUBLE_TAP_ZOOM, true, touches[0].clientX, touches[0].clientY);
+            }
+            State.lastTapTime = 0;
+            return;
+        }
+        
+        State.lastTapTime = now;
+        State.lastTapX = touches[0].clientX;
+        State.lastTapY = touches[0].clientY;
     }
 }
 
@@ -433,78 +342,50 @@ function handleTouchMove(e) {
     
     const touches = e.touches;
     
-    if (State.gesture === 'pinch' && touches.length === 2) {
+    // Pinch zoom
+    if (State.isPinching && touches.length === 2) {
         e.preventDefault();
         
-        const dist = getTouchDist(touches[0], touches[1]);
-        const ratio = dist / State.startPinchDist;
-        const newScale = clamp(State.startScale * ratio, MIN_SCALE, MAX_SCALE);
+        const dist = getTouchDistance(touches[0], touches[1]);
+        const newScale = State.initialScale * (dist / State.initialPinchDist);
         
-        // Calculate zoom offset
-        const contRect = State.container.getBoundingClientRect();
-        const imgCenterX = contRect.width / 2;
-        const imgCenterY = contRect.height / 2;
-        const offsetX = State.pinchCenterX - imgCenterX;
-        const offsetY = State.pinchCenterY - imgCenterY;
+        // Direct scale update without animation
+        const oldScale = State.scale;
+        State.scale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
         
-        const actualRatio = newScale / State.startScale;
-        State.scale = newScale;
-        State.x = State.startX * actualRatio - offsetX * (actualRatio - 1);
-        State.y = State.startY * actualRatio - offsetY * (actualRatio - 1);
-        
-        clampToBounds();
-        applyTransform(false);
-        showZoomIndicator();
+        if (oldScale !== State.scale) {
+            // Adjust position to zoom toward pinch center
+            const ratio = State.scale / oldScale;
+            const offsetX = State.pinchMidX - State.containerWidth / 2;
+            const offsetY = State.pinchMidY - State.containerHeight / 2;
+            
+            State.x = (State.x - offsetX) * ratio + offsetX;
+            State.y = (State.y - offsetY) * ratio + offsetY;
+            
+            clampPosition();
+            applyTransform(false);
+            showZoomIndicator();
+        }
         return;
     }
     
-    if (touches.length !== 1) return;
-    
-    const touch = touches[0];
-    const dx = touch.clientX - State.startX;
-    const dy = touch.clientY - State.startY;
-    
-    // Determine gesture
-    if (!State.gesture) {
-        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
-        
-        if (State.scale > MIN_SCALE) {
-            State.gesture = 'pan';
-        } else if (dy > 0 && Math.abs(dy) > Math.abs(dx) * 1.2) {
-            State.gesture = 'swipe-close';
-        } else {
-            State.gesture = 'ignore';
-        }
-    }
-    
-    if (State.gesture === 'pan') {
+    // Single finger pan (only when zoomed)
+    if (touches.length === 1 && State.scale > MIN_SCALE) {
         e.preventDefault();
+        State.isPanning = true;
         
-        // Track for velocity
-        const now = Date.now();
-        const prev = State.touches[State.touches.length - 1];
-        if (prev) {
-            const dt = now - prev.time || 16;
-            State.velocityX = (touch.clientX - prev.x) / dt * 16;
-            State.velocityY = (touch.clientY - prev.y) / dt * 16;
-        }
-        State.touches.push({ x: touch.clientX, y: touch.clientY, time: now });
-        if (State.touches.length > 5) State.touches.shift();
+        const touch = touches[0];
+        const deltaX = touch.clientX - State.lastTouchX;
+        const deltaY = touch.clientY - State.lastTouchY;
         
-        State.x += touch.clientX - (State.touches[State.touches.length - 2]?.x || touch.clientX);
-        State.y += touch.clientY - (State.touches[State.touches.length - 2]?.y || touch.clientY);
+        State.x += deltaX;
+        State.y += deltaY;
         
-        softClamp();
-        applyTransform(false);
+        // Clamp immediately - never allow out of bounds
+        clampPosition();
         
-    } else if (State.gesture === 'swipe-close') {
-        e.preventDefault();
-        const swipeY = Math.max(0, dy);
-        State.y = swipeY;
-        
-        const opacity = Math.max(0.3, 1 - swipeY / 300);
-        State.overlay.style.opacity = opacity;
-        State.overlay.style.transition = 'none';
+        State.lastTouchX = touch.clientX;
+        State.lastTouchY = touch.clientY;
         
         applyTransform(false);
     }
@@ -513,78 +394,21 @@ function handleTouchMove(e) {
 function handleTouchEnd(e) {
     if (!State.isOpen) return;
     
-    const gesture = State.gesture;
-    
-    if (gesture === 'swipe-close') {
-        const shouldClose = State.y > SWIPE_CLOSE_THRESHOLD || 
-            Math.abs(State.velocityY) > SWIPE_VELOCITY_THRESHOLD;
-        
-        if (shouldClose) {
-            closeLightbox(true);
-        } else {
-            State.y = 0;
-            State.overlay.style.transition = 'opacity 0.25s ease';
-            State.overlay.style.opacity = '';
-            applyTransform(true);
-        }
-    } else if (gesture === 'pan') {
-        // Start momentum
-        startMomentum();
-    } else if (gesture === 'pinch') {
-        clampToBounds(true);
+    if (State.isPinching) {
+        State.isPinching = false;
+        // Ensure final position is valid
+        clampPosition();
+        applyTransform(true);
     }
     
-    // Check double tap
-    if (!gesture || gesture === 'ignore') {
-        checkDoubleTap(e);
-    }
-    
-    State.gesture = null;
-    State.touches = [];
+    State.isPanning = false;
 }
 
 function handleTouchCancel() {
-    if (!State.isOpen) return;
-    
-    State.gesture = null;
-    State.touches = [];
-    stopMomentum();
-    
-    if (State.scale === MIN_SCALE) {
-        State.x = 0;
-        State.y = 0;
-    } else {
-        clampToBounds();
-    }
-    
-    State.overlay.style.transition = 'opacity 0.3s ease';
-    State.overlay.style.opacity = '';
+    State.isPinching = false;
+    State.isPanning = false;
+    clampPosition();
     applyTransform(true);
-}
-
-function checkDoubleTap(e) {
-    const touch = e.changedTouches?.[0];
-    if (!touch) return;
-    
-    const now = Date.now();
-    const dt = now - State.lastTap;
-    const dist = Math.hypot(touch.clientX - State.lastTapX, touch.clientY - State.lastTapY);
-    
-    if (dt < DOUBLE_TAP_DELAY && dist < DOUBLE_TAP_DIST) {
-        e.preventDefault();
-        
-        if (State.scale > MIN_SCALE) {
-            setScale(MIN_SCALE, true);
-        } else {
-            setScale(DOUBLE_TAP_ZOOM, true, touch.clientX, touch.clientY);
-        }
-        
-        State.lastTap = 0;
-    } else {
-        State.lastTap = now;
-        State.lastTapX = touch.clientX;
-        State.lastTapY = touch.clientY;
-    }
 }
 
 // ===== MOUSE HANDLERS =====
@@ -593,111 +417,120 @@ function handleWheel(e) {
     if (!State.isOpen) return;
     e.preventDefault();
     
-    stopMomentum();
-    
-    const delta = e.deltaY > 0 ? -0.2 : 0.2;
+    const delta = e.deltaY > 0 ? -0.3 : 0.3;
     const newScale = State.scale * (1 + delta);
     
-    setScale(newScale, true, e.clientX, e.clientY);
+    setScale(newScale, false, e.clientX, e.clientY);
 }
 
 function handleMouseDown(e) {
     if (!State.isOpen || State.scale <= MIN_SCALE) return;
     
-    stopMomentum();
-    
-    State.isDragging = true;
-    State.dragStartX = e.clientX - State.x;
-    State.dragStartY = e.clientY - State.y;
-    State.touches = [{ x: e.clientX, y: e.clientY, time: Date.now() }];
-    
+    e.preventDefault();
+    State.isMouseDragging = true;
+    State.lastTouchX = e.clientX;
+    State.lastTouchY = e.clientY;
     State.container.style.cursor = 'grabbing';
 }
 
 function handleMouseMove(e) {
-    if (!State.isDragging) return;
+    if (!State.isMouseDragging) return;
     
-    // Track velocity
-    const now = Date.now();
-    const prev = State.touches[State.touches.length - 1];
-    if (prev) {
-        const dt = now - prev.time || 16;
-        State.velocityX = (e.clientX - prev.x) / dt * 16;
-        State.velocityY = (e.clientY - prev.y) / dt * 16;
-    }
-    State.touches.push({ x: e.clientX, y: e.clientY, time: now });
-    if (State.touches.length > 5) State.touches.shift();
+    const deltaX = e.clientX - State.lastTouchX;
+    const deltaY = e.clientY - State.lastTouchY;
     
-    State.x = e.clientX - State.dragStartX;
-    State.y = e.clientY - State.dragStartY;
+    State.x += deltaX;
+    State.y += deltaY;
     
-    softClamp();
+    // Clamp immediately
+    clampPosition();
+    
+    State.lastTouchX = e.clientX;
+    State.lastTouchY = e.clientY;
+    
     applyTransform(false);
 }
 
 function handleMouseUp() {
-    if (!State.isDragging) return;
+    if (!State.isMouseDragging) return;
     
-    State.isDragging = false;
-    State.container.style.cursor = 'grab';
-    
-    // Start momentum
-    startMomentum();
+    State.isMouseDragging = false;
+    State.container.style.cursor = State.scale > MIN_SCALE ? 'grab' : 'default';
 }
 
-// ===== TOP SWIPE AREA =====
+function handleDoubleClick(e) {
+    if (!State.isOpen) return;
+    
+    if (State.scale > MIN_SCALE) {
+        setScale(MIN_SCALE, true);
+    } else {
+        setScale(DOUBLE_TAP_ZOOM, true, e.clientX, e.clientY);
+    }
+}
 
-function initTopSwipeClose(area) {
-    let startY = 0, currentY = 0, dragging = false;
+// ===== TOP SWIPE TO CLOSE =====
+
+function initTopSwipeClose(element) {
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
     
     const onStart = (y) => {
         if (!State.isOpen) return;
-        dragging = true;
-        startY = currentY = y;
+        isDragging = true;
+        startY = y;
+        currentY = y;
     };
     
     const onMove = (y) => {
-        if (!dragging || !State.isOpen) return;
+        if (!isDragging || !State.isOpen) return;
         currentY = y;
-        const dy = currentY - startY;
+        const deltaY = Math.max(0, currentY - startY);
         
-        if (dy > 0) {
-            State.y = dy;
-            State.overlay.style.opacity = Math.max(0.3, 1 - dy / 250);
+        if (deltaY > 0) {
+            State.image.style.transition = 'none';
+            State.image.style.transform = `translate(${State.x}px, ${State.y + deltaY}px) scale(${State.scale})`;
             State.overlay.style.transition = 'none';
-            applyTransform(false);
+            State.overlay.style.opacity = Math.max(0.3, 1 - deltaY / 250);
         }
     };
     
     const onEnd = () => {
-        if (!dragging) return;
-        dragging = false;
+        if (!isDragging) return;
+        isDragging = false;
         
-        const dy = currentY - startY;
-        if (dy > 80) {
+        const deltaY = currentY - startY;
+        
+        if (deltaY > 80) {
             closeLightbox(true);
         } else {
-            State.y = 0;
-            State.overlay.style.transition = 'opacity 0.25s ease';
+            // Snap back
+            State.overlay.style.transition = `opacity ${ANIMATION_DURATION}ms ease-out`;
             State.overlay.style.opacity = '';
             applyTransform(true);
         }
     };
     
-    // Touch
-    area.addEventListener('touchstart', e => onStart(e.touches[0].clientY), { passive: true });
-    area.addEventListener('touchmove', e => { e.preventDefault(); onMove(e.touches[0].clientY); }, { passive: false });
-    area.addEventListener('touchend', onEnd, { passive: true });
+    // Touch events
+    element.addEventListener('touchstart', e => onStart(e.touches[0].clientY), { passive: true });
+    element.addEventListener('touchmove', e => {
+        e.preventDefault();
+        onMove(e.touches[0].clientY);
+    }, { passive: false });
+    element.addEventListener('touchend', onEnd, { passive: true });
     
-    // Mouse
-    area.addEventListener('mousedown', e => { e.preventDefault(); onStart(e.clientY); });
+    // Mouse events
+    element.addEventListener('mousedown', e => {
+        e.preventDefault();
+        onStart(e.clientY);
+    });
     document.addEventListener('mousemove', e => onMove(e.clientY));
     document.addEventListener('mouseup', onEnd);
 }
 
 // ===== UTILITIES =====
 
-function getTouchDist(t1, t2) {
+function getTouchDistance(t1, t2) {
     return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
 }
 
@@ -708,8 +541,8 @@ function showZoomIndicator() {
     el.textContent = `${Math.round(State.scale * 100)}%`;
     el.classList.add('visible');
     
-    clearTimeout(el._t);
-    el._t = setTimeout(() => el.classList.remove('visible'), 1000);
+    clearTimeout(el._timeout);
+    el._timeout = setTimeout(() => el.classList.remove('visible'), 1000);
 }
 
 function showSwipeHint() {
@@ -720,7 +553,7 @@ function showSwipeHint() {
     setTimeout(() => el.classList.remove('visible'), 2500);
 }
 
-// ===== DOM =====
+// ===== DOM CREATION =====
 
 function createDOM() {
     const html = `
@@ -764,6 +597,7 @@ function createDOM() {
     
     State.overlay = document.getElementById('lightbox-overlay');
     State.container = document.getElementById('lightbox-container');
+    State.image = document.getElementById('lightbox-image');
     
     // Buttons
     document.getElementById('lightbox-close').addEventListener('click', () => closeLightbox(false));
@@ -777,31 +611,34 @@ function createDOM() {
         if (e.key === 'Escape' && State.isOpen) closeLightbox(false);
     });
     
-    // Touch
+    // Touch events on container
     State.container.addEventListener('touchstart', handleTouchStart, { passive: false });
     State.container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    State.container.addEventListener('touchend', handleTouchEnd, { passive: false });
+    State.container.addEventListener('touchend', handleTouchEnd, { passive: true });
     State.container.addEventListener('touchcancel', handleTouchCancel, { passive: true });
     
-    // Mouse
+    // Mouse events
     State.container.addEventListener('wheel', handleWheel, { passive: false });
     State.container.addEventListener('mousedown', handleMouseDown);
     document.addEventListener('mousemove', handleMouseMove);
     document.addEventListener('mouseup', handleMouseUp);
     
     // Double click
-    State.container.addEventListener('dblclick', e => {
-        if (State.scale > MIN_SCALE) {
-            setScale(MIN_SCALE, true, e.clientX, e.clientY);
-        } else {
-            setScale(DOUBLE_TAP_ZOOM, true, e.clientX, e.clientY);
-        }
-    });
+    State.container.addEventListener('dblclick', handleDoubleClick);
     
-    // Click background to close
+    // Click background to close (only when not zoomed)
     State.overlay.addEventListener('click', e => {
         if (e.target === State.overlay && State.scale === MIN_SCALE) {
             closeLightbox(false);
+        }
+    });
+    
+    // Update dimensions on resize
+    window.addEventListener('resize', () => {
+        if (State.isOpen) {
+            updateDimensions();
+            clampPosition();
+            applyTransform(false);
         }
     });
 }
