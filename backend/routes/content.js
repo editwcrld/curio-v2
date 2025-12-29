@@ -634,4 +634,20 @@ router.post('/admin/trigger-daily', async (req, res, next) => {
     }
 });
 
+// =====================================================
+// PUBLIC CONFIG - Limits ohne Auth
+// =====================================================
+
+router.get('/config/limits', async (req, res) => {
+    try {
+        const { getLimits } = require('../config/constants');
+        res.json({
+            success: true,
+            data: getLimits()
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Could not load limits' });
+    }
+});
+
 module.exports = router;

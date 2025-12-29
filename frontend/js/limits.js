@@ -89,6 +89,24 @@ function resetLimits() {
 
 async function fetchLimitsFromBackend() {
     const token = localStorage.getItem('auth_token');
+    
+    try {
+        // Always fetch public limits config (for all user types)
+        const configResponse = await fetch(`${getApiBaseUrl()}/config/limits`);
+        if (configResponse.ok) {
+            const configResult = await configResponse.json();
+            if (configResult.data) {
+                LIMITS.guest = configResult.data.guest;
+                LIMITS.registered = configResult.data.registered;
+                LIMITS.premium = configResult.data.premium;
+                console.log('✅ Limits loaded from backend');
+            }
+        }
+    } catch (error) {
+        console.warn('⚠️ Could not fetch limits config, using fallback');
+    }
+    
+    // If logged in, also sync usage
     if (!token) return;
     
     try {
