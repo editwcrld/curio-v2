@@ -158,7 +158,9 @@ async function goNextQuote() {
     
     try {
         // Fetch from cache (instant response)
-        const response = await fetch(`${API_BASE_URL}/quote/fresh`, { 
+        const seenIds = quoteHistory.map(h => h.quote.id).join(',');
+        const excludeParam = seenIds ? `?exclude=${seenIds}` : '';
+        const response = await fetch(`${API_BASE_URL}/quote/fresh${excludeParam}`, { 
             headers: getAuthHeaders() 
         });
         
@@ -219,7 +221,9 @@ async function prefetchQuote() {
     
     try {
         // ✅ Use ?prefetch=true to get FRESH content from API
-        const response = await fetch(`${API_BASE_URL}/quote/fresh?prefetch=true`, { 
+        const seenIds = quoteHistory.map(h => h.quote.id).join(',');
+        const params = `?prefetch=true${seenIds ? `&exclude=${seenIds}` : ''}`;
+        const response = await fetch(`${API_BASE_URL}/quote/fresh${params}`, { 
             headers: getAuthHeaders() 
         });
         
@@ -322,7 +326,9 @@ async function goNextArt() {
     
     try {
         // Fetch from cache (instant response)
-        const response = await fetch(`${API_BASE_URL}/art/fresh`, { 
+        const seenIds = artHistory.map(a => a.id).join(',');
+        const excludeParam = seenIds ? `?exclude=${seenIds}` : '';
+        const response = await fetch(`${API_BASE_URL}/art/fresh${excludeParam}`, { 
             headers: getAuthHeaders() 
         });
         
@@ -381,7 +387,9 @@ async function prefetchArt() {
     
     try {
         // ✅ Use ?prefetch=true to get FRESH content from API
-        const response = await fetch(`${API_BASE_URL}/art/fresh?prefetch=true`, { 
+        const seenIds = artHistory.map(a => a.id).join(',');
+        const params = `?prefetch=true${seenIds ? `&exclude=${seenIds}` : ''}`;
+        const response = await fetch(`${API_BASE_URL}/art/fresh${params}`, { 
             headers: getAuthHeaders() 
         });
         

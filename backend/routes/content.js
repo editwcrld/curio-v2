@@ -306,7 +306,14 @@ router.get('/quote/fresh', optionalAuth, async (req, res, next) => {
         }
         
         // Get user's favorite IDs to exclude
-        const excludeIds = req.user ? await getUserFavoriteIds(req.user.id, 'quote') : [];
+        // Get user's favorite IDs to exclude
+        const favoriteIds = req.user ? await getUserFavoriteIds(req.user.id, 'quote') : [];
+
+        // Parse session-seen IDs from query param
+        const sessionExclude = req.query.exclude ? req.query.exclude.split(',').filter(Boolean) : [];
+
+        // Combine both exclusion lists
+        const excludeIds = [...new Set([...favoriteIds, ...sessionExclude])];
         
         // =====================================================
         // PREFETCH MODE: Fetch fresh from API + generate AI
@@ -483,7 +490,13 @@ router.get('/art/fresh', optionalAuth, async (req, res, next) => {
         }
         
         // Get user's favorite IDs to exclude
-        const excludeIds = req.user ? await getUserFavoriteIds(req.user.id, 'art') : [];
+        const favoriteIds = req.user ? await getUserFavoriteIds(req.user.id, 'art') : [];
+
+        // Parse session-seen IDs from query param
+        const sessionExclude = req.query.exclude ? req.query.exclude.split(',').filter(Boolean) : [];
+
+        // Combine both exclusion lists
+        const excludeIds = [...new Set([...favoriteIds, ...sessionExclude])];
         
         // =====================================================
         // PREFETCH MODE: Fetch fresh from API + generate AI

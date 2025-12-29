@@ -114,37 +114,24 @@ async function cacheMultipleQuotes(quotes) {
  */
 async function getRandomCachedQuote(excludeIds = []) {
     try {
-        // Get count of available quotes (excluding favorites)
-        let countQuery = supabase.from('quotes').select('*', { count: 'exact', head: true });
+        let query = supabase.from('quotes').select('*');
         
+        // Exclude favorites + session-seen IDs
         if (excludeIds && excludeIds.length > 0) {
-            countQuery = countQuery.not('id', 'in', `(${excludeIds.join(',')})`);
+            query = query.not('id', 'in', `(${excludeIds.join(',')})`);
         }
         
-        const { count: availableCount, error: countError } = await countQuery;
+        const { data, error } = await query;
         
-        if (countError) throw countError;
-        
-        if (!availableCount || availableCount === 0) {
+        if (error) throw error;
+        if (!data || data.length === 0) {
             console.warn('⚠️ Quote cache empty or all excluded!');
             return null;
         }
         
-        const randomOffset = Math.floor(Math.random() * availableCount);
-        
-        // Fetch with exclusions
-        let fetchQuery = supabase.from('quotes').select('*');
-        if (excludeIds && excludeIds.length > 0) {
-            fetchQuery = fetchQuery.not('id', 'in', `(${excludeIds.join(',')})`);
-        }
-        
-        const { data, error } = await fetchQuery
-            .range(randomOffset, randomOffset)
-            .single();
-        
-        if (error) throw error;
-        
-        return data;
+        // True random: shuffle and pick first
+        const randomIndex = Math.floor(Math.random() * data.length);
+        return data[randomIndex];
     } catch (error) {
         console.error('getRandomCachedQuote error:', error);
         return null;

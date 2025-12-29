@@ -141,42 +141,24 @@ async function cacheMultipleArtworks(artworks) {
  */
 async function getRandomCachedArt(excludeIds = []) {
     try {
-        // Build query
         let query = supabase.from('artworks').select('*');
         
-        // ✅ Exclude favorites if provided
+        // Exclude favorites + session-seen IDs
         if (excludeIds && excludeIds.length > 0) {
             query = query.not('id', 'in', `(${excludeIds.join(',')})`);
         }
         
-        // Get count of available artworks
-        const { count, error: countError } = await supabase
-            .from('artworks')
-            .select('*', { count: 'exact', head: true })
-            .not('id', 'in', excludeIds.length > 0 ? `(${excludeIds.join(',')})` : '()');
+        const { data, error } = await query;
         
-        const availableCount = excludeIds.length > 0 ? count : await getCacheCount();
-        
-        if (!availableCount || availableCount === 0) {
+        if (error) throw error;
+        if (!data || data.length === 0) {
             console.warn('⚠️ Art cache empty or all excluded!');
             return null;
         }
         
-        const randomOffset = Math.floor(Math.random() * availableCount);
-        
-        // Fetch with exclusions
-        let fetchQuery = supabase.from('artworks').select('*');
-        if (excludeIds && excludeIds.length > 0) {
-            fetchQuery = fetchQuery.not('id', 'in', `(${excludeIds.join(',')})`);
-        }
-        
-        const { data, error } = await fetchQuery
-            .range(randomOffset, randomOffset)
-            .single();
-        
-        if (error) throw error;
-        
-        return data;
+        // True random: shuffle and pick first
+        const randomIndex = Math.floor(Math.random() * data.length);
+        return data[randomIndex];
     } catch (error) {
         console.error('getRandomCachedArt error:', error);
         return null;
